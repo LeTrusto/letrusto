@@ -1,26 +1,65 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f7fb;
+  --foreground: #141a2a;
+  --surface: #ffffff;
+  --surface-soft: #eef2ff;
+  --brand: #5f2df2;
+  --brand-strong: #4a1ed2;
+  --accent: #ff6b48;
+  --ring: #7a5af8;
+  --shadow-premium: 0 25px 60px rgba(86, 55, 228, 0.14);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background:
+    radial-gradient(circle at 8% -10%, rgba(152, 118, 255, 0.2), transparent 28%),
+    radial-gradient(circle at 90% 0%, rgba(255, 167, 117, 0.18), transparent 30%),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+* {
+  border-color: rgba(104, 117, 245, 0.2);
+}
+
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.glass-panel {
+  background: color-mix(in srgb, white 86%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.premium-shadow {
+  box-shadow: var(--shadow-premium);
+}
+
+.shimmer {
+  background: linear-gradient(110deg, #edeffd 8%, #dfe5ff 18%, #edeffd 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position-x: -200%;
+  }
 }
