@@ -2,22 +2,24 @@
 
 import ProductCard from "@/components/ProductCard";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useProducts } from "@/hooks/useProducts";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
-import { products } from "@/lib/products";
+import type { Product } from "@/services/product.service";
 
-function mapIdsToProducts(ids: string[]) {
+function mapIdsToProducts(ids: string[], products: Product[]) {
   return ids
     .map((id) => products.find((product) => product.id === id))
-    .filter((product): product is (typeof products)[number] => Boolean(product));
+    .filter((product): product is Product => Boolean(product));
 }
 
 export default function HomePersonalized() {
   const { favoriteIds } = useFavorites();
   const { recentlyViewedIds } = useRecentlyViewed();
+  const { products } = useProducts();
 
-  const recentlyViewedProducts = mapIdsToProducts(recentlyViewedIds).slice(0, 4);
+  const recentlyViewedProducts = mapIdsToProducts(recentlyViewedIds, products).slice(0, 4);
   const seedIds = [...favoriteIds, ...recentlyViewedIds];
-  const seedProducts = mapIdsToProducts(seedIds);
+  const seedProducts = mapIdsToProducts(seedIds, products);
   const seedCategories = new Set(seedProducts.map((product) => product.category));
 
   const recommendedProducts = products

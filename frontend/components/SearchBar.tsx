@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { products } from "@/lib/products";
+import { useProducts } from "@/hooks/useProducts";
 
 const trendingSearches = [
   "phone under 30000",
@@ -16,12 +16,13 @@ const trendingSearches = [
 export default function SearchBar() {
   const [query, setQuery] = useState("");
   const router = useRouter();
+  const { products } = useProducts();
   const suggestions = useMemo(() => {
     return [
       ...trendingSearches,
       ...products.slice(0, 12).map((product) => product.name),
     ];
-  }, []);
+  }, [products]);
 
   const handleSearch = () => {
     if (!query.trim()) return;
@@ -42,29 +43,29 @@ export default function SearchBar() {
   return (
     <div className="relative z-20 flex justify-center -mt-10 px-4">
       <div className="w-full max-w-4xl rounded-[1.75rem] border border-purple-100 bg-white p-3 premium-shadow">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Search className="ml-2 h-5 w-5 text-purple-500" />
-        <input
-          type="text"
-          list="search-suggestions"
-          aria-label="Search products"
-          placeholder="Search products, compare phones, laptops, cameras..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleSearch();
-            }
-          }}
-          className="flex-1 rounded-2xl px-4 py-4 text-base outline-none md:text-lg"
-        />
+          <input
+            type="text"
+            list="search-suggestions"
+            aria-label="Search products"
+            placeholder="Search products, compare phones, laptops, cameras..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSearch();
+              }
+            }}
+            className="flex-1 rounded-2xl px-4 py-4 text-base outline-none md:text-lg"
+          />
 
-        <button
-          onClick={handleSearch}
-          className="rounded-2xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-4 text-sm font-semibold text-white transition hover:scale-[1.01] md:px-8 md:text-base"
-        >
-          Search
-        </button>
+          <button
+            onClick={handleSearch}
+            className="w-full rounded-2xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 px-6 py-4 text-sm font-semibold text-white transition hover:scale-[1.01] sm:w-auto md:px-8 md:text-base"
+          >
+            Search
+          </button>
         </div>
 
         <datalist id="search-suggestions">

@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+import { API_BASE_URL, IS_API_CONFIGURED } from "@/services/api";
+
 const STORAGE_KEY = "letrusto:favorites";
+const USER_ID_STORAGE_KEY = "letrusto:user-id";
 let favoriteStore: string[] = [];
 let hasHydratedStore = false;
 
@@ -20,6 +23,67 @@ function readFavorites() {
   }
 }
 
+function getOrCreateUserId() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const existing = window.localStorage.getItem(USER_ID_STORAGE_KEY);
+  if (existing) {
+    return existing;
+  }
+
+  const generated =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  window.localStorage.setItem(USER_ID_STORAGE_KEY, generated);
+
+  return generated;
+}
+
+async function fetchFavoritesFromApi() {
+  const userId = getOrCreateUserId();
+  if (!userId) {
+    return [];
+  }
+
+  const response = await fetch(`${API_BASE_URL}/favorites?userId=${encodeURIComponent(userId)}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load favorites (${response.status})`);
+  }
+
+  const payload = (await response.json()) as { items?: Array<{ id?: string }> };
+  return (payload.items ?? []).map((item) => item.id).filter((value): value is string => Boolean(value));
+}
+
+async function syncFavoriteWithApi(productId: string, shouldFavorite: boolean) {
+  const userId = getOrCreateUserId();
+  if (!userId) {
+    return;
+  }
+
+  const method = shouldFavorite ? "POST" : "DELETE";
+  const response = await fetch(
+    `${API_BASE_URL}/favorites/${encodeURIComponent(productId)}?userId=${encodeURIComponent(userId)}`,
+    {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to update favorites (${response.status})`);
+  }
+}
 function emitFavoritesChange(nextFavoriteIds: string[]) {
   favoriteStore = nextFavoriteIds;
 
@@ -97,23 +161,59 @@ export function useFavorites() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   useEffect(() => {
-    return subscribe(setFavoriteIds);
+    const unsubscribe = subscribe(setFavoriteIds);
+
+    if (IS_API_CONFIGURED) {
+      void fetchFavoritesFromApi()
+        .then((serverIds) => {
+          saveFavorites(serverIds);
+        })
+        .catch(() => {
+          // Keep local fallback state if backend fetch fails.
+        });
+    }
+
+    return unsubscribe;
   }, []);
 
   const toggleFavorite = (id: string) => {
-    saveFavorites(
-      favoriteIds.includes(id)
-        ? favoriteIds.filter((item) => item !== id)
-        : [...favoriteIds, id]
-    );
+    const wasFavorite = favoriteIds.includes(id);
+    const nextFavoriteIds = wasFavorite
+      ? favoriteIds.filter((item) => item !== id)
+      : [...favoriteIds, id];
+
+    saveFavorites(nextFavoriteIds);
+
+    if (IS_API_CONFIGURED) {
+      const previousFavoriteIds = [...favoriteIds];
+      void syncFavoriteWithApi(id, !wasFavorite).catch(() => {
+        saveFavorites(previousFavoriteIds);
+      });
+    }
   };
 
   const removeFavorite = (id: string) => {
-    saveFavorites(favoriteIds.filter((item) => item !== id));
+    const previousFavoriteIds = [...favoriteIds];
+    const nextFavoriteIds = favoriteIds.filter((item) => item !== id);
+
+    saveFavorites(nextFavoriteIds);
+
+    if (IS_API_CONFIGURED) {
+      void syncFavoriteWithApi(id, false).catch(() => {
+        saveFavorites(previousFavoriteIds);
+      });
+    }
   };
 
   const clearFavorites = () => {
+    const previousFavoriteIds = [...favoriteIds];
     saveFavorites([]);
+
+    if (IS_API_CONFIGURED) {
+      void Promise.all(previousFavoriteIds.map((id) => syncFavoriteWithApi(id, false))).catch(() => {
+        saveFavorites(previousFavoriteIds);
+      });
+    }
   };
 
   const isFavorite = (id: string) => favoriteIds.includes(id);

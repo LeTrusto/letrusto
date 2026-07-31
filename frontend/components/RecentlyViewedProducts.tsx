@@ -1,8 +1,9 @@
 "use client";
 
 import ProductCard from "@/components/ProductCard";
+import { useProducts } from "@/hooks/useProducts";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
-import { products } from "@/lib/products";
+import type { Product } from "@/services/product.service";
 
 type RecentlyViewedProductsProps = {
   currentProductId: string;
@@ -12,11 +13,12 @@ export default function RecentlyViewedProducts({
   currentProductId,
 }: RecentlyViewedProductsProps) {
   const { recentlyViewedIds } = useRecentlyViewed(currentProductId);
+  const { products } = useProducts();
 
   const recentlyViewedProducts = recentlyViewedIds
     .filter((productId) => productId !== currentProductId)
     .map((productId) => products.find((product) => product.id === productId))
-    .filter((product): product is (typeof products)[number] => Boolean(product));
+    .filter((product): product is Product => Boolean(product));
 
   if (recentlyViewedProducts.length === 0) {
     return null;

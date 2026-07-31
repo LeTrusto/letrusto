@@ -1,7 +1,12 @@
 import ProductCard from "./ProductCard";
-import { productSpotlightBadges, products } from "../lib/products";
+import { getCatalogMetadata, getHomeCollections } from "@/services/product.service";
 
-export default function TrendingProducts() {
+export default async function TrendingProducts() {
+  const [{ trending }, metadata] = await Promise.all([
+    getHomeCollections(),
+    getCatalogMetadata(),
+  ]);
+
   return (
     <section className="py-20">
       <div className="max-w-7xl mx-auto px-6">
@@ -15,11 +20,11 @@ export default function TrendingProducts() {
         </p>
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {products.slice(0, 8).map((product) => (
+          {trending.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
-              highlightLabel={productSpotlightBadges[product.id]}
+              highlightLabel={metadata.productSpotlightBadges[product.id]}
             />
           ))}
         </div>

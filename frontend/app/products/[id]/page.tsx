@@ -6,8 +6,8 @@ import ProductBuyButtons from "@/components/ProductBuyButtons";
 import ProductImageGallery from "@/components/ProductImageGallery";
 import ProductReviews from "@/components/ProductReviews";
 import RecentlyViewedProducts from "@/components/RecentlyViewedProducts";
-import { categoryLabels, getProductById, products } from "@/lib/products";
-import { getRelatedProducts } from "@/lib/recommendations";
+import { categoryLabels } from "@/lib/products";
+import { getAllProducts, getProductById, getRelatedProductsByProductId } from "@/services/product.service";
 
 export default async function ProductPage({
   params,
@@ -15,8 +15,10 @@ export default async function ProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = getProductById(id) ?? products[0];
-  const relatedProducts = getRelatedProducts(product.id, 4);
+  const catalog = await getAllProducts();
+  const fallbackProduct = catalog[0];
+  const product = (await getProductById(id)) ?? fallbackProduct;
+  const relatedProducts = await getRelatedProductsByProductId(product.id, 4);
 
   return (
     <main className="min-h-screen bg-gray-50 p-10">
@@ -39,7 +41,7 @@ export default async function ProductPage({
         <div className="grid gap-10 xl:grid-cols-[1.05fr_0.95fr]">
           <ProductImageGallery name={product.name} images={product.images} fallbackImage={product.fallbackImage} />
 
-          <div className="space-y-6 xl:sticky xl:top-28 xl:self-start">
+          <div className="min-w-0 space-y-6 xl:sticky xl:top-28 xl:self-start">
             <div className="rounded-[2rem] bg-white p-8 shadow-lg shadow-purple-100/40">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-full bg-purple-100 px-4 py-2 text-sm font-semibold text-purple-700">
@@ -186,10 +188,10 @@ export default async function ProductPage({
               <select
                 id="second-product"
                 name="second"
-                defaultValue={relatedProducts[0]?.id ?? products.find((item) => item.id !== product.id)?.id}
+                defaultValue={relatedProducts[0]?.id ?? catalog.find((item) => item.id !== product.id)?.id}
                 className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400"
               >
-                {products
+                {catalog
                   .filter((item) => item.id !== product.id)
                   .map((item) => (
                     <option key={item.id} value={item.id}>

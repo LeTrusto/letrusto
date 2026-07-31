@@ -1,12 +1,85 @@
 import ProductCard from "@/components/ProductCard";
 import SearchEnhancements from "@/components/SearchEnhancements";
-import { filterProducts } from "@/lib/filterProducts";
-import { categoryPluralLabels, productSpotlightBadges } from "@/lib/products";
-import { discoverProducts } from "@/lib/recommendations";
-import { sortProducts } from "@/lib/sortProducts";
-import { products } from "@/lib/products";
-import type { ProductAiScoreFilter, ProductFilterState, ProductPriceFilter, ProductRatingFilter, ProductSortOption } from "@/types/products";
+import {
+  getCatalogMetadata,
+  getProductSearch,
+  type ProductAiScoreFilter,
+  type ProductFilterState,
+  type ProductPriceFilter,
+  type ProductQueryOptions,
+  type ProductRatingFilter,
+  type ProductSortOption,
+} from "@/services/product.service";
 import { getSearchParamValue } from "@/utils/helpers";
+
+function parseNumberParam(value: string, fallback: number) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+}
+
+function buildSearchHref(options: ProductQueryOptions) {
+  const searchParams = new URLSearchParams();
+
+  if (options.q) {
+    searchParams.set("q", options.q);
+  }
+
+  if (options.sortBy) {
+    searchParams.set("sort", options.sortBy);
+  }
+
+  if (options.category && options.category !== "all") {
+    searchParams.set("category", options.category);
+  }
+
+  if (options.price && options.price !== "all") {
+    searchParams.set("price", options.price);
+  }
+
+  if (options.rating && options.rating !== "all") {
+    searchParams.set("rating", options.rating);
+  }
+
+  if (options.aiScore && options.aiScore !== "all") {
+    searchParams.set("aiScore", options.aiScore);
+  }
+
+  if (options.brand) {
+    searchParams.set("brand", options.brand);
+  }
+
+  if (options.minPrice !== undefined) {
+    searchParams.set("minPrice", String(options.minPrice));
+  }
+
+  if (options.maxPrice !== undefined) {
+    searchParams.set("maxPrice", String(options.maxPrice));
+  }
+
+  if (options.minRating !== undefined) {
+    searchParams.set("minRating", String(options.minRating));
+  }
+
+  if (options.minAiScore !== undefined) {
+    searchParams.set("minAiScore", String(options.minAiScore));
+  }
+
+  if (options.page) {
+    searchParams.set("page", String(options.page));
+  }
+
+  if (options.pageSize) {
+    searchParams.set("pageSize", String(options.pageSize));
+  }
+
+  const query = searchParams.toString();
+  return query ? `/search?${query}` : "/search";
+}
 
 export default async function SearchPage({
   searchParams,
@@ -18,22 +91,54 @@ export default async function SearchPage({
     price?: string | string[];
     rating?: string | string[];
     aiScore?: string | string[];
+    brand?: string | string[];
+    minPrice?: string | string[];
+    maxPrice?: string | string[];
+    minRating?: string | string[];
+    minAiScore?: string | string[];
+    page?: string | string[];
+    pageSize?: string | string[];
   }>;
 }) {
   const params = await searchParams;
 
   const query = getSearchParamValue(params.q);
   const sortBy = (getSearchParamValue(params.sort, "relevance") as ProductSortOption);
+  const brand = getSearchParamValue(params.brand);
+  const minPrice = getSearchParamValue(params.minPrice);
+  const maxPrice = getSearchParamValue(params.maxPrice);
+  const minRating = getSearchParamValue(params.minRating);
+  const minAiScore = getSearchParamValue(params.minAiScore);
+  const page = parseNumberParam(getSearchParamValue(params.page, "1"), 1);
+  const pageSize = parseNumberParam(getSearchParamValue(params.pageSize, "12"), 12);
   const filters: ProductFilterState = {
     category: getSearchParamValue(params.category, "all") as ProductFilterState["category"],
     price: getSearchParamValue(params.price, "all") as ProductPriceFilter,
     rating: getSearchParamValue(params.rating, "all") as ProductRatingFilter,
     aiScore: getSearchParamValue(params.aiScore, "all") as ProductAiScoreFilter,
   };
+  const [metadata, search] = await Promise.all([
+    getCatalogMetadata(),
+    getProductSearch({
+      q: query,
+      sortBy,
+      category: filters.category,
+      price: filters.price,
+      rating: filters.rating,
+      aiScore: filters.aiScore,
+      brand: brand || undefined,
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
+      minRating: minRating ? Number(minRating) : undefined,
+      minAiScore: minAiScore ? Number(minAiScore) : undefined,
+      page,
+      pageSize,
+    }),
+  ]);
 
-  const discoveredProducts = discoverProducts(query);
-  const filteredProducts = filterProducts(discoveredProducts, filters);
-  const results = sortProducts(filteredProducts, sortBy, query);
+  const results = search.items;
+  const pagination = search.pagination;
+  const pageOptions = [12, 24, 36];
 
   return (
     <main className="min-h-screen bg-gray-50 p-10">
@@ -48,11 +153,11 @@ export default async function SearchPage({
             <p className="mt-3 text-gray-500">
               {query ? (
                 <>
-                  Showing {results.length} result{results.length === 1 ? "" : "s"} for <span className="font-semibold text-gray-900">{query}</span>.
+                  Showing {pagination.totalItems} result{pagination.totalItems === 1 ? "" : "s"} for <span className="font-semibold text-gray-900">{query}</span>.
                 </>
               ) : (
                 <>
-                  Browse all {results.length} curated products and refine by category, price, rating, or AI score.
+                  Browse all {pagination.totalItems} curated products and refine by category, price, rating, or AI score.
                 </>
               )}
             </p>
@@ -79,7 +184,7 @@ export default async function SearchPage({
               className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400"
             />
             <datalist id="search-page-suggestions">
-              {products.slice(0, 20).map((product) => (
+              {results.slice(0, 20).map((product) => (
                 <option key={product.id} value={product.name} />
               ))}
             </datalist>
@@ -104,7 +209,7 @@ export default async function SearchPage({
             </label>
             <select id="category" name="category" defaultValue={filters.category} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
               <option value="all">All</option>
-              {Object.entries(categoryPluralLabels).map(([value, label]) => (
+              {Object.entries(metadata.categoryPluralLabels).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -145,6 +250,80 @@ export default async function SearchPage({
             </select>
           </div>
 
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="brand">
+              Brand
+            </label>
+            <select id="brand" name="brand" defaultValue={brand || ""} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
+              <option value="">All Brands</option>
+              {metadata.brands.map((brandName) => (
+                <option key={brandName} value={brandName}>
+                  {brandName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="minPrice">
+              Min Price
+            </label>
+            <input
+              id="minPrice"
+              name="minPrice"
+              defaultValue={minPrice}
+              type="number"
+              min={0}
+              placeholder="0"
+              className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="maxPrice">
+              Max Price
+            </label>
+            <input
+              id="maxPrice"
+              name="maxPrice"
+              defaultValue={maxPrice}
+              type="number"
+              min={0}
+              placeholder="250000"
+              className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="minRating">
+              Min Rating
+            </label>
+            <input
+              id="minRating"
+              name="minRating"
+              defaultValue={minRating}
+              type="number"
+              min={0}
+              max={5}
+              step="0.1"
+              placeholder="4.0"
+              className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="pageSize">
+              Page Size
+            </label>
+            <select id="pageSize" name="pageSize" defaultValue={String(pageSize)} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
+              {pageOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="lg:col-span-6 flex flex-wrap gap-3 pt-2">
             <button className="rounded-2xl bg-gradient-to-r from-fuchsia-600 to-purple-600 px-6 py-3 font-semibold text-white transition hover:from-fuchsia-700 hover:to-purple-700" type="submit">
               Apply Filters
@@ -160,10 +339,60 @@ export default async function SearchPage({
             <ProductCard
               key={product.id}
               product={product}
-              highlightLabel={query ? "Discovery Match" : productSpotlightBadges[product.id]}
+              highlightLabel={query ? "Discovery Match" : metadata.productSpotlightBadges[product.id]}
             />
           ))}
         </div>
+
+        {pagination.totalPages > 1 ? (
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3 rounded-3xl border border-purple-100 bg-white p-4">
+            <a
+              href={buildSearchHref({
+                q: query,
+                sortBy,
+                category: filters.category,
+                price: filters.price,
+                rating: filters.rating,
+                aiScore: filters.aiScore,
+                brand: brand || undefined,
+                minPrice: minPrice ? Number(minPrice) : undefined,
+                maxPrice: maxPrice ? Number(maxPrice) : undefined,
+                minRating: minRating ? Number(minRating) : undefined,
+                minAiScore: minAiScore ? Number(minAiScore) : undefined,
+                page: Math.max(1, pagination.page - 1),
+                pageSize,
+              })}
+              className={`rounded-xl px-4 py-2 font-semibold ${pagination.hasPreviousPage ? "border border-purple-200 text-purple-700 hover:bg-purple-50" : "pointer-events-none border border-gray-100 text-gray-300"}`}
+            >
+              Previous
+            </a>
+
+            <span className="rounded-xl bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+
+            <a
+              href={buildSearchHref({
+                q: query,
+                sortBy,
+                category: filters.category,
+                price: filters.price,
+                rating: filters.rating,
+                aiScore: filters.aiScore,
+                brand: brand || undefined,
+                minPrice: minPrice ? Number(minPrice) : undefined,
+                maxPrice: maxPrice ? Number(maxPrice) : undefined,
+                minRating: minRating ? Number(minRating) : undefined,
+                minAiScore: minAiScore ? Number(minAiScore) : undefined,
+                page: Math.min(pagination.totalPages, pagination.page + 1),
+                pageSize,
+              })}
+              className={`rounded-xl px-4 py-2 font-semibold ${pagination.hasNextPage ? "border border-purple-200 text-purple-700 hover:bg-purple-50" : "pointer-events-none border border-gray-100 text-gray-300"}`}
+            >
+              Next
+            </a>
+          </div>
+        ) : null}
 
         {results.length === 0 && (
           <div className="mt-16 rounded-[2rem] border border-dashed border-purple-200 bg-white p-10 text-center text-gray-500 shadow-lg shadow-purple-100/30">

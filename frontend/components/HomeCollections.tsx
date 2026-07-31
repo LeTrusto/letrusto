@@ -1,5 +1,5 @@
 import ProductCard from "@/components/ProductCard";
-import { products } from "@/lib/products";
+import { getHomeCollections, type Product } from "@/services/product.service";
 
 function SectionHeading({
   title,
@@ -26,7 +26,7 @@ function ProductRail({
 }: {
   title: string;
   subtitle: string;
-  items: typeof products;
+  items: Product[];
   highlightLabel: string;
 }) {
   return (
@@ -41,10 +41,8 @@ function ProductRail({
   );
 }
 
-export default function HomeCollections() {
-  const featured = products.slice(0, 4);
-  const newArrivals = [...products].sort((a, b) => b.aiScore - a.aiScore).slice(4, 8);
-  const topAiPicks = [...products].sort((a, b) => b.aiScore - a.aiScore).slice(0, 4);
+export default async function HomeCollections() {
+  const { featured, newArrivals, topAiPicks } = await getHomeCollections();
 
   return (
     <>

@@ -7,6 +7,21 @@ const imagesDir = path.join(repoRoot, "public", "images", "products");
 const manifestFile = path.join(repoRoot, "lib", "productImageManifest.ts");
 
 const USER_AGENT = "LeTrustoImageSync/1.0 (educational project)";
+const REQUEST_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(url, init = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 async function parseProducts() {
   const src = await fs.readFile(productsFile, "utf8");
@@ -29,7 +44,7 @@ async function parseProducts() {
 }
 
 async function fetchJson(url) {
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: { "User-Agent": USER_AGENT },
   });
 
@@ -55,14 +70,10 @@ function buildSearchQueries(product) {
     `${product.brand} ${product.name}`,
     `${product.name} ${product.brand}`,
     normalizedModel,
-    `${product.brand} ${normalizedModel} front`,
-    `${product.brand} ${normalizedModel} back`,
     `${product.brand} ${normalizedModel} product photo`,
     `${product.brand} ${product.category}`,
     `${product.category} ${product.brand}`,
-    `${product.brand} ${normalizedModel} product`,
-    `${product.category} ${normalizedModel}`,
-  ];
+  ].slice(0, 5);
 }
 
 async function searchWikipediaTitle(query) {
@@ -315,7 +326,7 @@ function extensionFromContentType(contentType) {
 }
 
 async function downloadImage(url, outputPathWithoutExt) {
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: { "User-Agent": USER_AGENT },
     redirect: "follow",
   });
@@ -355,7 +366,8 @@ async function main() {
   const resolved = [];
   const usedUrls = new Set();
 
-  for (const product of products) {
+  for (const [index, product] of products.entries()) {
+    console.log(`[${index + 1}/${products.length}] Resolving image for ${product.id}`);
     let imageUrl = null;
     let resolvedTitle = null;
 
@@ -397,6 +409,7 @@ async function main() {
 
     if (!imageUrl) {
       missing.push(product.id);
+      console.log(`  -> missing image`);
       continue;
     }
 
@@ -408,8 +421,10 @@ async function main() {
       mapping[product.id] = [relativePath];
       usedUrls.add(imageUrl);
       resolved.push({ id: product.id, title: resolvedTitle, imageUrl: relativePath });
+      console.log(`  -> saved ${relativePath}`);
     } catch {
       missing.push(product.id);
+      console.log(`  -> failed to download`);
     }
   }
 

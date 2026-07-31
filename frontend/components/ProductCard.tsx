@@ -8,8 +8,8 @@ import { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
 import { useFavorites } from "@/hooks/useFavorites";
-import { buildCompareHref } from "@/lib/recommendations";
 import { categoryLabels } from "@/lib/products";
+import { getCompareHref } from "@/services/product.service";
 import type { Product } from "@/types/products";
 
 type ProductCardProps = {
@@ -131,7 +131,7 @@ function ProductCard({
             View Details
           </Link>
           <Link
-            href={buildCompareHref(product.id, compareWithId)}
+            href={getCompareHref(product.id, compareWithId)}
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-purple-200 px-4 py-3 font-semibold text-purple-700 transition hover:bg-purple-50"
           >
             <Scale className="h-4 w-4" />

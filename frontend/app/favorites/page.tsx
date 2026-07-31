@@ -4,17 +4,20 @@ import { useMemo, useState } from "react";
 
 import ProductCard from "@/components/ProductCard";
 import { useFavorites } from "@/hooks/useFavorites";
-import { categoryLabels, products } from "@/lib/products";
+import { useProducts } from "@/hooks/useProducts";
+import { categoryLabels } from "@/lib/products";
+import type { Product } from "@/services/product.service";
 
 export default function FavoritesPage() {
   const { favoriteIds } = useFavorites();
+  const { products } = useProducts();
   const [sortBy, setSortBy] = useState<"latest" | "price-low" | "price-high" | "rating-high">("latest");
-  const [category, setCategory] = useState<"all" | (typeof products)[number]["category"]>("all");
+  const [category, setCategory] = useState<"all" | Product["category"]>("all");
 
   const favoriteProducts = useMemo(() => {
     const base = favoriteIds
       .map((favoriteId) => products.find((product) => product.id === favoriteId))
-      .filter((product): product is (typeof products)[number] => Boolean(product));
+      .filter((product): product is Product => Boolean(product));
 
     const filtered =
       category === "all"
@@ -40,7 +43,7 @@ export default function FavoritesPage() {
     }
 
     return sorted;
-  }, [category, favoriteIds, sortBy]);
+  }, [category, favoriteIds, products, sortBy]);
 
   return (
     <main className="min-h-screen bg-gray-50 px-6 py-16">

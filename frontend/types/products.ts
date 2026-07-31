@@ -61,6 +61,7 @@ export type Product = {
   reviews: ProductReview[];
   reviewSummary: string;
   buyLinks: ProductBuyLink[];
+  similarProductIds: string[];
 };
 
 export type ProductSortOption =
@@ -85,5 +86,35 @@ export type ProductFilterState = {
   price: ProductPriceFilter;
   rating: ProductRatingFilter;
   aiScore: ProductAiScoreFilter;
+};
+
+export type ProductPagination = {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+};
+
+export type ProductQueryOptions = {
+  q?: string;
+  sortBy?: ProductSortOption;
+  category?: ProductFilterState["category"];
+  price?: ProductPriceFilter;
+  rating?: ProductRatingFilter;
+  aiScore?: ProductAiScoreFilter;
+  brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  minAiScore?: number;
+  page?: number;
+  pageSize?: number;
+};
+
+export type PaginatedProductsResponse = {
+  items: Product[];
+  pagination: ProductPagination;
 };
 

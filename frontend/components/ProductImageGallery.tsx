@@ -20,7 +20,7 @@ export default function ProductImageGallery({
   const isLocalProductImage = activeImage.startsWith("/images/products/");
 
   return (
-    <div className="space-y-5 rounded-[2rem] bg-white p-8 premium-shadow">
+    <div className="min-w-0 space-y-5 rounded-[2rem] bg-white p-8 premium-shadow">
       <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-pink-50 via-white to-purple-50 p-8">
         {!imageLoaded && !isLocalProductImage ? <div className="absolute inset-8 rounded-3xl shimmer" aria-hidden="true" /> : null}
         <Image

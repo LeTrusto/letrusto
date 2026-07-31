@@ -1,5 +1,5 @@
-import { recommendProducts } from "@/lib/ai";
 import ProductCard from "@/components/ProductCard";
+import { getAiRecommendations } from "@/services/product.service";
 
 type Props = {
   searchParams: Promise<{
@@ -9,7 +9,7 @@ type Props = {
 
 export default async function AIPage({ searchParams }: Props) {
   const { q = "" } = await searchParams;
-  const recommendations = recommendProducts(q);
+  const recommendations = await getAiRecommendations(q);
 
   return (
     <main className="min-h-screen bg-gray-50 py-16 px-6">

@@ -1,7 +1,6 @@
 import Image from "next/image";
 
-import { products } from "@/lib/products";
-import { resolveCompareProducts } from "@/lib/recommendations";
+import { getAllProducts, getCompareProducts } from "@/services/product.service";
 import { getSearchParamValue } from "@/utils/helpers";
 
 export default async function ComparePage({
@@ -10,10 +9,11 @@ export default async function ComparePage({
   searchParams: Promise<{ first?: string | string[]; second?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const { firstProduct, secondProduct } = resolveCompareProducts(
-    getSearchParamValue(params.first),
-    getSearchParamValue(params.second)
-  );
+  const [catalog, compared] = await Promise.all([
+    getAllProducts(),
+    getCompareProducts(getSearchParamValue(params.first), getSearchParamValue(params.second)),
+  ]);
+  const { firstProduct, secondProduct } = compared;
 
   const specLabels = Array.from(
     new Set([
@@ -46,7 +46,7 @@ export default async function ComparePage({
               First Product
             </label>
             <select id="first" name="first" defaultValue={firstProduct.id} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
-              {products.map((product) => (
+              {catalog.map((product) => (
                 <option key={product.id} value={product.id}>
                   {product.name}
                 </option>
@@ -59,7 +59,7 @@ export default async function ComparePage({
               Second Product
             </label>
             <select id="second" name="second" defaultValue={secondProduct.id} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
-              {products.map((product) => (
+              {catalog.map((product) => (
                 <option key={product.id} value={product.id}>
                   {product.name}
                 </option>
