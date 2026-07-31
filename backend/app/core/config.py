@@ -18,6 +18,9 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    AI_PROVIDER: str = "heuristic"
+    AI_SESSION_TTL_MINUTES: int = 120
+
 
 @lru_cache
 def get_settings() -> Settings:

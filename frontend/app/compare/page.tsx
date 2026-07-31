@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import { getAIComparisonSummary } from "@/services/ai.service";
 import { getAllProducts, getCompareProducts } from "@/services/product.service";
 import { getSearchParamValue } from "@/utils/helpers";
 
@@ -28,6 +29,7 @@ export default async function ComparePage({
   const secondScore = secondProduct.aiScore + secondProduct.rating * 10 + secondProduct.pros.length;
   const winner = firstScore >= secondScore ? firstProduct : secondProduct;
   const valueWinner = firstProduct.priceValue <= secondProduct.priceValue ? firstProduct : secondProduct;
+  const aiSummary = await getAIComparisonSummary(firstProduct.id, secondProduct.id);
 
   return (
     <main className="min-h-screen bg-gray-50 p-10">
@@ -175,11 +177,28 @@ export default async function ComparePage({
           </p>
 
           <p className="mt-3 text-gray-700">
-            {winner.name} comes out ahead on overall value after combining AI score, ratings, and day-to-day strengths.
-            {winner.category === "phone"
-              ? " If budget is your priority, focus on the price-to-performance tradeoff."
-              : " If your workflow matters more than raw specs, use the strengths list above to make the final call."}
+            {aiSummary.summary}
           </p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-purple-600">Key Advantages</p>
+              <ul className="mt-2 space-y-2 text-gray-700">
+                {aiSummary.keyAdvantages.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-purple-600">Trade-offs</p>
+              <ul className="mt-2 space-y-2 text-gray-700">
+                {aiSummary.tradeOffs.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
 
         </div>
 

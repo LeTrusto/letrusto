@@ -1,9 +1,10 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, categories, compare, favorites, health, products, recommendations, search
+from app.api.v1.endpoints import ai, auth, categories, compare, favorites, health, products, recommendations, search
 
 api_router = APIRouter()
 api_router.include_router(health.router)
+api_router.include_router(ai.router)
 api_router.include_router(search.router)
 api_router.include_router(compare.router)
 api_router.include_router(recommendations.router)

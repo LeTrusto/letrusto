@@ -6,6 +6,12 @@ import { useRouter } from "next/navigation";
 export default function AIShoppingAssistant() {
   const [query, setQuery] = useState("");
   const router = useRouter();
+  const popularQuestions = [
+    "Best phone under ₹30,000",
+    "Best laptop for Python programming",
+    "Compare iPhone vs Samsung",
+    "Best camera for travel",
+  ];
 
   const handleAskAI = () => {
     if (!query.trim()) return;
@@ -53,23 +59,19 @@ export default function AIShoppingAssistant() {
             </h3>
 
             <div className="grid md:grid-cols-2 gap-3">
-
-              <div className="border rounded-xl p-3 cursor-pointer hover:bg-gray-50">
-                Best phone under ₹30,000
-              </div>
-
-              <div className="border rounded-xl p-3 cursor-pointer hover:bg-gray-50">
-                Best laptop for Python programming
-              </div>
-
-              <div className="border rounded-xl p-3 cursor-pointer hover:bg-gray-50">
-                Best headphones for office work
-              </div>
-
-              <div className="border rounded-xl p-3 cursor-pointer hover:bg-gray-50">
-                Best smartwatch for fitness
-              </div>
-
+              {popularQuestions.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => {
+                    setQuery(question);
+                    router.push(`/ai?q=${encodeURIComponent(question)}`);
+                  }}
+                  className="w-full border rounded-xl p-3 text-left cursor-pointer transition hover:bg-gray-50"
+                >
+                  {question}
+                </button>
+              ))}
             </div>
           </div>
 

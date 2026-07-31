@@ -7,6 +7,7 @@ import ProductImageGallery from "@/components/ProductImageGallery";
 import ProductReviews from "@/components/ProductReviews";
 import RecentlyViewedProducts from "@/components/RecentlyViewedProducts";
 import { categoryLabels } from "@/lib/products";
+import { getAIBuyingGuide, getAIReviewSummary } from "@/services/ai.service";
 import { getAllProducts, getProductById, getRelatedProductsByProductId } from "@/services/product.service";
 
 export default async function ProductPage({
@@ -18,7 +19,11 @@ export default async function ProductPage({
   const catalog = await getAllProducts();
   const fallbackProduct = catalog[0];
   const product = (await getProductById(id)) ?? fallbackProduct;
-  const relatedProducts = await getRelatedProductsByProductId(product.id, 4);
+  const [relatedProducts, aiReviewSummary, aiBuyingGuide] = await Promise.all([
+    getRelatedProductsByProductId(product.id, 4),
+    getAIReviewSummary(product.id),
+    getAIBuyingGuide(product.id, 3),
+  ]);
 
   return (
     <main className="min-h-screen bg-gray-50 p-10">
@@ -208,7 +213,13 @@ export default async function ProductPage({
         </div>
 
         <div className="mt-12">
-          <ProductReviews overallRating={product.rating} reviewSummary={product.reviewSummary} reviews={product.reviews} />
+          <ProductReviews
+            overallRating={product.rating}
+            reviewSummary={product.reviewSummary}
+            reviews={product.reviews}
+            aiReviewInsights={aiReviewSummary}
+            aiBuyingGuide={aiBuyingGuide}
+          />
         </div>
 
         <section className="mt-16 space-y-6">
