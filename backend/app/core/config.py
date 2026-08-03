@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,7 @@ def _normalise_db_url(url: str) -> str:
 
 
 class Settings(BaseSettings):
+    # env_file is only read when .env exists; real env vars always take precedence
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     APP_NAME: str = "LeTrusto Backend"
@@ -43,4 +45,19 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     s = Settings()
     s.DATABASE_URL = _normalise_db_url(s.DATABASE_URL)
+
+    # Crash immediately with a clear message if DATABASE_URL was never configured
+    if "localhost" in s.DATABASE_URL or "127.0.0.1" in s.DATABASE_URL:
+        env_val = os.environ.get("DATABASE_URL", "<not set>")
+        raise RuntimeError(
+            f"\n\n"
+            f"=================================================================\n"
+            f"FATAL: DATABASE_URL is pointing to localhost.\n"
+            f"  Env var DATABASE_URL = {env_val}\n"
+            f"  Resolved DATABASE_URL = {s.DATABASE_URL}\n"
+            f"\n"
+            f"  Fix: In Railway → your service → Variables, add:\n"
+            f"    DATABASE_URL = (copy from the PostgreSQL service plugin)\n"
+            f"=================================================================\n"
+        )
     return s
