@@ -22,5 +22,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy all backend application code
 COPY backend/ .
 
-# PORT is injected by Railway; run migrations then start server
-CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Make startup script executable
+RUN chmod +x start.sh
+
+CMD ["sh", "start.sh"]
