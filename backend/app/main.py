@@ -55,16 +55,12 @@ app.add_middleware(
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
-
-@app.on_event("startup")
-async def _log_routes() -> None:
-    routes = sorted(
-        [f"{sorted(r.methods)[0]} {r.path}" for r in app.routes if hasattr(r, "methods") and r.methods],
-        key=lambda x: x.split(" ", 1)[1],
-    )
-    print(f"[LeTrusto] {len(routes)} routes registered:", flush=True)
-    for r in routes:
-        print(f"  {r}", flush=True)
+# Print routes at module load time (not as startup event — avoids uvicorn startup hang)
+_routes = sorted(
+    [f"{sorted(r.methods)[0]} {r.path}" for r in app.routes if hasattr(r, "methods") and r.methods],
+    key=lambda x: x.split(" ", 1)[1],
+)
+print(f"[LeTrusto] {len(_routes)} routes registered", flush=True)
 
 
 @app.get("/", include_in_schema=False)
