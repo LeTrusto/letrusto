@@ -32,8 +32,12 @@ class ProductReviewDTO(BaseModel):
 
 
 class ProductBuyLinkDTO(BaseModel):
-    label: Literal["Amazon", "Flipkart", "Croma", "Reliance Digital"]
+    id: int = 0
+    label: str
     href: str
+    retailer_type: str = "marketplace"
+    is_affiliate: bool = True
+    click_count: int = 0
 
 
 class ProductDTO(BaseModel):

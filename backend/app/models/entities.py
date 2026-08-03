@@ -221,8 +221,34 @@ class ProductBuyLink(Base):
     product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
     label: Mapped[str] = mapped_column(String(60), nullable=False)
     href: Mapped[str] = mapped_column(Text, nullable=False)
+    retailer_type: Mapped[str] = mapped_column(String(40), nullable=False, default="marketplace")
+    is_affiliate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    click_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     product: Mapped[Product] = relationship(back_populates="buy_links")
+
+
+# ── Phase 3: Content Engine ───────────────────────────────────────────────────
+
+
+class Article(Base):
+    __tablename__ = "articles"
+    __table_args__ = (Index("ix_articles_slug", "slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    slug: Mapped[str] = mapped_column(String(200), unique=True, nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    excerpt: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(String(80), nullable=False, default="guide")
+    meta_title: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    meta_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    view_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class ProductSimilarity(Base):

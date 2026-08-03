@@ -1,7 +1,9 @@
 from app.api.v1.endpoints import (
     admin,
+    affiliate,
     ai,
     analytics,
+    articles,
     auth,
     categories,
     compare,
@@ -17,20 +19,9 @@ from app.api.v1.endpoints import (
 )
 
 __all__ = [
-    "admin",
-    "ai",
-    "analytics",
-    "auth",
-    "categories",
-    "compare",
-    "deals",
-    "favorites",
-    "health",
-    "notifications",
-    "products",
-    "recommendations",
-    "search",
-    "support",
-    "users",
+    "admin", "affiliate", "ai", "analytics", "articles",
+    "auth", "categories", "compare", "deals", "favorites",
+    "health", "notifications", "products", "recommendations",
+    "search", "support", "users",
 ]
 

@@ -46,8 +46,8 @@ def get_settings() -> Settings:
     s = Settings()
     s.DATABASE_URL = _normalise_db_url(s.DATABASE_URL)
 
-    # Crash immediately with a clear message if DATABASE_URL was never configured
-    if "localhost" in s.DATABASE_URL or "127.0.0.1" in s.DATABASE_URL:
+    # Only fail loudly in production — localhost is valid for local development
+    if s.APP_ENV == "production" and ("localhost" in s.DATABASE_URL or "127.0.0.1" in s.DATABASE_URL):
         env_val = os.environ.get("DATABASE_URL", "<not set>")
         raise RuntimeError(
             f"\n\n"

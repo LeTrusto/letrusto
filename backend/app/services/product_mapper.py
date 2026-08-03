@@ -79,7 +79,14 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
         ],
         reviewSummary=product.review_summary,
         buyLinks=[
-            ProductBuyLinkDTO(label=item.label, href=item.href)
+            ProductBuyLinkDTO(
+                id=item.id,
+                label=item.label,
+                href=item.href,
+                retailer_type=item.retailer_type,
+                is_affiliate=item.is_affiliate,
+                click_count=item.click_count,
+            )
             for item in sorted(product.buy_links, key=lambda item: item.label)
         ],
         similarProductIds=similar_slugs or [],

@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 
 import ProductCard from "@/components/ProductCard";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
@@ -10,11 +12,29 @@ import { categoryLabels } from "@/lib/products";
 import { getAIBuyingGuide, getAIReviewSummary } from "@/services/ai.service";
 import { getAllProducts, getProductById, getRelatedProductsByProductId } from "@/services/product.service";
 
-export default async function ProductPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const product = await getProductById(id);
+  if (!product) return { title: "Product Not Found" };
+  const title = `${product.name} Review — AI Score ${product.aiScore}/100 | LeTrusto`;
+  const description = `${product.name} by ${product.brand}. Price: ${product.price}. AI Score: ${product.aiScore}/100. ${product.aiSummary.slice(0, 120)}`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: product.image || "/images/og-default.png" }],
+      type: "website",
+    },
+    twitter: { card: "summary_large_image", title, description },
+    alternates: { canonical: `https://letrusto.com/products/${product.id}` },
+  };
+}
+
+export default async function ProductPage({ params }: Props) {
   const { id } = await params;
   const catalog = await getAllProducts();
   const fallbackProduct = catalog[0];
@@ -25,8 +45,43 @@ export default async function ProductPage({
     getAIBuyingGuide(product.id, 3),
   ]);
 
+  // JSON-LD Product schema for Google rich results
+  const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description,
+    brand: { "@type": "Brand", name: product.brand },
+    image: product.images,
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "INR",
+      price: Number(product.priceValue),
+      availability: product.availability === "In Stock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: Number(product.rating).toFixed(1),
+      bestRating: "5",
+      reviewCount: product.reviews.length || 1,
+    },
+  };
+
+  // Breadcrumb schema
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://letrusto.com" },
+      { "@type": "ListItem", position: 2, name: categoryLabels[product.category] ?? product.category, item: `https://letrusto.com/search?category=${product.category}` },
+      { "@type": "ListItem", position: 3, name: product.name, item: `https://letrusto.com/products/${product.id}` },
+    ],
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 p-10">
+      <Script id="product-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
+      <Script id="breadcrumb-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <div className="max-w-6xl mx-auto">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.ai.providers.factory import build_llm_provider
 from app.core.config import get_settings
 from app.core.exceptions import UnauthorizedError
-from app.db.session import get_db
+from app.db.session import SessionLocal, get_db  # noqa: F401 — re-exported for endpoints
 from app.models.entities import User
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.product_repository import ProductRepository

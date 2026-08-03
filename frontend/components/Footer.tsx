@@ -3,6 +3,7 @@ import Link from "next/link";
 const FOOTER_LINKS = {
   Product: [
     { label: "AI Advisor", href: "/ai" },
+    { label: "Buying Guides", href: "/articles" },
     { label: "Browse Products", href: "/search" },
     { label: "Compare", href: "/compare" },
     { label: "Deals Centre", href: "/deals" },

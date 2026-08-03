@@ -50,8 +50,12 @@ export type ProductReview = {
 };
 
 export type ProductBuyLink = {
-  label: "Amazon" | "Flipkart" | "Croma" | "Reliance Digital";
+  id?: number;
+  label: string;
   href: string;
+  retailer_type?: string;
+  is_affiliate?: boolean;
+  click_count?: number;
 };
 
 export type Product = {
