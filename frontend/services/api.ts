@@ -12,7 +12,11 @@ export const IS_API_CONFIGURED =
 // Log data-source once at module init (client-side only)
 if (typeof window !== "undefined") {
 	if (IS_API_CONFIGURED) {
-		console.info(`[LeTrusto] Data source: PostgreSQL via ${API_BASE_URL}`);
+		console.info(`[LeTrusto] Data source: PostgreSQL`);
+		console.info(`[LeTrusto] API_BASE_URL = "${API_BASE_URL}"`);
+		console.info(`[LeTrusto] Sample URL: "${API_BASE_URL}/products/metadata"`);
+		console.info(`[LeTrusto] Sample URL: "${API_BASE_URL}/products/collections/home"`);
+		console.info(`[LeTrusto] Expected: these URLs must return HTTP 200`);
 	} else {
 		console.warn("[LeTrusto] Data source: Local mock data (set NEXT_PUBLIC_API_BASE_URL to connect to backend)");
 	}
@@ -58,6 +62,7 @@ export async function apiRequest<T>(
 	});
 
 	if (!response.ok) {
+		console.error(`[LeTrusto] ${response.status} ${response.statusText} → ${endpoint}`);
 		throw new Error(`API request failed (${response.status}) for ${endpoint}`);
 	}
 
