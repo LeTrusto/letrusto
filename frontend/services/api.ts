@@ -72,5 +72,13 @@ export async function withApiFallback<T>(
 		return fallback();
 	}
 
-	return request();
+	try {
+		return await request();
+	} catch (error) {
+		// API unreachable at build time or runtime — fall back to mock data gracefully
+		if (typeof window === "undefined") {
+			console.warn("[LeTrusto] API unreachable at build time, using fallback data");
+		}
+		return fallback();
+	}
 }
