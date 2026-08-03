@@ -1,15 +1,19 @@
 "use client";
 
-import { Heart, LayoutGrid, Search, Sparkles, Scale } from "lucide-react";
+import { Bell, Heart, LayoutGrid, LogIn, LogOut, Search, Sparkles, Scale, LayoutDashboard, Tag, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
+import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 
 export default function Navbar() {
   const { favoriteIds } = useFavorites();
   const pathname = usePathname();
+  const { user, isLoading, logout } = useAuth();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const navItemClass =
     "inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[15px] font-semibold tracking-[0.01em] text-slate-700 transition hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 hover:text-purple-700";
@@ -61,6 +65,11 @@ export default function Navbar() {
             AI Assistant
           </Link>
 
+          <Link href="/deals" className={`${navItemClass} ${pathname === "/deals" ? activeNavItemClass : ""}`}>
+            <Tag className="h-4 w-4" />
+            Deals
+          </Link>
+
           <Link href="/favorites" className={`${navItemClass} ${pathname === "/favorites" ? activeNavItemClass : ""}`}>
             <Heart className="h-4 w-4" />
             Favorites
@@ -88,6 +97,56 @@ export default function Navbar() {
           >
             Ask AI
           </Link>
+
+          {!isLoading && (
+            user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  className="flex items-center gap-2 rounded-xl border border-purple-200 bg-white px-4 py-2.5 text-sm font-semibold text-purple-700 transition hover:bg-purple-50"
+                >
+                  <User className="h-4 w-4" />
+                  <span className="max-w-[120px] truncate">{user.full_name || user.email}</span>
+                </button>
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-12 z-50 min-w-[180px] rounded-2xl border border-gray-100 bg-white py-2 shadow-xl">
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-purple-50 hover:text-purple-700"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/notifications"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-purple-50 hover:text-purple-700"
+                    >
+                      <Bell className="h-4 w-4" />
+                      Notifications
+                    </Link>
+                    <hr className="my-1 border-gray-100" />
+                    <button
+                      onClick={() => { setUserMenuOpen(false); void logout(); }}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-2 rounded-xl border border-purple-200 bg-white px-4 py-2.5 text-sm font-semibold text-purple-700 transition hover:bg-purple-50"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Link>
+            )
+          )}
         </div>
       </div>
     </header>

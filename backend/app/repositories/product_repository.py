@@ -10,10 +10,14 @@ class ProductRepository:
         self.db = db
 
     @staticmethod
+    def _category_load_options():
+        return selectinload(Product.category).selectinload(Category.parent)
+
+    @staticmethod
     def _product_load_options() -> tuple:
         return (
             selectinload(Product.brand),
-            selectinload(Product.category),
+            selectinload(Product.category).selectinload(Category.parent),
             selectinload(Product.images),
             selectinload(Product.specifications),
             selectinload(Product.features),
@@ -49,10 +53,21 @@ class ProductRepository:
         stmt: Select = select(Product).join(Product.brand).join(Product.category).options(*self._product_load_options())
 
         if query.category != "all":
-            stmt = stmt.where(Category.slug == query.category)
+            # Match by category slug OR its parent slug (so "electronics" returns all electronics children)
+            parent_sub = select(Category.id).where(Category.slug == query.category)
+            stmt = stmt.where(
+                (Category.slug == query.category) | (Category.parent_id.in_(parent_sub))
+            )
+
+        if query.subcategory:
+            stmt = stmt.where(Category.slug == query.subcategory)
+
+        if query.series:
+            stmt = stmt.where(func.lower(Product.series).contains(query.series.lower()))
 
         if query.brand:
-            stmt = stmt.where(func.lower(Brand.name) == query.brand.lower())
+            # Partial case-insensitive brand match so "apple" finds "Apple"
+            stmt = stmt.where(func.lower(Brand.name).contains(query.brand.lower()))
 
         if query.price == "under-30000":
             stmt = stmt.where(Product.price_value < 30000)
@@ -90,7 +105,21 @@ class ProductRepository:
         return list(self.db.scalars(stmt).all())
 
     def get_categories(self) -> list[Category]:
-        return list(self.db.scalars(select(Category).order_by(Category.name.asc())).all())
+        return list(self.db.scalars(select(Category).order_by(Category.position.asc(), Category.name.asc())).all())
+
+    def get_top_level_categories(self) -> list[Category]:
+        return list(
+            self.db.scalars(
+                select(Category)
+                .where(Category.parent_id.is_(None))
+                .options(selectinload(Category.children))
+                .order_by(Category.position.asc())
+            ).all()
+        )
 
     def get_brands(self) -> list[str]:
         return list(self.db.scalars(select(Brand.name).order_by(Brand.name.asc())).all())
+
+    def get_by_id(self, product_id) -> Product | None:
+        stmt = select(Product).options(*self._product_load_options()).where(Product.id == product_id)
+        return self.db.scalars(stmt).unique().first()

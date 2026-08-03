@@ -17,6 +17,7 @@ from app.services.product_mapper import to_product_dto
 
 
 CATEGORY_LABELS = {
+    # Existing leaf categories
     "phone": "Phone",
     "laptop": "Laptop",
     "headphones": "Headphones",
@@ -27,6 +28,24 @@ CATEGORY_LABELS = {
     "gaming": "Gaming",
     "tablet": "Tablet",
     "camera": "Camera",
+    # Phase 6.1 top-level
+    "electronics": "Electronics",
+    "home-kitchen": "Home & Kitchen",
+    "beauty": "Beauty",
+    "baby-care": "Baby Care",
+    "pet-care": "Pet Care",
+    "fitness": "Fitness",
+    "furniture": "Furniture",
+    # Phase 6.1 sub-categories
+    "smartphones": "Smartphones",
+    "laptops-ultrabooks": "Laptops",
+    "tablets-ipads": "Tablets",
+    "earbuds-tws": "Earbuds",
+    "smartwatches-bands": "Smartwatches",
+    "digital-cameras": "Cameras",
+    "bluetooth-speakers": "Speakers",
+    "monitors-displays": "Monitors",
+    "televisions-oleds": "Televisions",
 }
 
 CATEGORY_PLURAL_LABELS = {
@@ -40,6 +59,17 @@ CATEGORY_PLURAL_LABELS = {
     "gaming": "Gaming",
     "tablet": "Tablets",
     "camera": "Cameras",
+    "electronics": "Electronics",
+    "home-kitchen": "Home & Kitchen",
+    "smartphones": "Smartphones",
+    "laptops-ultrabooks": "Laptops & Ultrabooks",
+    "tablets-ipads": "Tablets & iPads",
+    "earbuds-tws": "Earbuds & TWS",
+    "smartwatches-bands": "Smartwatches & Bands",
+    "digital-cameras": "Cameras",
+    "bluetooth-speakers": "Speakers",
+    "monitors-displays": "Monitors",
+    "televisions-oleds": "Televisions",
 }
 
 
@@ -188,22 +218,28 @@ class ProductService:
         score = 0.0
 
         haystack = " ".join(
-            [
+            filter(None, [
                 product.name.lower(),
                 product.description.lower(),
                 product.brand.name.lower(),
                 product.category.slug.lower(),
+                product.series.lower() if product.series else None,
+                product.model_name.lower() if product.model_name else None,
                 " ".join(item.value.lower() for item in product.tags),
                 " ".join(item.value.lower() for item in product.features),
-            ]
+            ])
         )
 
         if normalized in product.name.lower():
             score += 60
         if normalized in product.brand.name.lower():
             score += 24
-        if normalized in product.category.slug.lower():
+        if product.series and normalized in product.series.lower():
             score += 20
+        if product.model_name and normalized in product.model_name.lower():
+            score += 18
+        if normalized in product.category.slug.lower():
+            score += 16
 
         for token in tokens:
             if token in haystack:

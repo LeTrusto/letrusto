@@ -46,6 +46,7 @@ class ProductDTO(BaseModel):
     images: list[str]
     fallbackImage: str
     category: str
+    parentCategory: str | None = None
     availability: str
     description: str
     features: list[str]
@@ -58,6 +59,13 @@ class ProductDTO(BaseModel):
     bestFor: list[str]
     notRecommendedFor: list[str]
     tags: list[str]
+    # Phase 6.1 catalog fields
+    series: str | None = None
+    modelName: str | None = None
+    variant: str | None = None
+    storage: str | None = None
+    ram: str | None = None
+    color: str | None = None
     priceHistory: list[ProductPriceHistoryDTO]
     reviews: list[ProductReviewDTO]
     reviewSummary: str
@@ -69,6 +77,8 @@ class ProductSearchQuery(BaseModel):
     q: str = ""
     sort: ProductSortOption = "relevance"
     category: str = "all"
+    subcategory: str | None = None
+    series: str | None = None
     price: ProductPriceFilter = "all"
     rating: ProductRatingFilter = "all"
     aiScore: ProductAiScoreFilter = "all"

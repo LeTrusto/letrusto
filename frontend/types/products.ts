@@ -8,7 +8,26 @@ export type ProductCategory =
   | "washing-machine"
   | "gaming"
   | "tablet"
-  | "camera";
+  | "camera"
+  // Phase 6.1 top-level
+  | "electronics"
+  | "home-kitchen"
+  | "beauty"
+  | "baby-care"
+  | "pet-care"
+  | "fitness"
+  | "furniture"
+  // Phase 6.1 sub-categories
+  | "smartphones"
+  | "laptops-ultrabooks"
+  | "tablets-ipads"
+  | "earbuds-tws"
+  | "smartwatches-bands"
+  | "digital-cameras"
+  | "bluetooth-speakers"
+  | "monitors-displays"
+  | "televisions-oleds"
+  | (string & {});  // allow future slugs without breaking type checks
 
 export type ProductAvailability = "In Stock" | "Limited Stock" | "Pre-order";
 
@@ -45,6 +64,7 @@ export type Product = {
   images: string[];
   fallbackImage: string;
   category: ProductCategory;
+  parentCategory?: string | null;
   availability: ProductAvailability;
   description: string;
   features: string[];
@@ -62,6 +82,13 @@ export type Product = {
   reviewSummary: string;
   buyLinks: ProductBuyLink[];
   similarProductIds: string[];
+  // Phase 6.1 catalog fields
+  series?: string | null;
+  modelName?: string | null;
+  variant?: string | null;
+  storage?: string | null;
+  ram?: string | null;
+  color?: string | null;
 };
 
 export type ProductSortOption =
@@ -101,6 +128,8 @@ export type ProductQueryOptions = {
   q?: string;
   sortBy?: ProductSortOption;
   category?: ProductFilterState["category"];
+  subcategory?: string;
+  series?: string;
   price?: ProductPriceFilter;
   rating?: ProductRatingFilter;
   aiScore?: ProductAiScoreFilter;

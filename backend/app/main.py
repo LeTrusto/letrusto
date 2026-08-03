@@ -4,13 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
 from app.core.config import get_settings
+from app.core.rate_limit import RateLimitMiddleware
 from app.core.security import TokenPayloadError
 
 settings = get_settings()
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version="1.0.0",
+    version="5.0.0",
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -22,6 +23,12 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+    RateLimitMiddleware,
+    default_limit=settings.RATE_LIMIT_DEFAULT,
+    auth_limit=settings.RATE_LIMIT_AUTH,
 )
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)

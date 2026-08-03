@@ -29,6 +29,8 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
     images = [item.url for item in sorted(product.images, key=lambda item: item.position)]
     fallback_image = images[0] if images else ""
 
+    parent_category = product.category.parent.slug if product.category.parent else None
+
     return ProductDTO(
         id=product.slug,
         name=product.name,
@@ -39,6 +41,7 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
         images=images,
         fallbackImage=fallback_image,
         category=product.category.slug,
+        parentCategory=parent_category,
         availability=product.availability,
         description=product.description,
         features=[item.value for item in sorted(product.features, key=lambda item: item.position)],
@@ -80,4 +83,10 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
             for item in sorted(product.buy_links, key=lambda item: item.label)
         ],
         similarProductIds=similar_slugs or [],
+        series=product.series,
+        modelName=product.model_name,
+        variant=product.variant,
+        storage=product.storage,
+        ram=product.ram,
+        color=product.color,
     )

@@ -76,7 +76,8 @@ function applyAdvancedFilters(productsToFilter: Product[], options: ProductQuery
 	const normalizedBrand = options.brand?.toLowerCase().trim();
 
 	return productsToFilter.filter((product) => {
-		if (normalizedBrand && product.brand.toLowerCase() !== normalizedBrand) {
+		// Partial brand match (consistent with backend ILIKE)
+		if (normalizedBrand && !product.brand.toLowerCase().includes(normalizedBrand)) {
 			return false;
 		}
 
@@ -165,6 +166,8 @@ export async function getProductSearch(options: ProductQueryOptions): Promise<Pa
 					q: options.q,
 					sort: options.sortBy,
 					category: options.category,
+					subcategory: options.subcategory,
+					series: options.series,
 					price: options.price,
 					rating: options.rating,
 					aiScore: options.aiScore,
@@ -288,8 +291,8 @@ export async function getCatalogMetadata() {
 				brands: string[];
 			}>("/products/metadata"),
 		() => ({
-			categoryLabels,
-			categoryPluralLabels,
+			categoryLabels: categoryLabels as Record<string, string>,
+			categoryPluralLabels: categoryPluralLabels as Record<string, string>,
 			productSpotlightBadges,
 			brands: Array.from(new Set(products.map((product) => product.brand))).sort((left, right) =>
 				left.localeCompare(right)

@@ -1,3 +1,36 @@
-from app.api.v1.endpoints import auth, categories, compare, favorites, health, products, recommendations, search
+from app.api.v1.endpoints import (
+    admin,
+    ai,
+    analytics,
+    auth,
+    categories,
+    compare,
+    deals,
+    favorites,
+    health,
+    notifications,
+    products,
+    recommendations,
+    search,
+    support,
+    users,
+)
 
-__all__ = ["auth", "categories", "compare", "favorites", "health", "products", "recommendations", "search"]
+__all__ = [
+    "admin",
+    "ai",
+    "analytics",
+    "auth",
+    "categories",
+    "compare",
+    "deals",
+    "favorites",
+    "health",
+    "notifications",
+    "products",
+    "recommendations",
+    "search",
+    "support",
+    "users",
+]
+

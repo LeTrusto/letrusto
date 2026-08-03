@@ -9,6 +9,15 @@ export const IS_API_CONFIGURED =
 	Boolean(process.env.NEXT_PUBLIC_API_BASE_URL?.trim()) ||
 	Boolean(process.env.API_BASE_URL?.trim());
 
+// Log data-source once at module init (client-side only)
+if (typeof window !== "undefined") {
+	if (IS_API_CONFIGURED) {
+		console.info(`[LeTrusto] Data source: PostgreSQL via ${API_BASE_URL}`);
+	} else {
+		console.warn("[LeTrusto] Data source: Local mock data (set NEXT_PUBLIC_API_BASE_URL to connect to backend)");
+	}
+}
+
 function normalizePath(path: string) {
 	if (!path) {
 		return "/";

@@ -14,12 +14,20 @@ class Settings(BaseSettings):
 
     JWT_SECRET_KEY: str = "change-this-secret-for-production"
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     CORS_ORIGINS: str = "http://localhost:3000"
 
     AI_PROVIDER: str = "heuristic"
     AI_SESSION_TTL_MINUTES: int = 120
+
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
+    # Rate limiting (requests per minute per IP)
+    RATE_LIMIT_AUTH: int = 10
+    RATE_LIMIT_DEFAULT: int = 120
 
 
 @lru_cache
