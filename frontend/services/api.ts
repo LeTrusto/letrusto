@@ -1,9 +1,14 @@
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 
-export const API_BASE_URL =
+// Strip any trailing /api/v1 from the env var — the prefix is added automatically below
+const _rawBase = (
 	process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
 	process.env.API_BASE_URL?.trim() ||
-	DEFAULT_API_BASE_URL;
+	DEFAULT_API_BASE_URL
+).replace(/\/api\/v1\/?$/, "");
+
+export const API_BASE_URL = _rawBase;
+const API_PREFIX = "/api/v1";
 
 export const IS_API_CONFIGURED =
 	Boolean(process.env.NEXT_PUBLIC_API_BASE_URL?.trim()) ||
@@ -14,20 +19,16 @@ if (typeof window !== "undefined") {
 	if (IS_API_CONFIGURED) {
 		console.info(`[LeTrusto] Data source: PostgreSQL`);
 		console.info(`[LeTrusto] API_BASE_URL = "${API_BASE_URL}"`);
-		console.info(`[LeTrusto] Sample URL: "${API_BASE_URL}/products/metadata"`);
-		console.info(`[LeTrusto] Sample URL: "${API_BASE_URL}/products/collections/home"`);
-		console.info(`[LeTrusto] Expected: these URLs must return HTTP 200`);
+		console.info(`[LeTrusto] Final URL example: "${API_BASE_URL}${API_PREFIX}/products/metadata"`);
 	} else {
 		console.warn("[LeTrusto] Data source: Local mock data (set NEXT_PUBLIC_API_BASE_URL to connect to backend)");
 	}
 }
 
-function normalizePath(path: string) {
-	if (!path) {
-		return "/";
-	}
-
-	return path.startsWith("/") ? path : `/${path}`;
+function normalizePath(path: string): string {
+	const p = path.startsWith("/") ? path : `/${path}`;
+	// Always prepend /api/v1 — works whether NEXT_PUBLIC_API_BASE_URL has it or not
+	return p.startsWith(API_PREFIX) ? p : `${API_PREFIX}${p}`;
 }
 
 export function buildQueryString(
@@ -52,14 +53,25 @@ export async function apiRequest<T>(
 	init?: RequestInit
 ): Promise<T> {
 	const endpoint = `${API_BASE_URL}${normalizePath(path)}`;
-	const response = await fetch(endpoint, {
-		...init,
-		headers: {
-			"Content-Type": "application/json",
-			...(init?.headers ?? {}),
-		},
-		next: { revalidate: 60 },
-	});
+
+	// Abort after 8s so SSG/ISR never hangs the build
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+	let response: Response;
+	try {
+		response = await fetch(endpoint, {
+			...init,
+			signal: controller.signal,
+			headers: {
+				"Content-Type": "application/json",
+				...(init?.headers ?? {}),
+			},
+			next: { revalidate: 60 },
+		});
+	} finally {
+		clearTimeout(timeoutId);
+	}
 
 	if (!response.ok) {
 		console.error(`[LeTrusto] ${response.status} ${response.statusText} → ${endpoint}`);
@@ -79,7 +91,7 @@ export async function withApiFallback<T>(
 
 	try {
 		return await request();
-	} catch (error) {
+	} catch {
 		// API unreachable at build time or runtime — fall back to mock data gracefully
 		if (typeof window === "undefined") {
 			console.warn("[LeTrusto] API unreachable at build time, using fallback data");
