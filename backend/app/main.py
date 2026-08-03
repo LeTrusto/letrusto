@@ -9,6 +9,20 @@ from app.core.security import TokenPayloadError
 
 settings = get_settings()
 
+# Mask password in logged URL for debugging Railway startup
+_db_url_display = settings.DATABASE_URL
+try:
+    from urllib.parse import urlparse, urlunparse
+    _p = urlparse(_db_url_display)
+    if _p.password:
+        _db_url_display = _db_url_display.replace(_p.password, "****")
+except Exception:
+    pass
+
+print(f"[LeTrusto] APP_ENV={settings.APP_ENV}")
+print(f"[LeTrusto] DATABASE_URL={_db_url_display}")
+print(f"[LeTrusto] CORS_ORIGINS={settings.CORS_ORIGINS}")
+
 app = FastAPI(
     title=settings.APP_NAME,
     version="5.0.0",
