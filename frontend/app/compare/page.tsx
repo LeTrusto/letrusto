@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Crown, TrendingDown } from "lucide-react";
 
 import { getAIComparisonSummary } from "@/services/ai.service";
 import { getAllProducts, getCompareProducts } from "@/services/product.service";
@@ -76,52 +77,66 @@ export default async function ComparePage({
           </div>
         </form>
 
-        <div className="grid md:grid-cols-2 gap-10">
+        <div className="grid md:grid-cols-2 gap-6">
 
-          {[firstProduct, secondProduct].map((product) => (
+          {[firstProduct, secondProduct].map((product) => {
+            const isWinner = winner.id === product.id;
+            const isBestValue = valueWinner.id === product.id;
+            return (
             <div
               key={product.name}
-              className="bg-white rounded-2xl shadow-lg p-8"
+              className={`relative rounded-2xl border-2 bg-white p-6 shadow-sm transition ${isWinner ? "border-emerald-400 shadow-emerald-100" : "border-gray-100"}`}
             >
+              {isWinner && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="flex items-center gap-1.5 rounded-full bg-emerald-500 px-4 py-1 text-sm font-bold text-white shadow-lg">
+                    <Crown className="h-4 w-4" /> Best Overall
+                  </span>
+                </div>
+              )}
+              {!isWinner && isBestValue && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="flex items-center gap-1.5 rounded-full bg-blue-500 px-4 py-1 text-sm font-bold text-white shadow-lg">
+                    <TrendingDown className="h-4 w-4" /> Best Value
+                  </span>
+                </div>
+              )}
               <Image
                 src={product.image}
                 alt={product.name}
-                width={300}
-                height={300}
+                width={240}
+                height={200}
                 unoptimized={product.image.startsWith("/images/products/")}
-                className="mx-auto"
+                className="mx-auto h-40 w-auto object-contain"
               />
-
-              <h2 className="text-2xl font-bold mt-6 text-center">
-                {product.name}
-              </h2>
-
-              <div className="text-center text-3xl font-bold text-purple-600 mt-2">
-                {product.price}
+              <h2 className="mt-4 text-center text-xl font-bold text-gray-900">{product.name}</h2>
+              <p className="text-center text-sm text-gray-500">{product.brand}</p>
+              <div className="mt-2 text-center text-2xl font-black text-purple-600">{product.price}</div>
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-xl bg-purple-50 px-2 py-2">
+                  <div className="text-xs font-semibold text-purple-500">AI Score</div>
+                  <div className="text-lg font-black text-purple-700">{product.aiScore}</div>
+                </div>
+                <div className="rounded-xl bg-amber-50 px-2 py-2">
+                  <div className="text-xs font-semibold text-amber-500">Rating</div>
+                  <div className="text-lg font-black text-amber-700">{Number(product.rating).toFixed(1)}</div>
+                </div>
+                <div className="rounded-xl bg-emerald-50 px-2 py-2">
+                  <div className="text-xs font-semibold text-emerald-500">Pros</div>
+                  <div className="text-lg font-black text-emerald-700">{product.pros.length}</div>
+                </div>
               </div>
-
-              <div className="mt-8 space-y-4">
+              <ul className="mt-4 space-y-1.5">
                 {product.features.slice(0, 4).map((feature) => (
-                  <div key={feature} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-sm text-purple-700">✓</span>
-                    <span>{feature}</span>
-                  </div>
+                  <li key={feature} className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs text-purple-600">✓</span>
+                    {feature}
+                  </li>
                 ))}
-
-                <div className="flex justify-between font-bold text-purple-700">
-                  <span>AI Score</span>
-                  <span>{product.aiScore}/100</span>
-                </div>
-
-                <div className="flex justify-between text-gray-600">
-                  <span>Rating</span>
-                  <span>{product.rating.toFixed(1)} / 5</span>
-                </div>
-
-              </div>
-
+              </ul>
             </div>
-          ))}
+            );
+          })}
 
         </div>
 

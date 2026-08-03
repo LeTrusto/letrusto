@@ -89,44 +89,63 @@ export default async function ProductPage({
             </div>
 
             <div className="rounded-[2rem] bg-white p-8 shadow-lg shadow-purple-100/40">
-              <div className="mb-5 flex items-end justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Buy Options</h2>
-                  <p className="mt-2 text-gray-500">Placeholder links for marketplace integrations.</p>
-                </div>
-                <div className="rounded-2xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700">
-                  Sticky Buy Panel
-                </div>
-              </div>
-
+              <h2 className="mb-2 text-2xl font-bold text-gray-900">Buy Now</h2>
+              <p className="mb-5 text-sm text-gray-400">Compare prices across retailers before you buy.</p>
               <ProductBuyButtons links={product.buyLinks} />
+              <p className="mt-4 text-center text-xs text-gray-400">
+                * LeTrusto may earn a small affiliate commission at no extra cost to you.
+              </p>
             </div>
           </div>
         </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-[2rem] bg-white p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-gray-900">Pros</h2>
-            <ul className="mt-4 space-y-3 text-gray-600">
+          <div className="rounded-2xl bg-white p-6 shadow-sm border border-emerald-100">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-gray-900">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-sm text-emerald-600">✓</span>
+              Pros
+            </h2>
+            <ul className="mt-4 space-y-3">
               {product.pros.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <span className="text-emerald-500">+</span>
+                <li key={item} className="flex gap-3 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+                  <span className="mt-0.5 text-emerald-500">+</span>
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="rounded-[2rem] bg-white p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-gray-900">Cons</h2>
-            <ul className="mt-4 space-y-3 text-gray-600">
+          <div className="rounded-2xl bg-white p-6 shadow-sm border border-rose-100">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-gray-900">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-100 text-sm text-rose-600">✕</span>
+              Cons
+            </h2>
+            <ul className="mt-4 space-y-3">
               {product.cons.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <span className="text-rose-500">-</span>
+                <li key={item} className="flex gap-3 rounded-xl bg-rose-50 px-4 py-2.5 text-sm text-rose-800">
+                  <span className="mt-0.5 text-rose-400">-</span>
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
+          </div>
+        </div>
+
+        {/* Expert Verdict */}
+        <div className="mt-6 rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 p-6">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-lg">🤖</span>
+            <div>
+              <h2 className="text-lg font-bold text-purple-900">Expert Verdict</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-purple-800">{product.aiSummary}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {product.bestFor.map((item) => (
+                  <span key={item} className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+                    ✓ {item}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 

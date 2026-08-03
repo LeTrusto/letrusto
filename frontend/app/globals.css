@@ -1,15 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7fb;
-  --foreground: #141a2a;
+  --background: #ffffff;
+  --foreground: #111827;
   --surface: #ffffff;
-  --surface-soft: #eef2ff;
-  --brand: #5f2df2;
-  --brand-strong: #4a1ed2;
-  --accent: #ff6b48;
-  --ring: #7a5af8;
-  --shadow-premium: 0 25px 60px rgba(86, 55, 228, 0.14);
+  --surface-soft: #f9fafb;
+  --brand: #7c3aed;
+  --brand-strong: #6d28d9;
+  --accent: #f97316;
+  --ring: #8b5cf6;
 }
 
 @theme inline {
@@ -25,17 +24,10 @@
 }
 
 body {
-  background:
-    radial-gradient(circle at 8% -10%, rgba(152, 118, 255, 0.2), transparent 28%),
-    radial-gradient(circle at 90% 0%, rgba(255, 167, 117, 0.18), transparent 30%),
-    var(--background);
+  background: #ffffff;
   color: var(--foreground);
   font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
   text-rendering: optimizeLegibility;
-}
-
-* {
-  border-color: rgba(104, 117, 245, 0.2);
 }
 
 *:focus-visible {
@@ -44,8 +36,23 @@ body {
 }
 
 .glass-panel {
-  background: color-mix(in srgb, white 86%, transparent);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+}
+
+.premium-shadow {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 37%, #f0f0f0 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
 }
 
 .premium-shadow {
