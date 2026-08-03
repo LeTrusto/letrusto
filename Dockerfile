@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy all backend application code
 COPY backend/ .
 
-# Make startup script executable
-RUN chmod +x start.sh
+# Strip Windows CR from startup script and make executable
+RUN sed -i 's/\r//' start.sh && chmod +x start.sh
 
 CMD ["sh", "start.sh"]
