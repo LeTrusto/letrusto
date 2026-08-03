@@ -1,3 +1,11 @@
+import os
+import sys
+
+# Print raw environment BEFORE any app imports — shows exactly what Railway injects
+_raw_db_url = os.environ.get("DATABASE_URL", "<<NOT SET IN ENVIRONMENT>>")
+print(f"[LeTrusto BOOT] sys.version={sys.version}", flush=True)
+print(f"[LeTrusto BOOT] Raw DATABASE_URL from os.environ = {_raw_db_url[:60] if len(_raw_db_url) > 60 else _raw_db_url}", flush=True)
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware

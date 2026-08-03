@@ -1,3 +1,9 @@
+import os
+import sys
+
+# Print raw env before any app imports so Railway logs show exact DATABASE_URL
+print(f"[Alembic BOOT] Raw DATABASE_URL = {os.environ.get('DATABASE_URL', '<<NOT SET>>')[:60]}", flush=True)
+
 from logging.config import fileConfig
 
 from alembic import context

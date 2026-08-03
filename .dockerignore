@@ -1,0 +1,14 @@
+# Never copy local environment or secrets into the Docker image
+frontend/
+**/.env
+**/.env.*
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/*.egg-info/
+**/dist/
+**/build/
+**/.git/
+**/.venv/
+**/node_modules/
