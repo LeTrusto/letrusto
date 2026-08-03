@@ -1,19 +1,26 @@
 export default function ProductCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-3xl border border-purple-100 bg-white p-6 premium-shadow">
-      <div className="h-52 rounded-2xl shimmer" />
-      <div className="mt-5 h-7 w-2/3 rounded-lg shimmer" />
-      <div className="mt-3 h-4 w-full rounded-lg shimmer" />
-      <div className="mt-2 h-4 w-4/5 rounded-lg shimmer" />
-
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="h-16 rounded-2xl shimmer" />
-        <div className="h-16 rounded-2xl shimmer" />
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      {/* Image area */}
+      <div className="p-5">
+        <div className="h-40 rounded-xl shimmer" />
       </div>
-
-      <div className="mt-5 flex gap-3">
-        <div className="h-12 flex-1 rounded-2xl shimmer" />
-        <div className="h-12 flex-1 rounded-2xl shimmer" />
+      {/* Content */}
+      <div className="px-4 pb-4">
+        <div className="mb-2.5 flex items-center justify-between">
+          <div className="h-5 w-20 rounded-full shimmer" />
+          <div className="h-5 w-10 rounded-full shimmer" />
+        </div>
+        <div className="h-5 w-3/4 rounded-lg shimmer" />
+        <div className="mt-1.5 h-3.5 w-1/3 rounded-lg shimmer" />
+        <div className="mt-3 flex items-end justify-between gap-2">
+          <div className="h-4 w-24 rounded shimmer" />
+          <div className="h-5 w-16 rounded shimmer" />
+        </div>
+        <div className="mt-4 flex gap-2">
+          <div className="h-10 flex-1 rounded-xl shimmer" />
+          <div className="h-10 w-10 rounded-xl shimmer" />
+        </div>
       </div>
     </div>
   );
