@@ -18,12 +18,22 @@ def list_products(
 
 @router.get("/metadata", response_model=CatalogMetadataResponse)
 def get_metadata(service: ProductService = Depends(get_product_service)) -> CatalogMetadataResponse:
-    return service.get_metadata()
+    import traceback
+    try:
+        return service.get_metadata()
+    except Exception:
+        traceback.print_exc()
+        raise
 
 
 @router.get("/collections/home", response_model=HomeCollectionsResponse)
 def get_home_collections(service: ProductService = Depends(get_product_service)) -> HomeCollectionsResponse:
-    return service.get_home_collections()
+    import traceback
+    try:
+        return service.get_home_collections()
+    except Exception:
+        traceback.print_exc()
+        raise
 
 
 @router.get("/suggestions", response_model=list[str])
