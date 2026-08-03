@@ -34,7 +34,7 @@ print(f"[LeTrusto] CORS_ORIGINS={settings.CORS_ORIGINS}")
 app = FastAPI(
     title=settings.APP_NAME,
     version="5.0.0",
-    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
+    openapi_url="/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -54,6 +54,17 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
+
+@app.on_event("startup")
+async def _log_routes() -> None:
+    routes = sorted(
+        [f"{sorted(r.methods)[0]} {r.path}" for r in app.routes if hasattr(r, "methods") and r.methods],
+        key=lambda x: x.split(" ", 1)[1],
+    )
+    print(f"[LeTrusto] {len(routes)} routes registered:", flush=True)
+    for r in routes:
+        print(f"  {r}", flush=True)
 
 
 @app.get("/", include_in_schema=False)
