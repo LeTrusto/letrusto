@@ -3,6 +3,15 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _normalise_db_url(url: str) -> str:
+    """Ensure the pg8000 driver is used regardless of how Railway injects DATABASE_URL."""
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+pg8000://", 1)
+    elif url.startswith("postgresql://") and "+pg8000" not in url:
+        url = url.replace("postgresql://", "postgresql+pg8000://", 1)
+    return url
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -32,4 +41,6 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    s.DATABASE_URL = _normalise_db_url(s.DATABASE_URL)
+    return s
