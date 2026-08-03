@@ -8,29 +8,41 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/ai`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
   { url: `${BASE_URL}/search`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
   { url: `${BASE_URL}/deals`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
-  { url: `${BASE_URL}/articles`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-  { url: `${BASE_URL}/favorites`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.5 },
+  { url: `${BASE_URL}/articles`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.85 },
   { url: `${BASE_URL}/support`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.4 },
 ];
 
 const CATEGORY_ROUTES: MetadataRoute.Sitemap = [
-  "phone",
-  "laptop",
-  "headphones",
-  "smartwatch",
-  "television",
-  "refrigerator",
-  "washing-machine",
-  "gaming",
-  "tablet",
-  "camera",
+  "smartphones", "laptop", "headphones", "smartwatch",
+  "television", "refrigerator", "washing-machine", "gaming",
+  "tablet", "camera", "web-hosting",
 ].map((slug) => ({
-  url: `${BASE_URL}/search?category=${slug}`,
+  url: `${BASE_URL}/category/${slug}`,
   lastModified: new Date(),
   changeFrequency: "weekly" as const,
-  priority: 0.7,
+  priority: 0.8,
+}));
+
+// 10 launch articles
+const ARTICLE_ROUTES: MetadataRoute.Sitemap = [
+  "best-web-hosting-india-2026",
+  "hostinger-vs-bluehost-india",
+  "best-phone-under-20000-india-2026",
+  "best-laptop-for-students-india-2026",
+  "canva-pro-vs-free-2026",
+  "semrush-vs-ahrefs-india-2026",
+  "best-vpn-for-india-2026",
+  "iphone-16-pro-vs-samsung-s25-ultra",
+  "best-ai-tools-developers-india-2026",
+  "how-ai-helps-choose-right-product",
+].map((slug) => ({
+  url: `${BASE_URL}/articles/${slug}`,
+  lastModified: new Date(),
+  changeFrequency: "monthly" as const,
+  priority: 0.75,
 }));
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [...STATIC_ROUTES, ...CATEGORY_ROUTES];
+  return [...STATIC_ROUTES, ...CATEGORY_ROUTES, ...ARTICLE_ROUTES];
 }
+

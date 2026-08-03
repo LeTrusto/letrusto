@@ -1,3 +1,4 @@
+// Default only used locally when NEXT_PUBLIC_API_BASE_URL is not set
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 
 // Strip any trailing /api/v1 from the env var — the prefix is added automatically below

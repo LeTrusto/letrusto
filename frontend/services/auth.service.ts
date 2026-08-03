@@ -12,7 +12,7 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
       body: JSON.stringify(payload),
     });
   } catch {
-    throw new Error("Cannot reach the server. Make sure the backend is running on http://127.0.0.1:8000");
+    throw new Error("Cannot reach the server. Please check your internet connection.");
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

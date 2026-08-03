@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      images: [{ url: product.image || "/images/og-default.png" }],
+      images: [{ url: product.image || "https://letrusto.com/images/logo/logo.png" }],
       type: "website",
     },
     twitter: { card: "summary_large_image", title, description },
