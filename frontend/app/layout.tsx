@@ -77,6 +77,16 @@ export default function RootLayout({
             },
           }}
         />
+        <SchemaOrg
+          type="Organization"
+          data={{
+            name: "LeTrusto",
+            url: "https://letrusto.com",
+            logo: "https://letrusto.com/images/logo/logo.png",
+            description: "India's AI Buying Advisor. Compare products, get personalised recommendations, and shop smarter.",
+            sameAs: ["https://twitter.com/letrusto", "https://instagram.com/letrusto"],
+          }}
+        />
         <AuthProvider>
           <Navbar />
           {children}

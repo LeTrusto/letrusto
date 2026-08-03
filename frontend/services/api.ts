@@ -15,14 +15,8 @@ export const IS_API_CONFIGURED =
 	Boolean(process.env.API_BASE_URL?.trim());
 
 // Log data-source once at module init (client-side only)
-if (typeof window !== "undefined") {
-	if (IS_API_CONFIGURED) {
-		console.info(`[LeTrusto] Data source: PostgreSQL`);
-		console.info(`[LeTrusto] API_BASE_URL = "${API_BASE_URL}"`);
-		console.info(`[LeTrusto] Final URL example: "${API_BASE_URL}${API_PREFIX}/products/metadata"`);
-	} else {
-		console.warn("[LeTrusto] Data source: Local mock data (set NEXT_PUBLIC_API_BASE_URL to connect to backend)");
-	}
+if (typeof window !== "undefined" && IS_API_CONFIGURED) {
+	console.info(`[LeTrusto] Connected to API: ${API_BASE_URL}`);
 }
 
 function normalizePath(path: string): string {

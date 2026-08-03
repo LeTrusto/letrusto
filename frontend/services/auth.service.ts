@@ -30,7 +30,7 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
       body: JSON.stringify(payload),
     });
   } catch {
-    throw new Error("Cannot reach the server. Make sure the backend is running on http://127.0.0.1:8000");
+    throw new Error("Cannot reach the server. Please check your internet connection and try again.");
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

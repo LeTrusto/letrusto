@@ -38,9 +38,14 @@ def main() -> None:
         seed_phones()
 
         # Seed 3: hosting & SaaS catalog (10 products)
-        print("  [3/3] Seeding hosting & SaaS catalog...", flush=True)
+        print("  [3/4] Seeding hosting & SaaS catalog...", flush=True)
         from scripts.seed_hosting_saas import run as seed_hosting  # type: ignore[import]
         seed_hosting()
+
+        # Seed 4: launch articles (10 buying guides)
+        print("  [4/4] Seeding launch articles...", flush=True)
+        from scripts.seed_articles import run as seed_articles  # type: ignore[import]
+        seed_articles()
 
         # Verify final count
         final = db.execute(select(func.count()).select_from(Product)).scalar() or 0
