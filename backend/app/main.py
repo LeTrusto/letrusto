@@ -56,6 +56,17 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
+@app.get("/", include_in_schema=False)
+def root() -> dict:
+    return {
+        "service": "LeTrusto Backend API",
+        "status": "running",
+        "docs": "/docs",
+        "api_prefix": settings.API_V1_PREFIX,
+        "note": "All endpoints are under /api/v1 — e.g. /api/v1/products/metadata",
+    }
+
+
 @app.exception_handler(TokenPayloadError)
 async def token_payload_error_handler(_: Request, exc: TokenPayloadError) -> JSONResponse:
     return JSONResponse(status_code=401, content={"detail": str(exc)})
