@@ -11,7 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Build context is repo root — copy backend deps first for layer caching
+# PYTHONPATH ensures 'from app.xxx import ...' resolves when alembic/uvicorn run as console scripts
+ENV PYTHONPATH=/app
+
+# Install dependencies first (layer cache)
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
