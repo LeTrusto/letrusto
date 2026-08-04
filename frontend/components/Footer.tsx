@@ -3,7 +3,7 @@ import Link from "next/link";
 const FOOTER_LINKS = {
   Product: [
     { label: "AI Advisor", href: "/ai" },
-    { label: "Buying Guides", href: "/articles" },
+    { label: "Buying Guides", href: "/guides" },
     { label: "Browse Products", href: "/search" },
     { label: "Compare", href: "/compare" },
     { label: "Deals Centre", href: "/deals" },
@@ -18,10 +18,11 @@ const FOOTER_LINKS = {
   ],
   Company: [
     { label: "Support", href: "/support" },
-    { label: "Contact Us", href: "/support" },
-    { label: "Report Issue", href: "/support" },
-    { label: "Privacy Policy", href: "/support" },
-    { label: "Terms of Use", href: "/support" },
+    { label: "Contact Us", href: "/contact" },
+    { label: "Report Issue", href: "/report-issue" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    { label: "Terms of Use", href: "/terms-of-use" },
+    { label: "About", href: "/about" },
   ],
 };
 

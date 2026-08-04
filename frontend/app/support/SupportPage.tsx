@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronUp, Loader2, MessageCircle, Send } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { buildApiUrl, IS_API_CONFIGURED } from "@/services/api";
 
@@ -45,12 +46,18 @@ function FaqAccordion({ items }: { items: FaqItem[] }) {
 }
 
 export default function SupportPage() {
+  const searchParams = useSearchParams();
+  const initialTab: "faq" | "contact" = searchParams.get("tab") === "contact" ? "contact" : "faq";
+  const initialCategoryParam = searchParams.get("category");
+  const initialCategory = CATEGORIES.some((item) => item.value === initialCategoryParam)
+    ? initialCategoryParam
+    : "contact";
   const [faq, setFaq] = useState<FaqItem[]>([]);
-  const [form, setForm] = useState({ email: "", category: "contact", subject: "", body: "" });
+  const [form, setForm] = useState({ email: "", category: initialCategory, subject: "", body: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [activeTab, setActiveTab] = useState<"faq" | "contact">("faq");
+  const [activeTab, setActiveTab] = useState<"faq" | "contact">(initialTab);
   const [toast, setToast] = useState<ToastState>(null);
 
   function dismissToastAfterDelay() {
