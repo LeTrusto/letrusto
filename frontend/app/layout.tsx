@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import SchemaOrg from "@/components/SchemaOrg";
 import { AuthProvider } from "@/lib/authContext";
 
@@ -92,6 +93,7 @@ export default function RootLayout({
           {children}
           <Footer />
         </AuthProvider>
+        <GoogleAnalytics />
       </body>
     </html>
   );
