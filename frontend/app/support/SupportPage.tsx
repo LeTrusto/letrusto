@@ -158,7 +158,7 @@ export default function SupportPage() {
                     value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                     className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
-                    placeholder="your@email.com"
+                    placeholder="hello@letrusto.com"
                   />
                 </div>
                 <div>
