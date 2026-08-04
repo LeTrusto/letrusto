@@ -17,6 +17,27 @@ const CATEGORIES = [
   { value: "other", label: "Other" },
 ] as const;
 
+type SupportCategory = (typeof CATEGORIES)[number]["value"];
+type SupportFormState = {
+  email: string;
+  category: SupportCategory;
+  subject: string;
+  body: string;
+};
+
+const DEFAULT_FORM: SupportFormState = {
+  email: "",
+  category: "contact",
+  subject: "",
+  body: "",
+};
+
+function resolveInitialCategory(value: string | null): SupportCategory {
+  return CATEGORIES.some((item) => item.value === value)
+    ? (value as SupportCategory)
+    : DEFAULT_FORM.category;
+}
+
 function FaqAccordion({ items }: { items: FaqItem[] }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   return (
@@ -48,12 +69,9 @@ function FaqAccordion({ items }: { items: FaqItem[] }) {
 export default function SupportPage() {
   const searchParams = useSearchParams();
   const initialTab: "faq" | "contact" = searchParams.get("tab") === "contact" ? "contact" : "faq";
-  const initialCategoryParam = searchParams.get("category");
-  const initialCategory = CATEGORIES.some((item) => item.value === initialCategoryParam)
-    ? initialCategoryParam
-    : "contact";
+  const initialCategory = resolveInitialCategory(searchParams.get("category"));
   const [faq, setFaq] = useState<FaqItem[]>([]);
-  const [form, setForm] = useState({ email: "", category: initialCategory, subject: "", body: "" });
+  const [form, setForm] = useState<SupportFormState>({ ...DEFAULT_FORM, category: initialCategory });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -193,7 +211,7 @@ export default function SupportPage() {
                 We&apos;ll get back to you at <strong>{form.email}</strong> within 24–48 hours.
               </p>
               <button
-                onClick={() => { setSubmitted(false); setForm({ email: "", category: "contact", subject: "", body: "" }); }}
+                onClick={() => { setSubmitted(false); setForm(DEFAULT_FORM); }}
                 className="mt-6 text-sm font-semibold text-purple-700 hover:underline"
               >
                 Submit another ticket
@@ -223,7 +241,7 @@ export default function SupportPage() {
                   <label className="mb-1.5 block text-sm font-semibold text-gray-700">Category</label>
                   <select
                     value={form.category}
-                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as SupportCategory }))}
                     className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
                   >
                     {CATEGORIES.map((c) => (

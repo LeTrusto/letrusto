@@ -8,22 +8,41 @@ import HomeAskAiCtaSection from "@/components/homepage/HomeAskAiCtaSection";
 import type { HomepageSectionConfig } from "@/config/homepage";
 import type { HomepageDataSources } from "@/services/homepage.service";
 
+type ProductSourceKey =
+  | "products.trending"
+  | "products.newArrivals"
+  | "products.hostingSaas"
+  | "products.aiPicks"
+  | "products.bestDeals";
+
+const PRODUCT_SOURCE_KEYS: ProductSourceKey[] = [
+  "products.trending",
+  "products.newArrivals",
+  "products.hostingSaas",
+  "products.aiPicks",
+  "products.bestDeals",
+];
+
+function isProductSourceKey(value: string): value is ProductSourceKey {
+  return PRODUCT_SOURCE_KEYS.includes(value as ProductSourceKey);
+}
+
 type HomepageSectionRendererProps = {
   section: HomepageSectionConfig;
   dataSources: HomepageDataSources;
 };
 
-function resolveItems(
+function resolveItems<K extends keyof HomepageDataSources>(
   dataSources: HomepageDataSources,
-  key: keyof HomepageDataSources,
+  key: K,
   maxItems?: number
-) {
+): HomepageDataSources[K] {
   const items = dataSources[key];
   if (!Array.isArray(items) || maxItems === undefined) {
     return items;
   }
 
-  return items.slice(0, maxItems);
+  return items.slice(0, maxItems) as HomepageDataSources[K];
 }
 
 export default function HomepageSectionRenderer({
@@ -46,15 +65,11 @@ export default function HomepageSectionRenderer({
     }
 
     case "productGrid": {
-      if (!section.dataSource.startsWith("products.")) {
+      if (!isProductSourceKey(section.dataSource)) {
         return null;
       }
 
-      const items = resolveItems(
-        dataSources,
-        section.dataSource as keyof HomepageDataSources,
-        section.maxItems
-      );
+      const items = resolveItems(dataSources, section.dataSource, section.maxItems);
 
       if (!Array.isArray(items)) {
         return null;
@@ -73,15 +88,11 @@ export default function HomepageSectionRenderer({
     }
 
     case "productRail": {
-      if (!section.dataSource.startsWith("products.")) {
+      if (!isProductSourceKey(section.dataSource)) {
         return null;
       }
 
-      const items = resolveItems(
-        dataSources,
-        section.dataSource as keyof HomepageDataSources,
-        section.maxItems
-      );
+      const items = resolveItems(dataSources, section.dataSource, section.maxItems);
 
       if (!Array.isArray(items)) {
         return null;
