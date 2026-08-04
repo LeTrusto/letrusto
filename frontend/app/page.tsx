@@ -1,21 +1,22 @@
-import Hero from "@/components/Hero";
-import Categories from "@/components/Categories";
-import TrendingProducts from "@/components/TrendingProducts";
-import AIShoppingAssistant from "@/components/AIShoppingAssistant";
-import HomeCollections from "@/components/HomeCollections";
-import LatestArticles from "@/components/LatestArticles";
+import HomepageSectionRenderer from "@/components/homepage/HomepageSectionRenderer";
+import { HOMEPAGE_SECTIONS } from "@/config/homepage";
+import { getHomepageDataSources } from "@/services/homepage.service";
 
-export default function Home() {
+export default async function Home() {
+  const dataSources = await getHomepageDataSources();
+  const sections = HOMEPAGE_SECTIONS.filter((section) => section.enabled).sort(
+    (left, right) => left.order - right.order
+  );
+
   return (
     <>
-      <Hero />
-      <div className="mx-auto w-full max-w-7xl px-6">
-        <HomeCollections />
-        <LatestArticles />
-      </div>
-      <Categories />
-      <TrendingProducts />
-      <AIShoppingAssistant />
+      {sections.map((section) => (
+        <HomepageSectionRenderer
+          key={section.id}
+          section={section}
+          dataSources={dataSources}
+        />
+      ))}
     </>
   );
 }
