@@ -11,6 +11,12 @@ const _rawBase = (
 export const API_BASE_URL = _rawBase;
 const API_PREFIX = "/api/v1";
 
+// During static generation, never block page export on backend availability.
+export const IS_STATIC_GENERATION_BUILD =
+	typeof window === "undefined" &&
+	(process.env.NEXT_PHASE === "phase-production-build" ||
+		process.env.npm_lifecycle_event === "build");
+
 export const IS_API_CONFIGURED =
 	Boolean(process.env.NEXT_PUBLIC_API_BASE_URL?.trim()) ||
 	Boolean(process.env.API_BASE_URL?.trim());
@@ -49,9 +55,9 @@ export async function apiRequest<T>(
 ): Promise<T> {
 	const endpoint = `${API_BASE_URL}${normalizePath(path)}`;
 
-	// Abort after 8s so SSG/ISR never hangs the build
+	// Abort after 4s so SSG/ISR never hangs the build
 	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), 8000);
+	const timeoutId = setTimeout(() => controller.abort(), 4000);
 
 	let response: Response;
 	try {
@@ -80,6 +86,10 @@ export async function withApiFallback<T>(
 	request: () => Promise<T>,
 	fallback: () => T | Promise<T>
 ): Promise<T> {
+	if (IS_STATIC_GENERATION_BUILD) {
+		return fallback();
+	}
+
 	if (!IS_API_CONFIGURED) {
 		return fallback();
 	}

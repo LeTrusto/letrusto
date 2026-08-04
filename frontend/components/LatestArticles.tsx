@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { API_BASE_URL } from "@/services/api";
+import { API_BASE_URL, IS_STATIC_GENERATION_BUILD } from "@/services/api";
 
 type ArticleSummary = {
   slug: string;
@@ -15,8 +15,15 @@ const CATEGORY_BADGES: Record<string, { label: string; class: string }> = {
 };
 
 async function getLatestArticles(): Promise<ArticleSummary[]> {
+  if (IS_STATIC_GENERATION_BUILD) {
+    return [];
+  }
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 4000);
   try {
     const res = await fetch(`${API_BASE_URL}/api/v1/articles?page_size=4`, {
+      signal: controller.signal,
       next: { revalidate: 300 },
     });
     if (!res.ok) return [];
@@ -24,6 +31,8 @@ async function getLatestArticles(): Promise<ArticleSummary[]> {
     return data.items;
   } catch {
     return [];
+  } finally {
+    clearTimeout(t);
   }
 }
 
