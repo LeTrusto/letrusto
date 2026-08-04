@@ -53,11 +53,15 @@ class ProductRepository:
         stmt: Select = select(Product).join(Product.brand).join(Product.category).options(*self._product_load_options())
 
         if query.category != "all":
-            # Match by category slug OR its parent slug (so "electronics" returns all electronics children)
-            parent_sub = select(Category.id).where(Category.slug == query.category)
-            stmt = stmt.where(
-                (Category.slug == query.category) | (Category.parent_id.in_(parent_sub))
-            )
+            # Keep legacy smartphone category slugs compatible across older and newer datasets.
+            if query.category in {"phone", "smartphones"}:
+                stmt = stmt.where(Category.slug.in_(["phone", "smartphones"]))
+            else:
+                # Match by category slug OR its parent slug (so "electronics" returns all electronics children)
+                parent_sub = select(Category.id).where(Category.slug == query.category)
+                stmt = stmt.where(
+                    (Category.slug == query.category) | (Category.parent_id.in_(parent_sub))
+                )
 
         if query.subcategory:
             stmt = stmt.where(Category.slug == query.subcategory)
