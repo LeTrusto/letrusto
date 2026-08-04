@@ -84,6 +84,9 @@ export default function Navbar() {
           <Link href="/compare" className={`${navItemClass} ${pathname === "/compare" ? activeNavItemClass : ""}`}>
             <Scale className="h-4 w-4" /> Compare
           </Link>
+          <Link href="/articles" className={`${navItemClass} ${pathname.startsWith("/articles") ? activeNavItemClass : ""}`}>
+            📚 Guides
+          </Link>
           <Link href="/deals" className={`${navItemClass} ${pathname === "/deals" ? activeNavItemClass : ""}`}>
             <Tag className="h-4 w-4" /> Deals
           </Link>
@@ -162,6 +165,7 @@ export default function Navbar() {
               { href: "/", label: "Home" },
               { href: "/search", label: "Browse Products" },
               { href: "/ai", label: "✨ AI Advisor" },
+              { href: "/articles", label: "📚 Buying Guides" },
               { href: "/compare", label: "Compare" },
               { href: "/deals", label: "Deals" },
               { href: "/favorites", label: `Favorites (${favoriteIds.length})` },
