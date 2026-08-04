@@ -20,6 +20,7 @@ export default function HomeCategoryShowcase({
       <HomeSectionHeader title={title} subtitle={subtitle} />
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
+          
           <Link
             key={item.id}
             href={item.href}
@@ -38,14 +39,21 @@ export default function HomeCategoryShowcase({
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-transparent" aria-hidden="true" />
 
             <div className="relative z-10 flex min-h-[220px] flex-col justify-between">
-              <div className="inline-flex w-fit rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur">
-                {item.productCountText}
+              <div className="flex flex-wrap gap-2">
+                <div className="inline-flex w-fit rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur">
+                  {item.productCountText}
+                </div>
+                {item.productCount === 0 ? (
+                  <div className="inline-flex w-fit rounded-full border border-white/25 bg-black/20 px-3 py-1 text-xs font-semibold backdrop-blur">
+                    Coming Soon
+                  </div>
+                ) : null}
               </div>
               <div>
                 <h3 className="text-2xl font-bold tracking-tight">{item.name}</h3>
                 <p className="mt-2 max-w-sm text-sm text-slate-100/90">{item.description}</p>
                 <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white/95">
-                  Explore category
+                  {item.productCount === 0 ? "View roadmap" : "Explore category"}
                   <ArrowUpRight className="h-4 w-4" />
                 </span>
               </div>

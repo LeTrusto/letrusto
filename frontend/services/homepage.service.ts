@@ -13,6 +13,7 @@ import {
   type HomepageCategoryConfig,
   type TrustSignal,
 } from "@/config/homepage";
+import type { ComingSoonVertical } from "@/components/homepage/HomeComingSoonRoadmapSection";
 
 export type HomeCategoryCard = HomepageCategoryConfig & {
   productCount: number;
@@ -30,9 +31,9 @@ export type HomepageDataSources = {
   "categories.showcase": HomeCategoryCard[];
   "products.trending": Product[];
   "products.newArrivals": Product[];
-  "products.hostingSaas": Product[];
   "products.aiPicks": Product[];
   "products.bestDeals": Product[];
+  "comingSoon.verticals": ComingSoonVertical[];
   "guides.latest": HomeGuideSummary[];
   "trust.default": TrustSignal[];
 };
@@ -49,16 +50,60 @@ function includesHint(value: string, hint: string) {
   return valueNorm.includes(hintNorm);
 }
 
-function isHostingOrSaasProduct(product: Product) {
-  const source = [product.category, product.parentCategory, product.name, product.tags?.join(" ")]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-
-  return ["hosting", "web-hosting", "server", "cloud", "saas", "software", "domain"].some((token) =>
-    source.includes(token)
-  );
-}
+const COMING_SOON_VERTICALS: ComingSoonVertical[] = [
+  {
+    id: "hosting",
+    title: "Hosting Advisor",
+    subtitle: "AI-led recommendations for startups, ecommerce stores, and enterprise workloads.",
+    illustration: "HOST",
+    eta: "Q4 2026",
+    route: "/category/hosting",
+    planned: [
+      "Uptime, support, and performance benchmarks",
+      "Managed WordPress and VPS comparison workflows",
+      "Transparent renewal cost forecasting",
+    ],
+  },
+  {
+    id: "saas",
+    title: "SaaS Buying Workspace",
+    subtitle: "Evaluate software like an operator with AI scoring and adoption fit analysis.",
+    illustration: "SAAS",
+    eta: "Q1 2027",
+    route: "/category/saas",
+    planned: [
+      "Role-based software recommendations",
+      "Total cost and integration complexity scoring",
+      "Vendor reliability and roadmap signals",
+    ],
+  },
+  {
+    id: "beauty",
+    title: "Beauty Intelligence",
+    subtitle: "Ingredient-aware recommendations and personalized routine guidance.",
+    illustration: "BEAUTY",
+    eta: "Q1 2027",
+    route: "/category/beauty",
+    planned: [
+      "Skin concern and ingredient match scoring",
+      "Routine builders by season and budget",
+      "Sensitive skin safe-choice filters",
+    ],
+  },
+  {
+    id: "pet-care",
+    title: "Pet Care Assistant",
+    subtitle: "Safer, smarter choices for food, grooming, and wellness essentials.",
+    illustration: "PET",
+    eta: "Q2 2027",
+    route: "/category/pet-care",
+    planned: [
+      "Breed and age-aware recommendations",
+      "Nutrition and ingredient comparison panels",
+      "Vet-informed buying guide series",
+    ],
+  },
+];
 
 function buildBestDeals(products: Product[]) {
   return [...products]
@@ -189,15 +234,15 @@ export async function getHomepageDataSources(): Promise<HomepageDataSources> {
   ]);
 
   const trendingMixed = pickMixedCategoryProducts(trending.length > 0 ? trending : allProducts, 8);
-  const hostingSaas = allProducts.filter(isHostingOrSaasProduct).slice(0, 8);
+  const aiPicks = [...topAiPicks].filter((product) => product.aiSummary?.trim().length > 0).slice(0, 4);
 
   return {
     "categories.showcase": buildCategoryShowcase(allProducts),
     "products.trending": trendingMixed,
     "products.newArrivals": newArrivals,
-    "products.hostingSaas": hostingSaas.length > 0 ? hostingSaas : allProducts.slice(0, 4),
-    "products.aiPicks": topAiPicks,
+    "products.aiPicks": aiPicks,
     "products.bestDeals": buildBestDeals(allProducts),
+    "comingSoon.verticals": COMING_SOON_VERTICALS,
     "guides.latest": guides,
     "trust.default": HOMEPAGE_TRUST_SIGNALS,
   };

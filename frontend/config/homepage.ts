@@ -3,6 +3,9 @@ export type HomeSectionComponent =
   | "categoryShowcase"
   | "productGrid"
   | "productRail"
+  | "aiFeatured"
+  | "dealsSpotlight"
+  | "comingSoonRoadmap"
   | "trustSignals"
   | "guides"
   | "askAiCta";
@@ -12,9 +15,9 @@ export type HomeDataSourceKey =
   | "categories.showcase"
   | "products.trending"
   | "products.newArrivals"
-  | "products.hostingSaas"
   | "products.aiPicks"
   | "products.bestDeals"
+  | "comingSoon.verticals"
   | "guides.latest"
   | "trust.default";
 
@@ -54,7 +57,7 @@ export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
     id: "electronics",
     name: "Electronics",
     description: "Phones, laptops, TVs, wearables, and more.",
-    href: "/categories",
+    href: "/category/electronics",
     image: "/images/products/iphone16pro-1.svg",
     gradientClass: "from-indigo-700/80 to-fuchsia-600/80",
     categoryHints: ["phone", "laptop", "tablet", "camera", "television", "gaming", "headphones", "smartwatch"],
@@ -64,7 +67,7 @@ export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
     id: "hosting",
     name: "Hosting",
     description: "Shared, managed, and cloud hosting recommendations.",
-    href: "/search?category=web-hosting",
+    href: "/category/hosting",
     image: "/images/products/macbook-air-m4.png",
     gradientClass: "from-cyan-700/80 to-blue-700/80",
     categoryHints: ["hosting", "web-hosting", "cloud", "server"],
@@ -74,7 +77,7 @@ export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
     id: "saas",
     name: "SaaS Tools",
     description: "Business software, productivity, and AI tools.",
-    href: "/search?category=saas",
+    href: "/category/saas",
     image: "/images/products/lenovo-legion-go-1.jpg",
     gradientClass: "from-emerald-700/80 to-teal-600/80",
     categoryHints: ["saas", "software", "productivity", "automation"],
@@ -84,7 +87,7 @@ export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
     id: "pet-care",
     name: "Pet Care",
     description: "Smart picks for pet health, food, and grooming.",
-    href: "/search?category=pet-care",
+    href: "/category/pet-care",
     image: "/images/products/sony-wh1000xm6.png",
     gradientClass: "from-amber-700/80 to-orange-600/80",
     categoryHints: ["pet-care"],
@@ -94,7 +97,7 @@ export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
     id: "beauty",
     name: "Beauty",
     description: "Skincare, grooming, and wellness essentials.",
-    href: "/search?category=beauty",
+    href: "/category/beauty",
     image: "/images/products/sony-a7-iv-1.jpg",
     gradientClass: "from-rose-700/80 to-pink-600/80",
     categoryHints: ["beauty"],
@@ -104,7 +107,7 @@ export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
     id: "home",
     name: "Home",
     description: "Kitchen, appliances, and everyday home upgrades.",
-    href: "/search?category=home-kitchen",
+    href: "/category/home-kitchen",
     image: "/images/products/ifb-senator-mxn-8012-1.jpg",
     gradientClass: "from-violet-700/80 to-indigo-600/80",
     categoryHints: ["home-kitchen", "refrigerator", "washing-machine", "furniture"],
@@ -114,7 +117,7 @@ export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
     id: "gaming",
     name: "Gaming",
     description: "Consoles, accessories, and performance gear.",
-    href: "/search?category=gaming",
+    href: "/category/gaming",
     image: "/images/products/nintendo-switch-oled-1.png",
     gradientClass: "from-red-700/80 to-orange-600/80",
     categoryHints: ["gaming"],
@@ -124,20 +127,20 @@ export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
     id: "fitness",
     name: "Fitness",
     description: "Wearables and training essentials for active lifestyles.",
-    href: "/search?category=fitness",
+    href: "/category/fitness",
     image: "/images/products/samsung-galaxy-tab-s10-1.png",
     gradientClass: "from-lime-700/80 to-emerald-600/80",
-    categoryHints: ["fitness", "smartwatch"],
+    categoryHints: ["fitness"],
     fallbackCount: "20+",
   },
   {
     id: "kitchen",
     name: "Kitchen",
     description: "Appliances and tools for smarter cooking.",
-    href: "/search?category=home-kitchen",
+    href: "/category/kitchen",
     image: "/images/products/whirlpool-stainwash-pro-9kg-1.jpg",
     gradientClass: "from-sky-700/80 to-cyan-600/80",
-    categoryHints: ["home-kitchen", "refrigerator"],
+    categoryHints: ["kitchen"],
     fallbackCount: "45+",
   },
 ];
@@ -226,20 +229,19 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
     id: "hosting-saas",
     enabled: true,
     order: 6,
-    component: "productGrid",
-    dataSource: "products.hostingSaas",
+    component: "comingSoonRoadmap",
+    dataSource: "comingSoon.verticals",
     title: "Hosting & SaaS",
-    subtitle: "Top infrastructure and software picks for builders, teams, and businesses.",
+    subtitle: "Premium advisor experiences for cloud, software, and service buying are launching next.",
     ctaLabel: "Explore Hosting & SaaS",
-    ctaHref: "/search?category=web-hosting",
+    ctaHref: "/category/hosting",
     maxItems: 4,
-    highlightLabel: "Hosting & SaaS",
   },
   {
     id: "ai-picks",
     enabled: true,
     order: 7,
-    component: "productGrid",
+    component: "aiFeatured",
     dataSource: "products.aiPicks",
     title: "AI Picks",
     subtitle: "The strongest quality-to-value picks ranked by LeTrusto AI.",
@@ -252,7 +254,7 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
     id: "best-deals",
     enabled: true,
     order: 8,
-    component: "productGrid",
+    component: "dealsSpotlight",
     dataSource: "products.bestDeals",
     title: "Best Deals",
     subtitle: "High-value picks balancing price, reliability, and long-term utility.",

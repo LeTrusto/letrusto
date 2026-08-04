@@ -2,6 +2,9 @@ import Hero from "@/components/Hero";
 import HomeCategoryShowcase from "@/components/homepage/HomeCategoryShowcase";
 import HomeProductGridSection from "@/components/homepage/HomeProductGridSection";
 import HomeProductRailSection from "@/components/homepage/HomeProductRailSection";
+import HomeAIPicksFeaturedSection from "@/components/homepage/HomeAIPicksFeaturedSection";
+import HomeDealsSpotlightSection from "@/components/homepage/HomeDealsSpotlightSection";
+import HomeComingSoonRoadmapSection from "@/components/homepage/HomeComingSoonRoadmapSection";
 import HomeTrustSignalsSection from "@/components/homepage/HomeTrustSignalsSection";
 import HomeLatestGuidesSection from "@/components/homepage/HomeLatestGuidesSection";
 import HomeAskAiCtaSection from "@/components/homepage/HomeAskAiCtaSection";
@@ -11,14 +14,12 @@ import type { HomepageDataSources } from "@/services/homepage.service";
 type ProductSourceKey =
   | "products.trending"
   | "products.newArrivals"
-  | "products.hostingSaas"
   | "products.aiPicks"
   | "products.bestDeals";
 
 const PRODUCT_SOURCE_KEYS: ProductSourceKey[] = [
   "products.trending",
   "products.newArrivals",
-  "products.hostingSaas",
   "products.aiPicks",
   "products.bestDeals",
 ];
@@ -106,6 +107,45 @@ export default function HomepageSectionRenderer({
           ctaHref={section.ctaHref}
           items={items}
           highlightLabel={section.highlightLabel}
+        />
+      );
+    }
+
+    case "aiFeatured": {
+      const items = resolveItems(dataSources, "products.aiPicks", section.maxItems);
+      return (
+        <HomeAIPicksFeaturedSection
+          title={section.title ?? "AI Picks"}
+          subtitle={section.subtitle}
+          ctaLabel={section.ctaLabel}
+          ctaHref={section.ctaHref}
+          items={items}
+        />
+      );
+    }
+
+    case "dealsSpotlight": {
+      const items = resolveItems(dataSources, "products.bestDeals", section.maxItems);
+      return (
+        <HomeDealsSpotlightSection
+          title={section.title ?? "Best Deals"}
+          subtitle={section.subtitle}
+          ctaLabel={section.ctaLabel}
+          ctaHref={section.ctaHref}
+          items={items}
+        />
+      );
+    }
+
+    case "comingSoonRoadmap": {
+      const items = resolveItems(dataSources, "comingSoon.verticals", section.maxItems);
+      return (
+        <HomeComingSoonRoadmapSection
+          title={section.title ?? "Coming Soon"}
+          subtitle={section.subtitle}
+          ctaLabel={section.ctaLabel}
+          ctaHref={section.ctaHref}
+          items={items}
         />
       );
     }

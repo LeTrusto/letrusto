@@ -45,6 +45,7 @@ type ProductCardProps = {
   product: Product;
   compareWithId?: string;
   highlightLabel?: string;
+  aiReason?: string;
   className?: string;
   priority?: boolean;
 };
@@ -53,6 +54,7 @@ function ProductCard({
   product,
   compareWithId,
   highlightLabel,
+  aiReason,
   className,
   priority = false,
 }: ProductCardProps) {
@@ -70,16 +72,16 @@ function ProductCard({
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.32, ease: "easeOut" }}
       className={clsx(
-        "group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-100/60",
+        "group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-100/60",
         className
       )}
     >
       {/* Image area */}
-      <div className="relative bg-gradient-to-br from-gray-50 to-white p-5">
+      <div className="relative bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-5">
         {/* Badges top-left */}
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
           {highlightLabel === "AI Pick" && (
-            <span className="flex items-center gap-1 rounded-full bg-purple-600 px-2.5 py-0.5 text-[11px] font-bold text-white">
+            <span className="flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-0.5 text-[11px] font-bold text-white">
               <Sparkles className="h-3 w-3" /> AI Pick
             </span>
           )}
@@ -134,20 +136,26 @@ function ProductCard({
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 md:p-5">
         {/* Category + AI score */}
         <div className="mb-2.5 flex items-center justify-between gap-2">
-          <span className="rounded-full bg-purple-50 px-2.5 py-0.5 text-[11px] font-semibold text-purple-600">
+          <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700">
             {categoryLabels[product.category] ?? product.category}
           </span>
           <AiScoreBadge score={product.aiScore} />
         </div>
 
         {/* Name */}
-        <h3 className="line-clamp-2 text-base font-bold leading-snug text-gray-900 group-hover:text-purple-700">
+        <h3 className="line-clamp-2 text-base font-black leading-snug tracking-tight text-slate-900 group-hover:text-violet-700">
           {product.name}
         </h3>
-        <p className="mt-0.5 text-xs font-medium text-gray-400">{product.brand}</p>
+        <p className="mt-0.5 text-xs font-medium text-slate-400">{product.brand}</p>
+
+        {aiReason ? (
+          <p className="mt-2.5 line-clamp-2 rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2 text-xs leading-relaxed text-violet-800">
+            <span className="font-semibold">Why AI recommends this:</span> {aiReason}
+          </p>
+        ) : null}
 
         {/* Rating + price */}
         <div className="mt-3 flex items-end justify-between gap-2">
@@ -164,7 +172,7 @@ function ProductCard({
         <div className="mt-4 flex gap-2">
           <Link
             href={`/products/${product.id}`}
-            className="flex flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-2.5 text-sm font-bold text-white transition hover:scale-[1.02]"
+            className="flex flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-600 py-2.5 text-sm font-bold text-white transition hover:scale-[1.02]"
           >
             View Details
           </Link>
