@@ -19,5 +19,5 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# PORT is injected by Railway; run migrations then start server
-CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# PORT is injected by Railway; run migrations and production DB sync before serving traffic
+CMD alembic upgrade head && python -m scripts.init_production_db && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

@@ -1,15 +1,62 @@
 // Default only used locally when NEXT_PUBLIC_API_BASE_URL is not set
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 
-// Strip any trailing /api/v1 from the env var — the prefix is added automatically below
-const _rawBase = (
-	process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-	process.env.API_BASE_URL?.trim() ||
-	DEFAULT_API_BASE_URL
-).replace(/\/api\/v1\/?$/, "");
-
-export const API_BASE_URL = _rawBase;
 const API_PREFIX = "/api/v1";
+
+function stripApiPrefix(value: string): string {
+	return value.replace(/\/api\/v1\/?$/i, "").replace(/\/+$/, "");
+}
+
+function normalizeApiBase(rawBase: string | undefined): string {
+	const trimmed = rawBase?.trim();
+	if (!trimmed) {
+		return DEFAULT_API_BASE_URL;
+	}
+
+	let candidate = stripApiPrefix(trimmed);
+
+	if (/^https?:\/\//i.test(candidate)) {
+		try {
+			const parsed = new URL(candidate);
+			const embeddedHost = parsed.pathname.replace(/^\/+|\/+$/g, "");
+
+			// Guard against malformed values like https://letrusto.com/letrusto-production.up.railway.app
+			if (
+				(parsed.hostname === "letrusto.com" || parsed.hostname.endsWith(".vercel.app")) &&
+				/^[a-z0-9-]+\.up\.railway\.app$/i.test(embeddedHost)
+			) {
+				return `https://${embeddedHost}`;
+			}
+
+			const pathname = parsed.pathname === "/" ? "" : parsed.pathname;
+			return stripApiPrefix(`${parsed.protocol}//${parsed.host}${pathname}`);
+		} catch {
+			return DEFAULT_API_BASE_URL;
+		}
+	}
+
+	if (candidate.startsWith("//")) {
+		candidate = `https:${candidate}`;
+	} else if (/^[a-z0-9.-]+(?::\d+)?(?:\/.*)?$/i.test(candidate)) {
+		// Treat bare host values as production HTTPS hosts.
+		candidate = `https://${candidate}`;
+	}
+
+	try {
+		const parsed = new URL(candidate);
+		const pathname = parsed.pathname === "/" ? "" : parsed.pathname;
+		return stripApiPrefix(`${parsed.protocol}//${parsed.host}${pathname}`);
+	} catch {
+		return DEFAULT_API_BASE_URL;
+	}
+}
+
+const _rawBase =
+	process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+	process.env.NEXT_PUBLIC_API_URL?.trim() ||
+	process.env.API_BASE_URL?.trim();
+
+export const API_BASE_URL = normalizeApiBase(_rawBase);
 
 // During static generation, never block page export on backend availability.
 export const IS_STATIC_GENERATION_BUILD =
@@ -19,6 +66,7 @@ export const IS_STATIC_GENERATION_BUILD =
 
 export const IS_API_CONFIGURED =
 	Boolean(process.env.NEXT_PUBLIC_API_BASE_URL?.trim()) ||
+	Boolean(process.env.NEXT_PUBLIC_API_URL?.trim()) ||
 	Boolean(process.env.API_BASE_URL?.trim());
 
 // Log data-source once at module init (client-side only)
