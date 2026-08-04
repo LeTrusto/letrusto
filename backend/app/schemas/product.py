@@ -63,6 +63,9 @@ class ProductDTO(BaseModel):
     bestFor: list[str]
     notRecommendedFor: list[str]
     tags: list[str]
+    amazonAsin: str | None = None
+    amazonAffiliateUrl: str | None = None
+    flipkartAffiliateUrl: str | None = None
     # Phase 6.1 catalog fields
     series: str | None = None
     modelName: str | None = None

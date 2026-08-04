@@ -47,6 +47,9 @@ class CategorySeed:
     rating_range: tuple[float, float]
     ai_range: tuple[int, int]
     image_fallbacks: list[str]
+    amazon_asin: str | None = None
+    amazon_affiliate_url: str | None = None
+    flipkart_affiliate_url: str | None = None
 
 
 CATEGORY_SEEDS: list[CategorySeed] = [
@@ -292,7 +295,6 @@ def clamp(value: float, min_value: float, max_value: float) -> float:
 def build_buy_links(brand: str, name: str) -> list[tuple[str, str]]:
     query = f"{brand} {name}".replace(" ", "+")
     return [
-        ("Amazon", f"https://www.amazon.in/s?k={query}"),
         ("Flipkart", f"https://www.flipkart.com/search?q={query}"),
         ("Croma", f"https://www.croma.com/searchB?q={query}%3Arelevance"),
         ("Reliance Digital", f"https://www.reliancedigital.in/search?q={query}"),

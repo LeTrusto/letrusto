@@ -1,10 +1,13 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
+import type { Product } from "@/types/products";
 import type { ProductBuyLink } from "@/types/products";
 import { API_BASE_URL, IS_API_CONFIGURED } from "@/services/api";
+import { getAmazonAffiliateUrl, getFlipkartAffiliateUrl, trackAffiliateClick } from "@/lib/affiliate";
 
 type ProductBuyButtonsProps = {
+  product: Pick<Product, "id" | "name" | "category" | "amazonAsin" | "amazonAffiliateUrl" | "flipkartAffiliateUrl">;
   links: ProductBuyLink[];
 };
 
@@ -33,8 +36,12 @@ async function trackClick(linkId: number) {
   }
 }
 
-export default function ProductBuyButtons({ links }: ProductBuyButtonsProps) {
-  if (!links || links.length === 0) {
+export default function ProductBuyButtons({ product, links }: ProductBuyButtonsProps) {
+  const amazonAffiliateUrl = getAmazonAffiliateUrl(product);
+  const flipkartAffiliateUrl = getFlipkartAffiliateUrl(product);
+  const retailerLinks = links.filter((link) => link.label !== "Amazon");
+
+  if (!amazonAffiliateUrl && retailerLinks.length === 0) {
     return (
       <p className="text-sm text-gray-400">No purchase links available yet.</p>
     );
@@ -42,15 +49,43 @@ export default function ProductBuyButtons({ links }: ProductBuyButtonsProps) {
 
   return (
     <div className="space-y-3">
-      {links.map((link) => {
+      {amazonAffiliateUrl ? (
+        <a
+          href={amazonAffiliateUrl}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          onClick={() => {
+            trackAffiliateClick(product, "amazon");
+          }}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#232f3e] px-5 py-3.5 font-semibold text-white transition hover:bg-[#1b2530]"
+        >
+          Buy on Amazon
+          <ExternalLink className="h-4 w-4 opacity-70" />
+        </a>
+      ) : (
+        <button
+          type="button"
+          disabled
+          className="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-3.5 font-semibold text-gray-400"
+        >
+          Currently unavailable
+        </button>
+      )}
+
+      {retailerLinks.map((link) => {
         const styleClass = RETAILER_STYLES[link.label] ?? RETAILER_STYLES.default;
+        const href = link.label === "Flipkart" ? flipkartAffiliateUrl ?? link.href : link.href;
+        const retailer = link.label.toLowerCase().replace(/\s+/g, "_");
         return (
           <a
             key={link.id || link.label}
-            href={link.href}
+            href={href}
             target="_blank"
-            rel="noreferrer noopener"
-            onClick={() => { void trackClick(link.id ?? 0); }}
+            rel="noopener noreferrer sponsored"
+            onClick={() => {
+              void trackClick(link.id ?? 0);
+              trackAffiliateClick(product, retailer);
+            }}
             className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 font-semibold transition ${styleClass}`}
           >
             Buy on {link.label}

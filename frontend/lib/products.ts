@@ -1,5 +1,6 @@
 import type { Product, ProductAvailability, ProductBuyLink, ProductCategory, ProductPriceHistoryPoint, ProductReview, ProductSpecification } from "@/types/products";
 import { productImagesById } from "@/lib/productImageManifest";
+import { getAmazonAffiliateUrl, getFlipkartAffiliateUrl } from "@/lib/affiliate";
 
 type ProductSeed = {
   id: string;
@@ -17,6 +18,9 @@ type ProductSeed = {
   bestFor: string[];
   notRecommendedFor: string[];
   tags: string[];
+  amazonAsin?: string | null;
+  amazonAffiliateUrl?: string | null;
+  flipkartAffiliateUrl?: string | null;
 };
 
 const PRODUCT_IMAGE_VARIANTS = 4;
@@ -135,8 +139,6 @@ function buildMarketplaceSearchUrl(marketplace: ProductBuyLink["label"], seed: P
   const query = encodeURIComponent(`${seed.brand} ${seed.name}`);
 
   switch (marketplace) {
-    case "Amazon":
-      return `https://www.amazon.in/s?k=${query}`;
     case "Flipkart":
       return `https://www.flipkart.com/search?q=${query}`;
     case "Croma":
@@ -149,12 +151,23 @@ function buildMarketplaceSearchUrl(marketplace: ProductBuyLink["label"], seed: P
 }
 
 function buildBuyLinks(seed: ProductSeed): ProductBuyLink[] {
-  return [
-    { label: "Amazon", href: buildMarketplaceSearchUrl("Amazon", seed) },
-    { label: "Flipkart", href: buildMarketplaceSearchUrl("Flipkart", seed) },
-    { label: "Croma", href: buildMarketplaceSearchUrl("Croma", seed) },
-    { label: "Reliance Digital", href: buildMarketplaceSearchUrl("Reliance Digital", seed) },
-  ];
+  const links: ProductBuyLink[] = [];
+  const amazonAffiliateUrl = getAmazonAffiliateUrl(seed);
+
+  if (amazonAffiliateUrl) {
+    links.push({ label: "Amazon", href: amazonAffiliateUrl, is_affiliate: true });
+  }
+
+  const flipkartAffiliateUrl = getFlipkartAffiliateUrl(seed);
+  links.push({
+    label: "Flipkart",
+    href: flipkartAffiliateUrl ?? buildMarketplaceSearchUrl("Flipkart", seed),
+    is_affiliate: Boolean(flipkartAffiliateUrl),
+  });
+  links.push({ label: "Croma", href: buildMarketplaceSearchUrl("Croma", seed), is_affiliate: false });
+  links.push({ label: "Reliance Digital", href: buildMarketplaceSearchUrl("Reliance Digital", seed), is_affiliate: false });
+
+  return links;
 }
 
 function buildPriceHistory(priceValue: number): ProductPriceHistoryPoint[] {
@@ -272,6 +285,9 @@ function createProduct(seed: ProductSeed): Product {
     reviewSummary: buildReviewSummary(seed),
     buyLinks: buildBuyLinks(seed),
     similarProductIds: [],
+    amazonAsin: seed.amazonAsin ?? null,
+    amazonAffiliateUrl: seed.amazonAffiliateUrl ?? null,
+    flipkartAffiliateUrl: seed.flipkartAffiliateUrl ?? null,
   };
 }
 

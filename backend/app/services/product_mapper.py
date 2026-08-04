@@ -20,6 +20,27 @@ PRICE_LABEL_ORDER = {
 }
 
 
+def build_amazon_affiliate_url(product: Product) -> str | None:
+    if product.amazon_affiliate_url:
+        return product.amazon_affiliate_url
+
+    if product.amazon_asin:
+        return f"https://www.amazon.in/dp/{product.amazon_asin}?tag=letrusto-21"
+
+    return None
+
+
+def build_buy_link_href(product: Product, item_label: str, fallback_href: str) -> str:
+    if item_label == "Amazon":
+        amazon_href = build_amazon_affiliate_url(product)
+        return amazon_href or fallback_href
+
+    if item_label == "Flipkart" and product.flipkart_affiliate_url:
+        return product.flipkart_affiliate_url
+
+    return fallback_href
+
+
 def format_inr(value: Decimal) -> str:
     normalized = int(value)
     return f"₹{normalized:,}"
@@ -60,6 +81,9 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
             for item in sorted(product.not_recommended_for, key=lambda item: item.position)
         ],
         tags=[item.value for item in product.tags],
+        amazonAsin=product.amazon_asin,
+        amazonAffiliateUrl=product.amazon_affiliate_url,
+        flipkartAffiliateUrl=product.flipkart_affiliate_url,
         priceHistory=[
             ProductPriceHistoryDTO(label=item.label, price=item.price)
             for item in sorted(
@@ -82,12 +106,13 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
             ProductBuyLinkDTO(
                 id=item.id,
                 label=item.label,
-                href=item.href,
+                href=build_buy_link_href(product, item.label, item.href),
                 retailer_type=item.retailer_type,
                 is_affiliate=item.is_affiliate,
                 click_count=item.click_count,
             )
             for item in sorted(product.buy_links, key=lambda item: item.label)
+            if item.label != "Amazon" or build_amazon_affiliate_url(product)
         ],
         similarProductIds=similar_slugs or [],
         series=product.series,

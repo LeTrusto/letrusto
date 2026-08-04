@@ -146,7 +146,7 @@ export default async function ProductPage({ params }: Props) {
             <div className="rounded-[2rem] bg-white p-8 shadow-lg shadow-purple-100/40">
               <h2 className="mb-2 text-2xl font-bold text-gray-900">Buy Now</h2>
               <p className="mb-5 text-sm text-gray-400">Compare prices across retailers before you buy.</p>
-              <ProductBuyButtons links={product.buyLinks} />
+              <ProductBuyButtons product={product} links={product.buyLinks} />
               <p className="mt-4 text-center text-xs text-gray-400">
                 * LeTrusto may earn a small affiliate commission at no extra cost to you.
               </p>

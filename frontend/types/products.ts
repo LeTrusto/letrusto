@@ -86,6 +86,9 @@ export type Product = {
   reviewSummary: string;
   buyLinks: ProductBuyLink[];
   similarProductIds: string[];
+  amazonAsin?: string | null;
+  amazonAffiliateUrl?: string | null;
+  flipkartAffiliateUrl?: string | null;
   // Phase 6.1 catalog fields
   series?: string | null;
   modelName?: string | null;

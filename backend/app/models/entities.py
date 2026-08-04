@@ -57,6 +57,9 @@ class Product(Base):
     storage: Mapped[str | None] = mapped_column(String(40), nullable=True)
     ram: Mapped[str | None] = mapped_column(String(20), nullable=True)
     color: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    amazon_asin: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    amazon_affiliate_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    flipkart_affiliate_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     price_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(8), nullable=False, default="INR")
