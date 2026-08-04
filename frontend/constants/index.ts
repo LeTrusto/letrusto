@@ -36,6 +36,11 @@ export const CATALOG_TREE: CatalogCategoryNode[] = [
   { name: "Pet Care", slug: "pet-care", icon: "🐾", children: [] },
   { name: "Fitness", slug: "fitness", icon: "💪", children: [] },
   { name: "Furniture", slug: "furniture", icon: "🪑", children: [] },
+  { name: "Hosting", slug: "hosting", icon: "🌐", children: [] },
+  { name: "SaaS", slug: "saas", icon: "🧩", children: [] },
+  { name: "Finance", slug: "finance", icon: "💳", children: [] },
+  { name: "Insurance", slug: "insurance", icon: "🛡️", children: [] },
+  { name: "Travel", slug: "travel", icon: "✈️", children: [] },
 ];
 
 // ── Brand catalog per sub-category ────────────────────────────────────────────
@@ -433,6 +438,9 @@ export const CATEGORY_LABELS: Record<string, string> = {
   hosting: "Hosting",
   saas: "SaaS",
   kitchen: "Kitchen",
+  travel: "Travel",
+  finance: "Finance",
+  insurance: "Insurance",
   beauty: "Beauty",
   "baby-care": "Baby Care",
   "pet-care": "Pet Care",

@@ -1,19 +1,15 @@
-import {
-  API_BASE_URL,
-  IS_STATIC_GENERATION_BUILD,
-} from "@/services/api";
-import {
-  getAllProducts,
-  getHomeCollections,
-  type Product,
-} from "@/services/product.service";
+import { API_BASE_URL, IS_STATIC_GENERATION_BUILD } from "@/services/api";
+import { getAllProducts, type Product } from "@/services/product.service";
 import {
   HOMEPAGE_CATEGORY_CONFIG,
+  HOMEPAGE_COMING_SOON_VERTICALS,
+  HOMEPAGE_POPULAR_COMPARISONS,
   HOMEPAGE_TRUST_SIGNALS,
   type HomepageCategoryConfig,
+  type HomepageComingSoonItem,
+  type HomepageComparisonItem,
   type TrustSignal,
 } from "@/config/homepage";
-import type { ComingSoonVertical } from "@/components/homepage/HomeComingSoonRoadmapSection";
 
 export type HomeCategoryCard = HomepageCategoryConfig & {
   productCount: number;
@@ -29,126 +25,49 @@ export type HomeGuideSummary = {
 
 export type HomepageDataSources = {
   "categories.showcase": HomeCategoryCard[];
-  "products.trending": Product[];
-  "products.newArrivals": Product[];
-  "products.aiPicks": Product[];
-  "products.bestDeals": Product[];
-  "comingSoon.verticals": ComingSoonVertical[];
-  "guides.latest": HomeGuideSummary[];
   "trust.default": TrustSignal[];
+  "comparisons.popular": HomepageComparisonItem[];
+  "comingSoon.hostingSaas": HomepageComingSoonItem;
+  "comingSoon.beauty": HomepageComingSoonItem;
+  "comingSoon.petCare": HomepageComingSoonItem;
+  "guides.latest": HomeGuideSummary[];
 };
 
-const CATEGORY_FALLBACK_RE = /[^a-z0-9-]/g;
+const CATEGORY_MATCH_RE = /[^a-z0-9-]/g;
 
 function normalize(text: string) {
-  return text.toLowerCase().replace(CATEGORY_FALLBACK_RE, "");
+  return text.toLowerCase().replace(CATEGORY_MATCH_RE, "");
 }
 
-function includesHint(value: string, hint: string) {
-  const valueNorm = normalize(value);
+function includesHint(source: string, hint: string) {
+  const sourceNorm = normalize(source);
   const hintNorm = normalize(hint);
-  return valueNorm.includes(hintNorm);
+  return sourceNorm.includes(hintNorm);
 }
 
-const COMING_SOON_VERTICALS: ComingSoonVertical[] = [
-  {
-    id: "hosting",
-    title: "Hosting Advisor",
-    subtitle: "AI-led recommendations for startups, ecommerce stores, and enterprise workloads.",
-    illustration: "HOST",
-    eta: "Q4 2026",
-    route: "/category/hosting",
-    planned: [
-      "Uptime, support, and performance benchmarks",
-      "Managed WordPress and VPS comparison workflows",
-      "Transparent renewal cost forecasting",
-    ],
-  },
-  {
-    id: "saas",
-    title: "SaaS Buying Workspace",
-    subtitle: "Evaluate software like an operator with AI scoring and adoption fit analysis.",
-    illustration: "SAAS",
-    eta: "Q1 2027",
-    route: "/category/saas",
-    planned: [
-      "Role-based software recommendations",
-      "Total cost and integration complexity scoring",
-      "Vendor reliability and roadmap signals",
-    ],
-  },
-  {
-    id: "beauty",
-    title: "Beauty Intelligence",
-    subtitle: "Ingredient-aware recommendations and personalized routine guidance.",
-    illustration: "BEAUTY",
-    eta: "Q1 2027",
-    route: "/category/beauty",
-    planned: [
-      "Skin concern and ingredient match scoring",
-      "Routine builders by season and budget",
-      "Sensitive skin safe-choice filters",
-    ],
-  },
-  {
-    id: "pet-care",
-    title: "Pet Care Assistant",
-    subtitle: "Safer, smarter choices for food, grooming, and wellness essentials.",
-    illustration: "PET",
-    eta: "Q2 2027",
-    route: "/category/pet-care",
-    planned: [
-      "Breed and age-aware recommendations",
-      "Nutrition and ingredient comparison panels",
-      "Vet-informed buying guide series",
-    ],
-  },
-];
+function resolveCategoryCount(items: Product[], hints: string[]) {
+  return items.filter((product) => {
+    const source = [product.category, product.parentCategory, product.name, product.tags?.join(" ")]
+      .filter(Boolean)
+      .join(" ");
 
-function buildBestDeals(products: Product[]) {
-  return [...products]
-    .sort((left, right) => {
-      const leftValueScore = left.aiScore / Math.max(left.priceValue, 1);
-      const rightValueScore = right.aiScore / Math.max(right.priceValue, 1);
-      return rightValueScore - leftValueScore;
-    })
-    .slice(0, 8);
+    return hints.some((hint) => includesHint(source, hint));
+  }).length;
 }
 
-function pickMixedCategoryProducts(products: Product[], maxItems: number) {
-  const byCategory = new Map<string, Product[]>();
+function buildCategoryShowcase(allProducts: Product[]): HomeCategoryCard[] {
+  const launchedCategories = new Set(["electronics"]);
 
-  for (const product of products) {
-    const category = String(product.category);
-    const bucket = byCategory.get(category) ?? [];
-    bucket.push(product);
-    byCategory.set(category, bucket);
-  }
+  return HOMEPAGE_CATEGORY_CONFIG.map((entry) => {
+    const rawCount = resolveCategoryCount(allProducts, entry.categoryHints);
+    const productCount = launchedCategories.has(entry.id) ? rawCount : 0;
 
-  const selected: Product[] = [];
-  const categories = Array.from(byCategory.keys());
-
-  while (selected.length < maxItems && categories.length > 0) {
-    for (let index = categories.length - 1; index >= 0; index -= 1) {
-      const category = categories[index];
-      const list = byCategory.get(category);
-      const next = list?.shift();
-
-      if (next) {
-        selected.push(next);
-      }
-
-      if (!list || list.length === 0) {
-        categories.splice(index, 1);
-      }
-
-      if (selected.length >= maxItems) {
-        break;
-      }
-    }
-  }
-
-  return selected;
+    return {
+      ...entry,
+      productCount,
+      productCountText: productCount > 0 ? `${productCount} live picks` : "Coming Soon",
+    };
+  });
 }
 
 async function getLatestGuides(limit: number): Promise<HomeGuideSummary[]> {
@@ -205,45 +124,16 @@ async function getLatestGuides(limit: number): Promise<HomeGuideSummary[]> {
   }
 }
 
-function resolveCategoryCount(items: Product[], hints: string[]) {
-  return items.filter((product) => {
-    const source = [product.category, product.parentCategory, product.name, product.tags?.join(" ")]
-      .filter(Boolean)
-      .join(" ");
-
-    return hints.some((hint) => includesHint(source, hint));
-  }).length;
-}
-
-function buildCategoryShowcase(allProducts: Product[]): HomeCategoryCard[] {
-  return HOMEPAGE_CATEGORY_CONFIG.map((entry) => {
-    const count = resolveCategoryCount(allProducts, entry.categoryHints);
-    return {
-      ...entry,
-      productCount: count,
-      productCountText: count > 0 ? `${count}+ products` : `${entry.fallbackCount} products`,
-    };
-  });
-}
-
 export async function getHomepageDataSources(): Promise<HomepageDataSources> {
-  const [{ trending, newArrivals, topAiPicks }, allProducts, guides] = await Promise.all([
-    getHomeCollections(),
-    getAllProducts(),
-    getLatestGuides(4),
-  ]);
-
-  const trendingMixed = pickMixedCategoryProducts(trending.length > 0 ? trending : allProducts, 8);
-  const aiPicks = [...topAiPicks].filter((product) => product.aiSummary?.trim().length > 0).slice(0, 4);
+  const [allProducts, guides] = await Promise.all([getAllProducts(), getLatestGuides(4)]);
 
   return {
     "categories.showcase": buildCategoryShowcase(allProducts),
-    "products.trending": trendingMixed,
-    "products.newArrivals": newArrivals,
-    "products.aiPicks": aiPicks,
-    "products.bestDeals": buildBestDeals(allProducts),
-    "comingSoon.verticals": COMING_SOON_VERTICALS,
-    "guides.latest": guides,
     "trust.default": HOMEPAGE_TRUST_SIGNALS,
+    "comparisons.popular": HOMEPAGE_POPULAR_COMPARISONS,
+    "comingSoon.hostingSaas": HOMEPAGE_COMING_SOON_VERTICALS.hostingSaas,
+    "comingSoon.beauty": HOMEPAGE_COMING_SOON_VERTICALS.beauty,
+    "comingSoon.petCare": HOMEPAGE_COMING_SOON_VERTICALS.petCare,
+    "guides.latest": guides,
   };
 }

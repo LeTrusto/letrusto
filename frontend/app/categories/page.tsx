@@ -9,7 +9,13 @@ export const metadata: Metadata = {
 };
 
 export default function CategoriesPage() {
-  const allCategories = CATALOG_TREE.flatMap((group) => group.children ?? []);
+  const allCategories = CATALOG_TREE.flatMap((group) => {
+    if (!group.children || group.children.length === 0) {
+      return [{ name: group.name, slug: group.slug, icon: group.icon }];
+    }
+
+    return group.children;
+  });
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-12">

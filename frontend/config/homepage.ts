@@ -1,25 +1,21 @@
 export type HomeSectionComponent =
   | "hero"
   | "categoryShowcase"
-  | "productGrid"
-  | "productRail"
-  | "aiFeatured"
-  | "dealsSpotlight"
-  | "comingSoonRoadmap"
   | "trustSignals"
+  | "comparisons"
+  | "comingSoonVertical"
   | "guides"
   | "askAiCta";
 
 export type HomeDataSourceKey =
   | "none"
   | "categories.showcase"
-  | "products.trending"
-  | "products.newArrivals"
-  | "products.aiPicks"
-  | "products.bestDeals"
-  | "comingSoon.verticals"
-  | "guides.latest"
-  | "trust.default";
+  | "trust.default"
+  | "comparisons.popular"
+  | "comingSoon.hostingSaas"
+  | "comingSoon.beauty"
+  | "comingSoon.petCare"
+  | "guides.latest";
 
 export type HomepageSectionConfig = {
   id: string;
@@ -32,7 +28,6 @@ export type HomepageSectionConfig = {
   ctaLabel?: string;
   ctaHref?: string;
   maxItems?: number;
-  highlightLabel?: string;
 };
 
 export type HomepageCategoryConfig = {
@@ -43,7 +38,6 @@ export type HomepageCategoryConfig = {
   image: string;
   gradientClass: string;
   categoryHints: string[];
-  fallbackCount: string;
 };
 
 export type TrustSignal = {
@@ -52,96 +46,122 @@ export type TrustSignal = {
   description: string;
 };
 
+export type HomepageComparisonItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  accent: string;
+};
+
+export type HomepageComingSoonItem = {
+  id: string;
+  title: string;
+  categoryHref: string;
+  description: string;
+  illustration: string;
+  expectedItems: string[];
+};
+
 export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
   {
     id: "electronics",
     name: "Electronics",
-    description: "Phones, laptops, TVs, wearables, and more.",
+    description: "Phones, laptops, cameras, gaming, and wearables.",
     href: "/category/electronics",
     image: "/images/products/iphone16pro-1.svg",
-    gradientClass: "from-indigo-700/80 to-fuchsia-600/80",
+    gradientClass: "from-indigo-800/90 via-violet-700/85 to-cyan-600/85",
     categoryHints: ["phone", "laptop", "tablet", "camera", "television", "gaming", "headphones", "smartwatch"],
-    fallbackCount: "120+",
   },
   {
     id: "hosting",
     name: "Hosting",
-    description: "Shared, managed, and cloud hosting recommendations.",
+    description: "Smart recommendations for sites, startups, and growing teams.",
     href: "/category/hosting",
     image: "/images/products/macbook-air-m4.png",
-    gradientClass: "from-cyan-700/80 to-blue-700/80",
+    gradientClass: "from-cyan-800/90 via-blue-700/80 to-indigo-700/85",
     categoryHints: ["hosting", "web-hosting", "cloud", "server"],
-    fallbackCount: "40+",
   },
   {
     id: "saas",
-    name: "SaaS Tools",
-    description: "Business software, productivity, and AI tools.",
+    name: "SaaS",
+    description: "Business software guidance with AI-first evaluation frameworks.",
     href: "/category/saas",
     image: "/images/products/lenovo-legion-go-1.jpg",
-    gradientClass: "from-emerald-700/80 to-teal-600/80",
+    gradientClass: "from-emerald-800/90 via-teal-700/85 to-cyan-700/80",
     categoryHints: ["saas", "software", "productivity", "automation"],
-    fallbackCount: "60+",
-  },
-  {
-    id: "pet-care",
-    name: "Pet Care",
-    description: "Smart picks for pet health, food, and grooming.",
-    href: "/category/pet-care",
-    image: "/images/products/sony-wh1000xm6.png",
-    gradientClass: "from-amber-700/80 to-orange-600/80",
-    categoryHints: ["pet-care"],
-    fallbackCount: "25+",
   },
   {
     id: "beauty",
     name: "Beauty",
-    description: "Skincare, grooming, and wellness essentials.",
+    description: "Evidence-led recommendations for skincare and wellness.",
     href: "/category/beauty",
     image: "/images/products/sony-a7-iv-1.jpg",
-    gradientClass: "from-rose-700/80 to-pink-600/80",
+    gradientClass: "from-rose-800/90 via-pink-700/85 to-fuchsia-700/80",
     categoryHints: ["beauty"],
-    fallbackCount: "35+",
+  },
+  {
+    id: "pet-care",
+    name: "Pet Care",
+    description: "Trusted picks for food, health, and everyday pet essentials.",
+    href: "/category/pet-care",
+    image: "/images/products/sony-wh1000xm6.png",
+    gradientClass: "from-amber-800/90 via-orange-700/85 to-rose-700/75",
+    categoryHints: ["pet-care"],
   },
   {
     id: "home",
     name: "Home",
-    description: "Kitchen, appliances, and everyday home upgrades.",
+    description: "Appliance and lifestyle buying guidance for modern homes.",
     href: "/category/home-kitchen",
     image: "/images/products/ifb-senator-mxn-8012-1.jpg",
-    gradientClass: "from-violet-700/80 to-indigo-600/80",
+    gradientClass: "from-slate-800/90 via-indigo-700/80 to-violet-700/80",
     categoryHints: ["home-kitchen", "refrigerator", "washing-machine", "furniture"],
-    fallbackCount: "55+",
-  },
-  {
-    id: "gaming",
-    name: "Gaming",
-    description: "Consoles, accessories, and performance gear.",
-    href: "/category/gaming",
-    image: "/images/products/nintendo-switch-oled-1.png",
-    gradientClass: "from-red-700/80 to-orange-600/80",
-    categoryHints: ["gaming"],
-    fallbackCount: "30+",
-  },
-  {
-    id: "fitness",
-    name: "Fitness",
-    description: "Wearables and training essentials for active lifestyles.",
-    href: "/category/fitness",
-    image: "/images/products/samsung-galaxy-tab-s10-1.png",
-    gradientClass: "from-lime-700/80 to-emerald-600/80",
-    categoryHints: ["fitness"],
-    fallbackCount: "20+",
   },
   {
     id: "kitchen",
     name: "Kitchen",
-    description: "Appliances and tools for smarter cooking.",
+    description: "Compare cooking and prep tools with practical recommendations.",
     href: "/category/kitchen",
     image: "/images/products/whirlpool-stainwash-pro-9kg-1.jpg",
-    gradientClass: "from-sky-700/80 to-cyan-600/80",
+    gradientClass: "from-sky-800/90 via-cyan-700/80 to-blue-700/85",
     categoryHints: ["kitchen"],
-    fallbackCount: "45+",
+  },
+  {
+    id: "fitness",
+    name: "Fitness",
+    description: "Performance-focused picks for training and recovery goals.",
+    href: "/category/fitness",
+    image: "/images/products/samsung-galaxy-tab-s10-1.png",
+    gradientClass: "from-lime-800/90 via-emerald-700/85 to-teal-700/80",
+    categoryHints: ["fitness"],
+  },
+  {
+    id: "travel",
+    name: "Travel",
+    description: "Curated recommendations for smart travel planning and gear.",
+    href: "/category/travel",
+    image: "/images/products/nintendo-switch-oled-1.png",
+    gradientClass: "from-blue-800/90 via-sky-700/80 to-teal-700/80",
+    categoryHints: ["travel"],
+  },
+  {
+    id: "finance",
+    name: "Finance",
+    description: "Decision support for cards, savings, and financial tools.",
+    href: "/category/finance",
+    image: "/images/products/galaxy-s25-1.png",
+    gradientClass: "from-emerald-800/90 via-green-700/80 to-cyan-700/75",
+    categoryHints: ["finance"],
+  },
+  {
+    id: "insurance",
+    name: "Insurance",
+    description: "Policy comparison guidance focused on clarity and trust.",
+    href: "/category/insurance",
+    image: "/images/products/sony-bravia-7-55-1.jpg",
+    gradientClass: "from-indigo-900/90 via-violet-700/80 to-fuchsia-700/75",
+    categoryHints: ["insurance"],
   },
 ];
 
@@ -149,29 +169,90 @@ export const HOMEPAGE_TRUST_SIGNALS: TrustSignal[] = [
   {
     id: "ai-recommendations",
     title: "AI Recommendations",
-    description: "Intent-aware suggestions tuned to your budget, use case, and priorities.",
+    description: "Intent-aware suggestions tuned to your budget, priorities, and use case.",
   },
   {
     id: "verified-reviews",
     title: "Verified Reviews",
-    description: "Signals from real buyer sentiment and long-term ownership feedback.",
+    description: "Buyer feedback and sentiment signals filtered for reliability and relevance.",
   },
   {
     id: "comparisons",
-    title: "Smart Comparisons",
-    description: "Side-by-side product breakdowns to surface meaningful differences quickly.",
+    title: "Deep Comparisons",
+    description: "Side-by-side breakdowns that surface practical differences, not just specs.",
   },
   {
     id: "buying-guides",
     title: "Buying Guides",
-    description: "Expert research that converts complexity into clear decisions.",
+    description: "Clear editorial guidance that turns research into confident purchase decisions.",
   },
   {
     id: "best-deals",
-    title: "Best Deals",
-    description: "Track value and spot opportunities without noisy price chasing.",
+    title: "Best Value Signals",
+    description: "Transparent value indicators that prioritize long-term quality over hype.",
   },
 ];
+
+export const HOMEPAGE_POPULAR_COMPARISONS: HomepageComparisonItem[] = [
+  {
+    id: "iphone-vs-galaxy",
+    title: "iPhone 16 Pro vs Galaxy S25",
+    subtitle: "Camera consistency, software lifecycle, and resale value.",
+    href: "/compare?first=iphone16pro&second=galaxy-s25",
+    accent: "from-blue-600 to-violet-600",
+  },
+  {
+    id: "air-vs-zenbook",
+    title: "MacBook Air M4 vs ZenBook 14 OLED",
+    subtitle: "Battery longevity, build, and performance for coding workflows.",
+    href: "/compare?first=macbook-air-m4&second=asus-zenbook-14-oled",
+    accent: "from-indigo-600 to-cyan-600",
+  },
+  {
+    id: "sony-vs-bose",
+    title: "WH-1000XM6 vs Bose QC Ultra",
+    subtitle: "Noise cancellation depth, comfort, and call quality.",
+    href: "/compare?first=sony-wh-1000xm6&second=bose-qc-ultra",
+    accent: "from-fuchsia-600 to-rose-600",
+  },
+];
+
+export const HOMEPAGE_COMING_SOON_VERTICALS: Record<
+  "hostingSaas" | "beauty" | "petCare",
+  HomepageComingSoonItem
+> = {
+  hostingSaas: {
+    id: "hosting-saas",
+    title: "Hosting & SaaS",
+    categoryHref: "/category/hosting",
+    description: "We are carefully curating trusted infrastructure and software recommendations for this category.",
+    illustration: "HOST",
+    expectedItems: [
+      "Hostinger",
+      "Cloudways",
+      "Namecheap",
+      "Google Workspace",
+      "Website Builders",
+      "AI Tools",
+    ],
+  },
+  beauty: {
+    id: "beauty",
+    title: "Beauty",
+    categoryHref: "/category/beauty",
+    description: "We are carefully curating the best products and recommendations for this category.",
+    illustration: "BEAUTY",
+    expectedItems: ["Skincare", "Hair Care", "Wellness", "Cosmetics"],
+  },
+  petCare: {
+    id: "pet-care",
+    title: "Pet Care",
+    categoryHref: "/category/pet-care",
+    description: "We are carefully curating trusted recommendations for pets and their caregivers.",
+    illustration: "PET",
+    expectedItems: ["Food", "Health", "Accessories", "Training"],
+  },
+};
 
 export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
   {
@@ -188,89 +269,60 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
     component: "categoryShowcase",
     dataSource: "categories.showcase",
     title: "Browse Categories",
-    subtitle: "Explore fast-growing verticals with AI-curated picks and trusted comparisons.",
-  },
-  {
-    id: "trending-now",
-    enabled: true,
-    order: 3,
-    component: "productGrid",
-    dataSource: "products.trending",
-    title: "Trending Now",
-    subtitle: "High-momentum products across categories buyers are actively researching.",
-    ctaLabel: "See all products",
-    ctaHref: "/search",
-    maxItems: 8,
-    highlightLabel: "Trending",
-  },
-  {
-    id: "new-arrivals",
-    enabled: true,
-    order: 4,
-    component: "productRail",
-    dataSource: "products.newArrivals",
-    title: "New Arrivals",
-    subtitle: "Fresh launches and newly listed products, optimized for quick discovery.",
-    ctaLabel: "Browse new products",
-    ctaHref: "/search?sort=relevance",
-    maxItems: 10,
-    highlightLabel: "New",
+    subtitle: "Explore research-first buying journeys across present and upcoming verticals.",
   },
   {
     id: "trust-letrusto",
     enabled: true,
-    order: 5,
+    order: 3,
     component: "trustSignals",
     dataSource: "trust.default",
-    title: "Why Trust LeTrusto?",
-    subtitle: "The AI-first workflow that helps you choose with confidence.",
+    title: "Why Trust LeTrusto",
+    subtitle: "Designed for buyers who want clarity, confidence, and AI-backed guidance.",
+  },
+  {
+    id: "popular-comparisons",
+    enabled: true,
+    order: 4,
+    component: "comparisons",
+    dataSource: "comparisons.popular",
+    title: "Popular Comparisons",
+    subtitle: "Start with the decisions buyers ask us about most.",
+    ctaLabel: "Open Comparison Lab",
+    ctaHref: "/compare",
   },
   {
     id: "hosting-saas",
     enabled: true,
-    order: 6,
-    component: "comingSoonRoadmap",
-    dataSource: "comingSoon.verticals",
+    order: 5,
+    component: "comingSoonVertical",
+    dataSource: "comingSoon.hostingSaas",
     title: "Hosting & SaaS",
-    subtitle: "Premium advisor experiences for cloud, software, and service buying are launching next.",
-    ctaLabel: "Explore Hosting & SaaS",
-    ctaHref: "/category/hosting",
-    maxItems: 4,
   },
   {
-    id: "ai-picks",
+    id: "beauty",
+    enabled: true,
+    order: 6,
+    component: "comingSoonVertical",
+    dataSource: "comingSoon.beauty",
+    title: "Beauty",
+  },
+  {
+    id: "pet-care",
     enabled: true,
     order: 7,
-    component: "aiFeatured",
-    dataSource: "products.aiPicks",
-    title: "AI Picks",
-    subtitle: "The strongest quality-to-value picks ranked by LeTrusto AI.",
-    ctaLabel: "Ask AI for your pick",
-    ctaHref: "/ai",
-    maxItems: 4,
-    highlightLabel: "AI Pick",
-  },
-  {
-    id: "best-deals",
-    enabled: true,
-    order: 8,
-    component: "dealsSpotlight",
-    dataSource: "products.bestDeals",
-    title: "Best Deals",
-    subtitle: "High-value picks balancing price, reliability, and long-term utility.",
-    ctaLabel: "View more deals",
-    ctaHref: "/deals",
-    maxItems: 4,
-    highlightLabel: "Deal",
+    component: "comingSoonVertical",
+    dataSource: "comingSoon.petCare",
+    title: "Pet Care",
   },
   {
     id: "latest-guides",
     enabled: true,
-    order: 9,
+    order: 8,
     component: "guides",
     dataSource: "guides.latest",
     title: "Latest Buying Guides",
-    subtitle: "Editorial guidance and deep dives to help you buy smarter.",
+    subtitle: "Editorial intelligence to help you evaluate before you commit.",
     ctaLabel: "All guides",
     ctaHref: "/guides",
     maxItems: 4,
@@ -278,11 +330,11 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
   {
     id: "ask-ai-cta",
     enabled: true,
-    order: 10,
+    order: 9,
     component: "askAiCta",
     dataSource: "none",
-    title: "Still Deciding? Ask LeTrusto AI",
-    subtitle: "Share your budget and priorities to get a personalized shortlist in seconds.",
+    title: "Ask LeTrusto AI",
+    subtitle: "Describe what matters to you and get a personalized shortlist in seconds.",
     ctaLabel: "Ask AI Now",
     ctaHref: "/ai",
   },

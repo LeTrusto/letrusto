@@ -1,32 +1,12 @@
 import Hero from "@/components/Hero";
 import HomeCategoryShowcase from "@/components/homepage/HomeCategoryShowcase";
-import HomeProductGridSection from "@/components/homepage/HomeProductGridSection";
-import HomeProductRailSection from "@/components/homepage/HomeProductRailSection";
-import HomeAIPicksFeaturedSection from "@/components/homepage/HomeAIPicksFeaturedSection";
-import HomeDealsSpotlightSection from "@/components/homepage/HomeDealsSpotlightSection";
-import HomeComingSoonRoadmapSection from "@/components/homepage/HomeComingSoonRoadmapSection";
 import HomeTrustSignalsSection from "@/components/homepage/HomeTrustSignalsSection";
 import HomeLatestGuidesSection from "@/components/homepage/HomeLatestGuidesSection";
 import HomeAskAiCtaSection from "@/components/homepage/HomeAskAiCtaSection";
+import HomePopularComparisonsSection from "@/components/homepage/HomePopularComparisonsSection";
+import HomeComingSoonVerticalSection from "@/components/homepage/HomeComingSoonVerticalSection";
 import type { HomepageSectionConfig } from "@/config/homepage";
 import type { HomepageDataSources } from "@/services/homepage.service";
-
-type ProductSourceKey =
-  | "products.trending"
-  | "products.newArrivals"
-  | "products.aiPicks"
-  | "products.bestDeals";
-
-const PRODUCT_SOURCE_KEYS: ProductSourceKey[] = [
-  "products.trending",
-  "products.newArrivals",
-  "products.aiPicks",
-  "products.bestDeals",
-];
-
-function isProductSourceKey(value: string): value is ProductSourceKey {
-  return PRODUCT_SOURCE_KEYS.includes(value as ProductSourceKey);
-}
 
 type HomepageSectionRendererProps = {
   section: HomepageSectionConfig;
@@ -65,98 +45,49 @@ export default function HomepageSectionRenderer({
       );
     }
 
-    case "productGrid": {
-      if (!isProductSourceKey(section.dataSource)) {
-        return null;
-      }
-
-      const items = resolveItems(dataSources, section.dataSource, section.maxItems);
-
-      if (!Array.isArray(items)) {
-        return null;
-      }
-
-      return (
-        <HomeProductGridSection
-          title={section.title ?? "Products"}
-          subtitle={section.subtitle}
-          ctaLabel={section.ctaLabel}
-          ctaHref={section.ctaHref}
-          items={items}
-          highlightLabel={section.highlightLabel}
-        />
-      );
-    }
-
-    case "productRail": {
-      if (!isProductSourceKey(section.dataSource)) {
-        return null;
-      }
-
-      const items = resolveItems(dataSources, section.dataSource, section.maxItems);
-
-      if (!Array.isArray(items)) {
-        return null;
-      }
-
-      return (
-        <HomeProductRailSection
-          title={section.title ?? "Products"}
-          subtitle={section.subtitle}
-          ctaLabel={section.ctaLabel}
-          ctaHref={section.ctaHref}
-          items={items}
-          highlightLabel={section.highlightLabel}
-        />
-      );
-    }
-
-    case "aiFeatured": {
-      const items = resolveItems(dataSources, "products.aiPicks", section.maxItems);
-      return (
-        <HomeAIPicksFeaturedSection
-          title={section.title ?? "AI Picks"}
-          subtitle={section.subtitle}
-          ctaLabel={section.ctaLabel}
-          ctaHref={section.ctaHref}
-          items={items}
-        />
-      );
-    }
-
-    case "dealsSpotlight": {
-      const items = resolveItems(dataSources, "products.bestDeals", section.maxItems);
-      return (
-        <HomeDealsSpotlightSection
-          title={section.title ?? "Best Deals"}
-          subtitle={section.subtitle}
-          ctaLabel={section.ctaLabel}
-          ctaHref={section.ctaHref}
-          items={items}
-        />
-      );
-    }
-
-    case "comingSoonRoadmap": {
-      const items = resolveItems(dataSources, "comingSoon.verticals", section.maxItems);
-      return (
-        <HomeComingSoonRoadmapSection
-          title={section.title ?? "Coming Soon"}
-          subtitle={section.subtitle}
-          ctaLabel={section.ctaLabel}
-          ctaHref={section.ctaHref}
-          items={items}
-        />
-      );
-    }
-
     case "trustSignals": {
       const items = resolveItems(dataSources, "trust.default", section.maxItems);
       return (
         <HomeTrustSignalsSection
-          title={section.title ?? "Why Trust LeTrusto?"}
+          title={section.title ?? "Why Trust LeTrusto"}
           subtitle={section.subtitle}
           items={items}
+        />
+      );
+    }
+
+    case "comparisons": {
+      const items = resolveItems(dataSources, "comparisons.popular", section.maxItems);
+      return (
+        <HomePopularComparisonsSection
+          title={section.title ?? "Popular Comparisons"}
+          subtitle={section.subtitle}
+          ctaLabel={section.ctaLabel}
+          ctaHref={section.ctaHref}
+          items={items}
+        />
+      );
+    }
+
+    case "comingSoonVertical": {
+      const source = section.dataSource;
+      const item =
+        source === "comingSoon.hostingSaas"
+          ? dataSources["comingSoon.hostingSaas"]
+          : source === "comingSoon.beauty"
+            ? dataSources["comingSoon.beauty"]
+            : source === "comingSoon.petCare"
+              ? dataSources["comingSoon.petCare"]
+              : null;
+
+      if (!item) {
+        return null;
+      }
+
+      return (
+        <HomeComingSoonVerticalSection
+          title={section.title ?? item.title}
+          item={item}
         />
       );
     }

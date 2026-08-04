@@ -45,6 +45,7 @@ type ProductCardProps = {
   product: Product;
   compareWithId?: string;
   highlightLabel?: string;
+  aiHighlights?: string[];
   aiReason?: string;
   className?: string;
   priority?: boolean;
@@ -54,6 +55,7 @@ function ProductCard({
   product,
   compareWithId,
   highlightLabel,
+  aiHighlights,
   aiReason,
   className,
   priority = false,
@@ -64,6 +66,10 @@ function ProductCard({
   const [imageLoaded, setImageLoaded] = useState(false);
   const imageSrc = hasImageError ? product.fallbackImage : product.image;
   const isLocalProductImage = useMemo(() => imageSrc.startsWith("/images/products/"), [imageSrc]);
+  const resolvedHighlights = (aiHighlights && aiHighlights.length > 0 ? aiHighlights : product.pros)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .slice(0, 3);
 
   return (
     <motion.article
@@ -151,10 +157,21 @@ function ProductCard({
         </h3>
         <p className="mt-0.5 text-xs font-medium text-slate-400">{product.brand}</p>
 
-        {aiReason ? (
-          <p className="mt-2.5 line-clamp-2 rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2 text-xs leading-relaxed text-violet-800">
-            <span className="font-semibold">Why AI recommends this:</span> {aiReason}
-          </p>
+        {resolvedHighlights.length > 0 || aiReason ? (
+          <div className="mt-2.5 rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2 text-xs text-violet-900">
+            <p className="font-semibold text-violet-800">Why AI recommends</p>
+            {resolvedHighlights.length > 0 ? (
+              <ul className="mt-1.5 space-y-1">
+                {resolvedHighlights.map((point) => (
+                  <li key={`${product.id}-${point}`} className="line-clamp-1">
+                    {`\u2713 ${point}`}
+                  </li>
+                ))}
+              </ul>
+            ) : aiReason ? (
+              <p className="mt-1.5 line-clamp-2 leading-relaxed">{aiReason}</p>
+            ) : null}
+          </div>
         ) : null}
 
         {/* Rating + price */}
