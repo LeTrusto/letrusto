@@ -48,6 +48,10 @@ def main() -> None:
         from scripts.seed_smartphones import run as seed_phones  # type: ignore[import]
         seed_phones()
 
+        print("  Syncing verified Apple iPhone SKUs...", flush=True)
+        from scripts.sync_verified_apple_iphones import run as sync_verified_iphones  # type: ignore[import]
+        sync_verified_iphones()
+
         if article_count == 0:
             print("  Seeding launch articles...", flush=True)
             from scripts.seed_articles import run as seed_articles  # type: ignore[import]
