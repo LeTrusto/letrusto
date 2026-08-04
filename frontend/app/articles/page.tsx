@@ -25,13 +25,20 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 async function getArticles(): Promise<Article[]> {
   if (!IS_API_CONFIGURED) return [];
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 4000);
   try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/articles?page_size=20`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API_BASE_URL}/api/v1/articles?page_size=20`, {
+      signal: controller.signal,
+      next: { revalidate: 300 },
+    });
     if (!res.ok) return [];
     const data = await res.json() as { items: Article[] };
     return data.items;
   } catch {
     return [];
+  } finally {
+    clearTimeout(t);
   }
 }
 
