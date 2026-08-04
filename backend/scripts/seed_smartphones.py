@@ -68,6 +68,9 @@ class PhoneModel:
     tags: list[str]
     image_url: str
     availability: str = "In Stock"
+    amazon_affiliate_url: str | None = None
+    amazon_affiliate_urls: dict[str, str] | None = None
+    slug_suffix: str | None = None
     extra_specs: list[tuple[str, str]] = field(default_factory=list)
 
 
@@ -76,6 +79,128 @@ class PhoneModel:
 PHONES: list[PhoneModel] = [
 
     # ── Apple ────────────────────────────────────────────────────────────────
+    PhoneModel(
+        brand="Apple", series="iPhone 17 Series", model_name="iPhone 17 Pro Max",
+        ram="12GB", color="Silver",
+        storage_variants=[
+            ("256GB", 164900),
+        ],
+        rating=4.9, ai_score=98,
+        display='6.9" Super Retina XDR OLED, 1-120Hz ProMotion',
+        chip="Apple A19 Pro",
+        camera="48MP main + 48MP ultrawide + 12MP 5× telephoto",
+        battery="5000mAh, 35W wired + 25W MagSafe",
+        pros=["Best-in-class iPhone camera system", "Huge Pro display", "A19 Pro performance", "Premium build quality", "Long software support"],
+        cons=["Very expensive", "Heavy at 230g", "No charger in box", "Large size is not for everyone"],
+        best_for=["professional photography", "videography", "power users", "iOS ecosystem"],
+        not_for=["budget buyers", "small-phone lovers", "Android users"],
+        tags=["iphone", "apple", "flagship", "5g", "camera", "ios", "pro", "promax"],
+        image_url="/images/products/iphone16pro-1.svg",
+        amazon_affiliate_url="https://link.amazon/B01FUEr1a",
+        extra_specs=[("Network", "5G"), ("OS", "iOS 19"), ("Charging", "35W wired + 25W MagSafe"), ("Colors", "Silver/Black/Blue")],
+    ),
+    PhoneModel(
+        brand="Apple", series="iPhone 17 Series", model_name="iPhone 17 Pro",
+        ram="12GB", color="Silver",
+        storage_variants=[
+            ("512GB", 149900),
+        ],
+        rating=4.9, ai_score=97,
+        display='6.3" Super Retina XDR OLED, 1-120Hz ProMotion',
+        chip="Apple A19 Pro",
+        camera="48MP main + 48MP ultrawide + 12MP 5× telephoto",
+        battery="4450mAh, 35W wired + 25W MagSafe",
+        pros=["A19 Pro chip performance", "Excellent Pro camera system", "Compact premium body", "Bright ProMotion display", "Long iOS update support"],
+        cons=["Very expensive", "No charger included", "Storage tier costs more", "Not the lightest phone"],
+        best_for=["professional photography", "power users", "iOS ecosystem", "compact flagship buyers"],
+        not_for=["budget buyers", "Android users", "one-hand minimalists"],
+        tags=["iphone", "apple", "flagship", "5g", "camera", "ios", "pro"],
+        image_url="/images/products/iphone16pro-1.svg",
+        amazon_affiliate_url="https://link.amazon/B0dJ0ewY4",
+        extra_specs=[("Network", "5G"), ("OS", "iOS 19"), ("Charging", "35W wired + 25W MagSafe")],
+    ),
+    PhoneModel(
+        brand="Apple", series="iPhone 17 Series", model_name="iPhone 17",
+        ram="8GB", color="Black",
+        storage_variants=[
+            ("256GB", 89900),
+        ],
+        rating=4.8, ai_score=95,
+        display='6.3" Super Retina XDR OLED, 1-120Hz ProMotion',
+        chip="Apple A19",
+        camera="48MP main + 12MP ultrawide",
+        battery="3600mAh, 25W wired + MagSafe",
+        pros=["Bright 120Hz display", "Balanced flagship value", "A19 performance", "Apple Intelligence support", "Compact premium design"],
+        cons=["No telephoto lens", "Still expensive", "Single-color base variant may vary", "No charger included"],
+        best_for=["everyday iOS users", "compact flagship buyers", "Apple ecosystem"],
+        not_for=["telephoto photography", "budget shoppers", "Android users"],
+        tags=["iphone", "apple", "flagship", "5g", "ios", "compact", "smartphone"],
+        image_url="/images/products/iphone16pro-1.svg",
+        amazon_affiliate_url="https://link.amazon/B0hZkkcht",
+        extra_specs=[("Network", "5G"), ("OS", "iOS 19"), ("Charging", "25W wired + MagSafe")],
+    ),
+    PhoneModel(
+        brand="Apple", series="iPhone Air Series", model_name="iPhone Air",
+        ram="12GB", color="Light Gold",
+        storage_variants=[
+            ("256GB", 109900),
+        ],
+        rating=4.8, ai_score=96,
+        display='6.6" Super Retina XDR OLED, 1-120Hz ProMotion',
+        chip="Apple A19",
+        camera="48MP main + 12MP ultrawide",
+        battery="3650mAh, 30W wired + MagSafe",
+        pros=["Ultra-thin premium design", "Lightweight in hand", "Large bright display", "Smooth 120Hz scrolling", "Great everyday battery life"],
+        cons=["No telephoto lens", "Premium pricing", "Sleek build needs a case", "No charger included"],
+        best_for=["style-first buyers", "large-screen lovers", "everyday iOS use"],
+        not_for=["camera enthusiasts", "budget buyers", "Android users"],
+        tags=["iphone", "apple", "air", "5g", "ios", "thin", "smartphone"],
+        image_url="/images/products/iphone16pro-1.svg",
+        amazon_affiliate_url="https://link.amazon/B0bh5bPFq",
+        slug_suffix="light-gold",
+        extra_specs=[("Network", "5G"), ("OS", "iOS 19"), ("Charging", "30W wired + MagSafe"), ("Colors", "Light Gold")],
+    ),
+    PhoneModel(
+        brand="Apple", series="iPhone Air Series", model_name="iPhone Air",
+        ram="12GB", color="Cloud White",
+        storage_variants=[
+            ("256GB", 109900),
+        ],
+        rating=4.8, ai_score=96,
+        display='6.6" Super Retina XDR OLED, 1-120Hz ProMotion',
+        chip="Apple A19",
+        camera="48MP main + 12MP ultrawide",
+        battery="3650mAh, 30W wired + MagSafe",
+        pros=["Ultra-thin premium design", "Lightweight in hand", "Large bright display", "Smooth 120Hz scrolling", "Great everyday battery life"],
+        cons=["No telephoto lens", "Premium pricing", "Sleek build needs a case", "No charger included"],
+        best_for=["style-first buyers", "large-screen lovers", "everyday iOS use"],
+        not_for=["camera enthusiasts", "budget buyers", "Android users"],
+        tags=["iphone", "apple", "air", "5g", "ios", "thin", "smartphone"],
+        image_url="/images/products/iphone16pro-1.svg",
+        amazon_affiliate_url="https://link.amazon/B0iWzgMLe",
+        slug_suffix="cloud-white",
+        extra_specs=[("Network", "5G"), ("OS", "iOS 19"), ("Charging", "30W wired + MagSafe"), ("Colors", "Cloud White")],
+    ),
+    PhoneModel(
+        brand="Apple", series="iPhone 16e Series", model_name="iPhone 16e",
+        ram="8GB", color="Black",
+        storage_variants=[
+            ("128GB", 59900),
+        ],
+        rating=4.5, ai_score=87,
+        display='6.1" Super Retina XDR OLED, 60Hz',
+        chip="Apple A18",
+        camera="48MP main",
+        battery="3561mAh, 20W wired",
+        pros=["Affordable iPhone entry", "Good daily performance", "Compact design", "USB-C convenience", "Long iOS support"],
+        cons=["Single rear camera", "No ProMotion", "Charging is modest", "No telephoto lens"],
+        best_for=["first-time iPhone buyers", "budget iOS users", "compact phone lovers"],
+        not_for=["camera enthusiasts", "power gamers", "Android users"],
+        tags=["iphone", "apple", "5g", "ios", "budget", "compact", "smartphone"],
+        image_url="/images/products/iphone16pro-1.svg",
+        amazon_affiliate_url="https://link.amazon/B071Vacq5",
+        extra_specs=[("Network", "5G"), ("OS", "iOS 19"), ("Charging", "20W wired")],
+    ),
     PhoneModel(
         brand="Apple", series="iPhone 16 Series", model_name="iPhone 16 Pro Max",
         ram="8GB", color="Black Titanium",
@@ -131,6 +256,7 @@ PHONES: list[PhoneModel] = [
         not_for=["compact phone users", "Pro camera needs", "gaming enthusiasts"],
         tags=["iphone", "apple", "5g", "ios", "plus", "battery"],
         image_url="/images/products/iphone16pro-1.svg",
+        amazon_affiliate_urls={"256GB": "https://link.amazon/B04u0A9g6"},
         extra_specs=[("Network", "5G"), ("OS", "iOS 18"), ("Charging", "25W wired + MagSafe")],
     ),
     PhoneModel(
@@ -150,6 +276,7 @@ PHONES: list[PhoneModel] = [
         not_for=["heavy gaming", "battery-intensive users", "Android users"],
         tags=["iphone", "apple", "5g", "ios", "compact", "ai"],
         image_url="/images/products/iphone16pro-1.svg",
+        amazon_affiliate_urls={"128GB": "https://link.amazon/B06GgJfv6"},
         extra_specs=[("Network", "5G"), ("OS", "iOS 18"), ("Charging", "25W wired + MagSafe")],
     ),
     PhoneModel(
@@ -1355,20 +1482,29 @@ def run() -> None:
 
         inserted = 0
         skipped = 0
+        updated = 0
 
         for phone in PHONES:
             brand = brand_cache[phone.brand]
 
             for storage, price_inr in phone.storage_variants:
+                affiliate_url = phone.amazon_affiliate_urls.get(storage) if phone.amazon_affiliate_urls else phone.amazon_affiliate_url
+
                 # Strip brand prefix from model name to avoid double-slug (e.g., "samsung-samsung-galaxy")
                 model_for_slug = phone.model_name
                 if model_for_slug.lower().startswith(phone.brand.lower()):
                     model_for_slug = model_for_slug[len(phone.brand):].strip()
-                slug = slugify(f"{phone.brand}-{model_for_slug}-{storage}")
+                slug_source = f"{phone.brand}-{model_for_slug}-{storage}"
+                if phone.slug_suffix:
+                    slug_source = f"{slug_source}-{phone.slug_suffix}"
+                slug = slugify(slug_source)
 
                 # Skip duplicates
                 exists = session.scalars(select(Product).where(Product.slug == slug)).first()
                 if exists:
+                    if exists.amazon_affiliate_url != affiliate_url:
+                        exists.amazon_affiliate_url = affiliate_url
+                        updated += 1
                     skipped += 1
                     continue
 
@@ -1404,6 +1540,7 @@ def run() -> None:
                     storage=storage,
                     ram=phone.ram,
                     color=phone.color,
+                    amazon_affiliate_url=affiliate_url,
                 )
                 session.add(product)
                 session.flush()
@@ -1503,7 +1640,7 @@ def run() -> None:
                 inserted += 1
 
         session.commit()
-        print(f"\n✓ Done. Inserted: {inserted} | Skipped (already existed): {skipped}")
+        print(f"\n✓ Done. Inserted: {inserted} | Updated URLs: {updated} | Skipped (already existed): {skipped}")
         print(f"  Category: {smartphone_cat.name} (id={smartphone_cat.id})")
 
         # Print summary
