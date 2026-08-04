@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { API_BASE_URL, IS_API_CONFIGURED } from "@/services/api";
+import { buildApiUrl, buildQueryString, IS_API_CONFIGURED } from "@/services/api";
 
 const STORAGE_KEY = "letrusto:favorites";
 const USER_ID_STORAGE_KEY = "letrusto:user-id";
@@ -48,7 +48,7 @@ async function fetchFavoritesFromApi() {
     return [];
   }
 
-  const response = await fetch(`${API_BASE_URL}/favorites?userId=${encodeURIComponent(userId)}`, {
+  const response = await fetch(buildApiUrl(`/favorites${buildQueryString({ userId })}`), {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -70,15 +70,12 @@ async function syncFavoriteWithApi(productId: string, shouldFavorite: boolean) {
   }
 
   const method = shouldFavorite ? "POST" : "DELETE";
-  const response = await fetch(
-    `${API_BASE_URL}/favorites/${encodeURIComponent(productId)}?userId=${encodeURIComponent(userId)}`,
-    {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await fetch(buildApiUrl(`/favorites/${encodeURIComponent(productId)}${buildQueryString({ userId })}`), {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to update favorites (${response.status})`);

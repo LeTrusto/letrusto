@@ -80,6 +80,10 @@ function normalizePath(path: string): string {
 	return p.startsWith(API_PREFIX) ? p : `${API_PREFIX}${p}`;
 }
 
+export function buildApiUrl(path: string): string {
+	return `${API_BASE_URL}${normalizePath(path)}`;
+}
+
 export function buildQueryString(
 	params: Record<string, string | number | boolean | undefined | null>
 ) {
@@ -101,7 +105,7 @@ export async function apiRequest<T>(
 	path: string,
 	init?: RequestInit
 ): Promise<T> {
-	const endpoint = `${API_BASE_URL}${normalizePath(path)}`;
+	const endpoint = buildApiUrl(path);
 
 	// Abort after 4s so SSG/ISR never hangs the build
 	const controller = new AbortController();

@@ -23,6 +23,16 @@ import { apiRequest, buildQueryString, withApiFallback } from "@/services/api";
 
 const DEFAULT_PAGE_SIZE = 12;
 
+const CATEGORY_ALIASES: Record<string, string> = {
+	smartphones: "phone",
+	phone: "phone",
+	"laptops-ultrabooks": "laptop",
+	"tablets-ipads": "tablet",
+	"smartwatches-bands": "smartwatch",
+	"digital-cameras": "camera",
+	"televisions-oleds": "television",
+};
+
 function toNumber(value: unknown): number {
 	if (typeof value === "number" && Number.isFinite(value)) {
 		return value;
@@ -63,9 +73,27 @@ function clampPage(value: number) {
 	return Math.floor(value);
 }
 
-function normalizeFilters(options: ProductQueryOptions): ProductFilterState {
+function normalizeCategoryValue(value: ProductQueryOptions["category"]) {
+	if (!value || value === "all") {
+		return value;
+	}
+
+	const raw = String(value).trim().toLowerCase();
+	return (CATEGORY_ALIASES[raw] ?? raw) as ProductFilterState["category"];
+}
+
+function normalizeQueryOptions(options: ProductQueryOptions): ProductQueryOptions {
 	return {
-		category: options.category ?? "all",
+		...options,
+		category: normalizeCategoryValue(options.category),
+	};
+}
+
+function normalizeFilters(options: ProductQueryOptions): ProductFilterState {
+	const normalizedCategory = normalizeCategoryValue(options.category);
+
+	return {
+		category: normalizedCategory ?? "all",
 		price: options.price ?? "all",
 		rating: options.rating ?? "all",
 		aiScore: options.aiScore ?? "all",
@@ -159,31 +187,33 @@ export async function getProductsByIds(productIds: string[]) {
 }
 
 export async function getProductSearch(options: ProductQueryOptions): Promise<PaginatedProductsResponse> {
+	const normalizedOptions = normalizeQueryOptions(options);
+
 	return withApiFallback(
 		() =>
 			apiRequest<PaginatedProductsResponse>(
 				`/products/search${buildQueryString({
-					q: options.q,
-					sort: options.sortBy,
-					category: options.category,
-					subcategory: options.subcategory,
-					series: options.series,
-					price: options.price,
-					rating: options.rating,
-					aiScore: options.aiScore,
-					brand: options.brand,
-					minPrice: options.minPrice,
-					maxPrice: options.maxPrice,
-					minRating: options.minRating,
-					minAiScore: options.minAiScore,
-					page: options.page,
-					pageSize: options.pageSize,
+					q: normalizedOptions.q,
+					sort: normalizedOptions.sortBy,
+					category: normalizedOptions.category,
+					subcategory: normalizedOptions.subcategory,
+					series: normalizedOptions.series,
+					price: normalizedOptions.price,
+					rating: normalizedOptions.rating,
+					aiScore: normalizedOptions.aiScore,
+					brand: normalizedOptions.brand,
+					minPrice: normalizedOptions.minPrice,
+					maxPrice: normalizedOptions.maxPrice,
+					minRating: normalizedOptions.minRating,
+					minAiScore: normalizedOptions.minAiScore,
+					page: normalizedOptions.page,
+					pageSize: normalizedOptions.pageSize,
 				})}`
 			).then((response) => ({
 				...response,
 				items: response.items.map(normalizeProduct),
 			})),
-		() => buildLocalSearchResponse(options)
+		() => buildLocalSearchResponse(normalizedOptions)
 	);
 }
 
