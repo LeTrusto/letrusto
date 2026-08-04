@@ -273,15 +273,116 @@ Affiliate setup now spans disclosure, outbound link presentation, and backend an
 | Analytics integration | Healthy | GA4 production-only load and App Router page-view tracking are wired |
 | Affiliate tracking | Healthy | Buy-link click tracking endpoint is available |
 
-## Pending Roadmap
+## Today's End-to-End Delivery (2026-08-04)
 
-- [ ] Move GA Measurement ID to environment-based runtime configuration if multi-environment analytics separation becomes necessary.
-- [ ] Add Search Console and analytics dashboards to operational runbooks.
-- [ ] Expand sitemap coverage to dynamically generated product detail pages and article inventory from the API.
-- [ ] Add first-party event taxonomy for search, compare, AI prompt, deal click, and article engagement events.
-- [ ] Add affiliate reporting dashboards for retailer, category, and article conversion views.
-- [ ] Add explicit privacy policy and terms pages instead of temporary support-page placeholders.
-- [ ] Formalize canonical URL strategy for every long-tail page type.
+This section records the full implementation and verification pass completed today, from analytics and affiliate foundation through production sync and post-deploy logic fixes.
+
+### Phase: Google Analytics (GA4)
+
+- Created Google Analytics account for LeTrusto.
+- Created GA4 property.
+- Configured Web Data Stream.
+- Measurement ID: `G-J8SC0HRNT2`.
+- Integrated GA4 using `next/script`.
+- Production-only loading.
+- Manual `page_view` tracking with App Router.
+- Prevented duplicate `page_view` events.
+- Added reusable analytics utility.
+- Added `affiliate_click` event tracking.
+- Verified events in GA4 Realtime.
+
+### Phase: Amazon Associates
+
+- Created Amazon Associates account.
+- Store ID: `letrusto-21`.
+- Completed tax information.
+- Completed payment configuration.
+- Amazon Associates account approved and active.
+
+### Phase: Affiliate Link System
+
+- Added `amazonAffiliateUrl` and `amazonAsin` support.
+- Added database migration.
+- Added backend schema updates.
+- Added affiliate helper utilities.
+- Product pages now use exact affiliate URLs.
+- Removed Amazon search-based redirects.
+- Added GA4 `affiliate_click` tracking.
+- Added documentation for affiliate system.
+
+### Phase: Apple Product Catalog
+
+- Added latest Apple iPhone products.
+- Updated existing iPhone affiliate URLs.
+- Added verified affiliate links supplied from Amazon SiteStripe.
+- Prevented duplicate products.
+- Seed scripts updated.
+- Production catalog synchronized.
+
+### Phase: Production Deployment
+
+- Latest backend deployed to Railway.
+- Latest frontend deployed to Vercel.
+- Alembic migrations executed successfully.
+- Production seed synchronization executed.
+- Production database verified.
+- Smartphone products: 157.
+- Apple products: 55.
+
+### Phase: Production Fixes
+
+- Fixed API URL normalization.
+- Fixed favorites endpoint routing.
+- Fixed category alias mapping (`smartphones` -> `phone`).
+- Unified API usage across frontend.
+- Shared API client now used consistently.
+- Production deployment verified.
+
+### Verification
+
+- Railway deployment successful.
+- Vercel deployment successful.
+- GA4 Realtime verified.
+- Amazon affiliate links configured.
+- Backend migrations completed.
+- Seed synchronization completed.
+- Production database updated.
+
+## Project Checklist (Completed)
+
+- ✅ GA4 property and stream configured with Measurement ID `G-J8SC0HRNT2`.
+- ✅ GA4 integrated via `next/script` with production-only loading.
+- ✅ Manual App Router `page_view` tracking implemented.
+- ✅ Duplicate `page_view` prevention implemented.
+- ✅ Reusable analytics utility implemented.
+- ✅ `affiliate_click` event tracking implemented and verified in Realtime.
+- ✅ Amazon Associates account created and approved (Store ID `letrusto-21`).
+- ✅ Amazon tax and payment onboarding completed.
+- ✅ Affiliate schema and migration support added for Amazon fields.
+- ✅ Backend and frontend affiliate-link handling implemented.
+- ✅ Amazon search redirects removed in favor of direct product affiliate links.
+- ✅ Affiliate system documentation added and updated.
+- ✅ Apple iPhone catalog updated with verified SiteStripe affiliate links.
+- ✅ Duplicate prevention in catalog synchronization applied.
+- ✅ Production backend deployment completed on Railway.
+- ✅ Production frontend deployment completed on Vercel.
+- ✅ Alembic migrations executed in production.
+- ✅ Production seed synchronization completed.
+- ✅ Production data verification completed (Smartphones: 157, Apple: 55).
+- ✅ API URL normalization fix completed.
+- ✅ Favorites endpoint routing fix completed.
+- ✅ Category alias normalization (`smartphones` -> `phone`) completed.
+- ✅ Shared API client usage unified across affected frontend flows.
+
+## Next Tasks
+
+- Move GA Measurement ID to environment-based runtime configuration if multi-environment analytics separation becomes necessary.
+- Add Search Console and analytics dashboards to operational runbooks.
+- Expand sitemap coverage to dynamically generated product detail pages and article inventory from the API.
+- Add first-party event taxonomy for search, compare, AI prompt, deal click, and article engagement events.
+- Add affiliate reporting dashboards for retailer, category, and article conversion views.
+- Add explicit privacy policy and terms pages instead of temporary support-page placeholders.
+- Formalize canonical URL strategy for every long-tail page type.
 
 ## Operational Notes
 
