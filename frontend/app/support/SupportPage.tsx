@@ -3,9 +3,10 @@
 import { ChevronDown, ChevronUp, Loader2, MessageCircle, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { API_BASE_URL, IS_API_CONFIGURED } from "@/services/api";
+import { buildApiUrl, IS_API_CONFIGURED } from "@/services/api";
 
 type FaqItem = { question: string; answer: string; category: string };
+type ToastState = { type: "success" | "error"; message: string } | null;
 
 const CATEGORIES = [
   { value: "contact", label: "General Enquiry" },
@@ -50,32 +51,68 @@ export default function SupportPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [activeTab, setActiveTab] = useState<"faq" | "contact">("faq");
+  const [toast, setToast] = useState<ToastState>(null);
+
+  function dismissToastAfterDelay() {
+    window.setTimeout(() => {
+      setToast(null);
+    }, 3500);
+  }
+
+  async function parseErrorMessage(res: Response) {
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const payload = (await res.json().catch(() => ({}))) as { detail?: string; message?: string };
+      return payload.detail ?? payload.message ?? `Ticket submission failed (${res.status}).`;
+    }
+
+    const text = (await res.text().catch(() => "")).trim();
+    return text || `Ticket submission failed (${res.status}).`;
+  }
 
   useEffect(() => {
     if (!IS_API_CONFIGURED) return;
-    fetch(`${API_BASE_URL}/api/v1/support/faq`)
+    fetch(buildApiUrl("/support/faq"))
       .then((r) => r.json() as Promise<{ items: FaqItem[] }>)
       .then((d) => setFaq(d.items))
-      .catch(() => {});
+      .catch((err) => {
+        console.error("[Support] FAQ load failed", err);
+      });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError("");
+    setToast(null);
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/support/tickets`, {
+      const res = await fetch(buildApiUrl("/support/tickets"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({})) as { detail?: string };
-        throw new Error(err.detail ?? "Submission failed");
+        throw new Error(await parseErrorMessage(res));
       }
+
+      const payload = (await res.json().catch(() => ({}))) as { message?: string };
       setSubmitted(true);
+      setToast({
+        type: "success",
+        message: payload.message ?? "Ticket submitted successfully. Our team will contact you shortly.",
+      });
+      dismissToastAfterDelay();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Submission failed");
+      const message =
+        err instanceof TypeError
+          ? "Unable to reach support service right now. Please check your connection and try again."
+          : err instanceof Error
+            ? err.message
+            : "Unable to submit your support ticket right now. Please try again.";
+      setSubmitError(message);
+      setToast({ type: "error", message });
+      dismissToastAfterDelay();
+      console.error("[Support] Ticket submission failed", err);
     } finally {
       setSubmitting(false);
     }
@@ -83,6 +120,20 @@ export default function SupportPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-5 py-10 sm:px-6">
+      {toast && (
+        <div
+          className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${
+            toast.type === "success"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-3xl font-black text-slate-900">Support Centre</h1>
         <p className="mt-2 text-gray-500">Find answers or get in touch with our team</p>

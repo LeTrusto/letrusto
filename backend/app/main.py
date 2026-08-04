@@ -1,14 +1,18 @@
 import os
 import sys
+from collections import OrderedDict
 
 # Print raw environment BEFORE any app imports — shows exactly what Railway injects
 _raw_db_url = os.environ.get("DATABASE_URL", "<<NOT SET IN ENVIRONMENT>>")
 print(f"[LeTrusto BOOT] sys.version={sys.version}", flush=True)
-print(f"[LeTrusto BOOT] Raw DATABASE_URL from os.environ = {_raw_db_url[:60] if len(_raw_db_url) > 60 else _raw_db_url}", flush=True)
+print(
+    f"[LeTrusto BOOT] Raw DATABASE_URL from os.environ = {_raw_db_url[:60] if len(_raw_db_url) > 60 else _raw_db_url}",
+    flush=True,
+)
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1.api import api_router
 from app.core.config import get_settings
@@ -20,16 +24,35 @@ settings = get_settings()
 # Mask password in logged URL for debugging Railway startup
 _db_url_display = settings.DATABASE_URL
 try:
-    from urllib.parse import urlparse, urlunparse
+    from urllib.parse import urlparse
+
     _p = urlparse(_db_url_display)
     if _p.password:
         _db_url_display = _db_url_display.replace(_p.password, "****")
 except Exception:
     pass
 
+
+def _build_cors_origins(raw_origins: str) -> list[str]:
+    configured = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    defaults = [
+        "https://letrusto.com",
+        "https://www.letrusto.com",
+        "https://letrusto.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+    # Keep order stable while removing duplicates.
+    return list(OrderedDict.fromkeys([*configured, *defaults]))
+
+
+_cors_origins = _build_cors_origins(settings.CORS_ORIGINS)
+
 print(f"[LeTrusto] APP_ENV={settings.APP_ENV}")
 print(f"[LeTrusto] DATABASE_URL={_db_url_display}")
 print(f"[LeTrusto] CORS_ORIGINS={settings.CORS_ORIGINS}")
+print(f"[LeTrusto] Effective CORS origins={_cors_origins}")
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -41,7 +64,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()],
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"https://([a-z0-9-]+\.)?vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

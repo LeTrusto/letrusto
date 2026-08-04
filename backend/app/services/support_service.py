@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import logging
 import uuid
 
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.entities import SupportTicket
@@ -50,6 +52,8 @@ _FAQ_ITEMS: list[FaqItemDTO] = [
     ),
 ]
 
+logger = logging.getLogger(__name__)
+
 
 class SupportService:
     def __init__(self, db: Session) -> None:
@@ -59,18 +63,26 @@ class SupportService:
         return FaqListResponse(items=_FAQ_ITEMS)
 
     def create_ticket(self, req: SupportTicketRequest, user_id: uuid.UUID | None = None) -> SupportTicketResponse:
-        ticket = SupportTicket(
-            user_id=user_id,
-            email=req.email,
-            category=req.category,
-            subject=req.subject,
-            body=req.body,
-        )
-        self.db.add(ticket)
-        self.db.commit()
-        self.db.refresh(ticket)
-        return SupportTicketResponse(
-            id=ticket.id,
-            status=ticket.status,
-            message="Your support ticket has been received. We'll get back to you within 24-48 hours.",
-        )
+        try:
+            ticket = SupportTicket(
+                user_id=user_id,
+                email=req.email,
+                category=req.category,
+                subject=req.subject,
+                body=req.body,
+            )
+            self.db.add(ticket)
+            self.db.commit()
+            self.db.refresh(ticket)
+            return SupportTicketResponse(
+                id=ticket.id,
+                status=ticket.status,
+                message="Your support ticket has been received. We'll get back to you within 24-48 hours.",
+            )
+        except Exception:
+            self.db.rollback()
+            logger.exception("Failed to create support ticket", extra={"category": req.category})
+            raise HTTPException(
+                status_code=500,
+                detail="We could not create your support ticket right now. Please try again shortly.",
+            )
