@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { Crown, TrendingDown } from "lucide-react";
 
 import { getAIComparisonSummary } from "@/services/ai.service";
 import { getAllProducts, getCompareProducts } from "@/services/product.service";
 import { getSearchParamValue } from "@/utils/helpers";
+
+export const metadata: Metadata = {
+  title: "Product Compare",
+  description: "Compare two products side by side with AI analysis, key specs, and value insights.",
+  alternates: {
+    canonical: "/compare",
+  },
+};
 
 export default async function ComparePage({
   searchParams,

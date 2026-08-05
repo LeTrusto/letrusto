@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import ProductCard from "@/components/ProductCard";
 import SearchEnhancements from "@/components/SearchEnhancements";
 import {
@@ -11,6 +13,18 @@ import {
   type ProductSortOption,
 } from "@/services/product.service";
 import { getSearchParamValue } from "@/utils/helpers";
+
+export const metadata: Metadata = {
+  title: "Search",
+  description: "Search and filter products across categories, brands, price bands, and AI scores.",
+  robots: {
+    index: false,
+    follow: true,
+  },
+  alternates: {
+    canonical: "/search",
+  },
+};
 
 function parseNumberParam(value: string, fallback: number) {
   const parsed = Number(value);

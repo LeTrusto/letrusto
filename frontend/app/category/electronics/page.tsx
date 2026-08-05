@@ -5,8 +5,11 @@ import ProductCard from "@/components/ProductCard";
 import { getAllProducts, type Product } from "@/services/product.service";
 
 export const metadata: Metadata = {
-  title: "Electronics | LeTrusto",
+  title: "Electronics",
   description: "AI-first electronics buying workspace with guided discovery, premium comparisons, and trusted recommendations.",
+  alternates: {
+    canonical: "/category/electronics",
+  },
 };
 
 const ELECTRONICS_CATEGORIES = new Set([

@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticle(slug);
   if (!article) return { title: "Article Not Found" };
   return {
-    title: article.meta_title ?? `${article.title} | LeTrusto`,
+    title: article.meta_title ?? article.title,
     description: article.meta_description ?? article.excerpt,
     openGraph: { title: article.title, description: article.excerpt, type: "article" },
     alternates: { canonical: `https://letrusto.com/articles/${slug}` },
@@ -65,7 +65,7 @@ export default async function ArticlePage({ params }: Props) {
       <nav className="mb-6 flex items-center gap-2 text-sm text-gray-400">
         <Link href="/" className="hover:text-purple-700">Home</Link>
         <span>›</span>
-        <Link href="/articles" className="hover:text-purple-700">Guides</Link>
+        <Link href="/guides" className="hover:text-purple-700">Guides</Link>
         <span>›</span>
         <span className="text-gray-600">{article.title}</span>
       </nav>

@@ -4,8 +4,11 @@ import Link from "next/link";
 import { CATALOG_TREE } from "@/constants/index";
 
 export const metadata: Metadata = {
-  title: "Categories — LeTrusto",
+  title: "Categories",
   description: "Browse all LeTrusto product categories and jump directly to comparisons and recommendations.",
+  alternates: {
+    canonical: "/categories",
+  },
 };
 
 export default function CategoriesPage() {

@@ -1,6 +1,17 @@
+import type { Metadata } from "next";
+
 import HomepageSectionRenderer from "@/components/homepage/HomepageSectionRenderer";
 import { HOMEPAGE_SECTIONS } from "@/config/homepage";
 import { getHomepageDataSources } from "@/services/homepage.service";
+
+export const metadata: Metadata = {
+  title: "Know Before You Buy",
+  description:
+    "LeTrusto is your AI Buying Advisor. Compare electronics, get personalized recommendations, and buy with confidence.",
+  alternates: {
+    canonical: "/",
+  },
+};
 
 export default async function Home() {
   const dataSources = await getHomepageDataSources();

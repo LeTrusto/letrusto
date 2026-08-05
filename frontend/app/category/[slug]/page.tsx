@@ -139,8 +139,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const label = getCategoryLabel(slug);
   return {
-    title: `${label} | LeTrusto`,
+    title: label,
     description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+    alternates: {
+      canonical: `/category/${slug}`,
+    },
   };
 }
 

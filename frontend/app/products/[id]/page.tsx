@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const product = await getProductById(id);
   if (!product) return { title: "Product Not Found" };
-  const title = `${product.name} Review — AI Score ${product.aiScore}/100 | LeTrusto`;
+  const title = `${product.name} Review — AI Score ${product.aiScore}/100`;
   const description = `${product.name} by ${product.brand}. Price: ${product.price}. AI Score: ${product.aiScore}/100. ${product.aiSummary.slice(0, 120)}`;
   return {
     title,

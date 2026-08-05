@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Use — LeTrusto",
+  title: "Terms of Use",
   description: "Review the terms governing use of LeTrusto.",
+  alternates: {
+    canonical: "/terms-of-use",
+  },
 };
 
 export default function TermsOfUsePage() {

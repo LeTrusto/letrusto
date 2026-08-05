@@ -46,7 +46,7 @@ export default async function LatestArticles() {
           <h2 className="text-2xl font-black text-gray-900">Latest Buying Guides</h2>
           <p className="mt-1 text-sm text-gray-500">Expert research to help you decide before you buy</p>
         </div>
-        <Link href="/articles" className="text-sm font-semibold text-purple-700 hover:underline">
+        <Link href="/guides" className="text-sm font-semibold text-purple-700 hover:underline">
           All guides →
         </Link>
       </div>

@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
+
 import AIConversationExperience from "@/components/AIConversationExperience";
 import { askAssistant } from "@/services/ai.service";
+
+export const metadata: Metadata = {
+  title: "AI Advisor",
+  description: "Describe your needs and get AI-guided product recommendations in seconds.",
+  alternates: {
+    canonical: "/ai",
+  },
+};
 
 type Props = {
   searchParams: Promise<{
