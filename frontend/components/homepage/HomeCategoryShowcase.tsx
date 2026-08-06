@@ -17,14 +17,14 @@ export default function HomeCategoryShowcase({
   items,
 }: HomeCategoryShowcaseProps) {
   return (
-    <section className="mx-auto mt-10 w-full max-w-7xl px-6">
+    <section className="mx-auto mt-14 w-full max-w-7xl px-6">
       <HomeSectionHeader title={title} subtitle={subtitle} />
-      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((item) => (
           <Link
             key={item.id}
             href={item.href}
-            className="group relative isolate w-[240px] shrink-0 snap-start overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-3.5 shadow-sm transition duration-500 ease-out hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_20px_56px_-30px_rgba(15,23,42,0.34)]"
+            className="group relative isolate overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-3.5 shadow-sm transition duration-500 ease-out hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_20px_56px_-30px_rgba(15,23,42,0.34)]"
             aria-label={`Browse ${item.name}`}
           >
             <div className="relative flex min-h-[212px] flex-col">

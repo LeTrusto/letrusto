@@ -29,7 +29,7 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(168,85,247,0.16),_transparent_30%),radial-gradient(circle_at_85%_0%,_rgba(251,113,133,0.14),_transparent_28%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] py-16 md:py-22">
+    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(168,85,247,0.16),_transparent_30%),radial-gradient(circle_at_85%_0%,_rgba(251,113,133,0.14),_transparent_28%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] py-20 md:py-24">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
       <div className="pointer-events-none absolute -top-24 left-1/2 h-[440px] w-[440px] -translate-x-1/2 rounded-full bg-fuchsia-200/25 blur-3xl" />
       <div className="pointer-events-none absolute top-10 right-0 h-72 w-72 rounded-full bg-orange-100/40 blur-3xl" />
@@ -101,59 +101,61 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.24 }}
             onSubmit={handleSearch}
-            className="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_80px_-36px_rgba(15,23,42,0.28)] transition duration-300 focus-within:-translate-y-0.5 focus-within:border-fuchsia-300 focus-within:shadow-[0_30px_90px_-40px_rgba(139,92,246,0.35)]"
+            className="mt-10 rounded-[2rem] bg-gradient-to-r from-purple-200/70 via-pink-200/70 to-orange-200/70 p-[1.2px] shadow-[0_24px_80px_-32px_rgba(15,23,42,0.34)] transition duration-300 focus-within:-translate-y-0.5"
           >
-            <div className="flex items-start gap-4 px-5 py-5">
-              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-fuchsia-50 text-fuchsia-700 transition-colors duration-300 focus-within:bg-fuchsia-100">
-                <Search className="h-5 w-5" aria-hidden="true" />
+            <div className="overflow-hidden rounded-[calc(2rem-1.2px)] border border-white/80 bg-white/95 backdrop-blur">
+              <div className="flex items-start gap-4 px-6 py-6 md:px-7 md:py-7">
+                <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-100 to-orange-100 text-fuchsia-700 transition-colors duration-300">
+                  <Search className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <div className="flex-1">
+                  <label htmlFor="hero-search" className="sr-only">Search products, brands or ask a buying question</label>
+                  <textarea
+                    id="hero-search"
+                    ref={textareaRef}
+                    rows={2}
+                    disabled={isPending}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    onInput={(event) => {
+                      const target = event.currentTarget;
+                      target.style.height = "0px";
+                      target.style.height = `${Math.min(target.scrollHeight, 188)}px`;
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        event.currentTarget.form?.requestSubmit();
+                      }
+                    }}
+                    aria-describedby="hero-search-hint"
+                    placeholder="Ask anything before you buy: budget, use-case, or model comparisons."
+                    className="min-h-[82px] w-full resize-none bg-transparent text-[17px] leading-7 text-slate-900 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-70 md:text-lg"
+                  />
+                  <p id="hero-search-hint" className="mt-2 text-sm text-slate-500">
+                    Press Enter to search. Use Shift+Enter for a new line.
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                <label htmlFor="hero-search" className="sr-only">Search products, brands or ask a buying question</label>
-                <textarea
-                  id="hero-search"
-                  ref={textareaRef}
-                  rows={1}
+              <div className="flex justify-end border-t border-slate-100 bg-slate-50/85 px-5 py-4 md:px-6">
+                <button
+                  type="submit"
                   disabled={isPending}
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  onInput={(event) => {
-                    const target = event.currentTarget;
-                    target.style.height = "0px";
-                    target.style.height = `${Math.min(target.scrollHeight, 144)}px`;
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      event.currentTarget.form?.requestSubmit();
-                    }
-                  }}
-                  aria-describedby="hero-search-hint"
-                  placeholder="Search by budget, use-case, or product pair (e.g. phone under 30000, laptop for coding)..."
-                  className="min-h-[36px] w-full resize-none bg-transparent text-base leading-7 text-slate-900 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-70 md:text-lg"
-                />
-                <p id="hero-search-hint" className="mt-2 text-sm text-slate-500">
-                  Press Enter to search. Use Shift+Enter for a new line.
-                </p>
+                  className="inline-flex min-w-[156px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      Search
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
               </div>
-            </div>
-            <div className="flex justify-end border-t border-slate-100 bg-slate-50/80 px-5 py-4">
-              <button
-                type="submit"
-                disabled={isPending}
-                className="inline-flex min-w-[148px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    Search
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
             </div>
           </motion.form>
 

@@ -261,20 +261,20 @@ export const HOMEPAGE_TRENDING_SEARCHES: HomeTrendingSearch[] = [
 
 export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
   {
-    id: "categories",
+    id: "hero",
     enabled: true,
     order: 1,
+    component: "hero",
+    dataSource: "none",
+  },
+  {
+    id: "categories",
+    enabled: true,
+    order: 2,
     component: "categoryShowcase",
     dataSource: "categories.showcase",
     title: "Explore by Category",
     subtitle: "Browse category lanes with trusted research, recommendations, and practical buying context.",
-  },
-  {
-    id: "hero",
-    enabled: true,
-    order: 2,
-    component: "hero",
-    dataSource: "none",
   },
   {
     id: "trust-letrusto",
