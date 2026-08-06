@@ -96,9 +96,9 @@ export default async function ArticlePage({ params }: Props) {
 
       <div className="rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 p-6">
         <h2 className="text-lg font-bold text-gray-900">Not sure which to buy?</h2>
-        <p className="mt-1 text-sm text-gray-500">Ask our AI advisor and get a personalised recommendation in seconds.</p>
+        <p className="mt-1 text-sm text-gray-500">Open the Buying Assistant for a tailored recommendation based on your priorities.</p>
         <Link href={`/ai?q=${encodeURIComponent(article.title)}`} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-5 py-2.5 text-sm font-bold text-white">
-          ✨ Ask AI Advisor
+          ✨ Open Buying Assistant
         </Link>
       </div>
     </main>

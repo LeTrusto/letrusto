@@ -1,7 +1,15 @@
 import Link from "next/link";
 
 import HomeSectionHeader from "@/components/homepage/HomeSectionHeader";
-import type { HomepageComingSoonItem } from "@/config/homepage";
+
+type HomepageComingSoonItem = {
+  id: string;
+  title: string;
+  categoryHref: string;
+  description: string;
+  illustration: string;
+  expectedItems: string[];
+};
 
 type HomeComingSoonVerticalSectionProps = {
   title: string;
@@ -38,7 +46,7 @@ export default function HomeComingSoonVerticalSection({
                 href="/ai"
                 className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
               >
-                Ask AI
+                Open assistant
               </Link>
               <Link
                 href="/"

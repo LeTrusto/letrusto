@@ -20,7 +20,7 @@ export default async function Home() {
   );
 
   return (
-    <>
+    <main>
       {sections.map((section) => (
         <HomepageSectionRenderer
           key={section.id}
@@ -28,6 +28,6 @@ export default async function Home() {
           dataSources={dataSources}
         />
       ))}
-    </>
+    </main>
   );
 }

@@ -80,16 +80,15 @@ function ComingSoonCategory({ slug, label }: { slug: string; label: string }) {
   const profile = resolveComingSoonProfile(slug);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50">
       <section className="mx-auto max-w-6xl px-6 py-16 md:py-20">
         <article className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm md:p-12">
-          <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full bg-cyan-100/70 blur-3xl" aria-hidden="true" />
-          <div className="absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-violet-100/70 blur-3xl" aria-hidden="true" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" aria-hidden="true" />
 
           <div className="relative z-10 grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Coming Soon</p>
-              <div className="mt-4 inline-flex rounded-2xl border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-black tracking-[0.16em] text-slate-700">
+              <div className="mt-4 inline-flex rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-black tracking-[0.16em] text-violet-700">
                 {profile.illustration}
               </div>
               <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">{label}</h1>
@@ -98,7 +97,7 @@ function ComingSoonCategory({ slug, label }: { slug: string; label: string }) {
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/support?tab=contact&category=feedback"
-                  className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-3 text-sm font-bold text-white"
+                  className="rounded-xl bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 px-5 py-3 text-sm font-bold text-white"
                 >
                   Notify Me
                 </Link>
@@ -112,17 +111,29 @@ function ComingSoonCategory({ slug, label }: { slug: string; label: string }) {
                   href="/ai"
                   className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
                 >
-                  Ask AI
+                  Open assistant
                 </Link>
               </div>
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 md:p-7">
+              <svg viewBox="0 0 360 150" className="mb-5 h-[120px] w-full text-violet-700/45" aria-hidden="true">
+                <defs>
+                  <linearGradient id="coming-soon-line" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="currentColor" stopOpacity="0.75" />
+                    <stop offset="100%" stopColor="currentColor" stopOpacity="0.2" />
+                  </linearGradient>
+                </defs>
+                <rect x="16" y="16" width="328" height="118" rx="22" fill="none" stroke="url(#coming-soon-line)" strokeWidth="2" />
+                <path d="M40 102c28-34 55-52 93-52 40 0 58 20 91 20 28 0 47-11 91-39" fill="none" stroke="url(#coming-soon-line)" strokeWidth="8" strokeLinecap="round" />
+                <circle cx="268" cy="60" r="22" fill="none" stroke="url(#coming-soon-line)" strokeWidth="2" />
+                <rect x="80" y="56" width="80" height="34" rx="12" fill="none" stroke="url(#coming-soon-line)" strokeWidth="2" />
+              </svg>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">What you can expect</p>
               <ul className="mt-4 space-y-2.5 text-sm text-slate-700 md:text-base">
                 {profile.expected.map((entry) => (
                   <li key={`${slug}-${entry}`} className="flex items-start gap-2.5">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-600" />
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-fuchsia-600" />
                     <span>{entry}</span>
                   </li>
                 ))}
@@ -176,7 +187,7 @@ export default async function CategoryPage({ params }: Props) {
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href={`/ai?q=Best ${label}`} className="rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-violet-700">
-              Ask AI for {label}
+              Get recommendations for {label}
             </Link>
             <Link href={`/search?category=${slug}`} className="rounded-xl border border-white/40 px-5 py-2.5 text-sm font-semibold text-white">
               Advanced filters

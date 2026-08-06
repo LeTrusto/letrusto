@@ -27,13 +27,13 @@ export default function HomePopularComparisonsSection({
           <Link
             key={item.id}
             href={item.href}
-            className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+            className="group relative overflow-hidden rounded-[1.9rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-xl"
           >
             <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${item.accent}`} aria-hidden="true" />
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Popular Decision</p>
             <h3 className="mt-3 text-2xl font-black tracking-tight text-slate-900">{item.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.subtitle}</p>
-            <span className="mt-5 inline-flex text-sm font-semibold text-violet-700 transition group-hover:text-violet-900">
+            <span className="mt-5 inline-flex text-sm font-semibold text-sky-700 transition group-hover:text-sky-900">
               Compare now
             </span>
           </Link>

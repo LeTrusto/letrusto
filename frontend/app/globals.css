@@ -2,13 +2,14 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #111827;
+  --foreground: #0f172a;
   --surface: #ffffff;
-  --surface-soft: #f9fafb;
-  --brand: #7c3aed;
-  --brand-strong: #6d28d9;
-  --accent: #f97316;
-  --ring: #8b5cf6;
+  --surface-soft: #f8fafc;
+  --brand: #0f172a;
+  --brand-strong: #0369a1;
+  --accent: #f59e0b;
+  --ring: #0ea5e9;
+  --shadow-premium: 0 24px 80px -32px rgba(15, 23, 42, 0.22), 0 10px 32px -18px rgba(15, 23, 42, 0.12);
 }
 
 @theme inline {
@@ -41,32 +42,17 @@ body {
 }
 
 .premium-shadow {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.shimmer {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 37%, #f0f0f0 63%);
-  background-size: 400% 100%;
-  animation: shimmer 1.4s ease infinite;
-}
-
-.premium-shadow {
   box-shadow: var(--shadow-premium);
-}
-
-.shimmer {
-  background: linear-gradient(110deg, #edeffd 8%, #dfe5ff 18%, #edeffd 33%);
-  background-size: 200% 100%;
-  animation: shimmer 1.2s linear infinite;
 }
 
 @keyframes shimmer {
   to {
     background-position-x: -200%;
   }
+}
+
+.shimmer {
+  background: linear-gradient(110deg, #eff6ff 8%, #dbeafe 18%, #eff6ff 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
 }

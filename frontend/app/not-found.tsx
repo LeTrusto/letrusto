@@ -33,7 +33,7 @@ export default function NotFound() {
           href="/ai"
           className="rounded-xl border border-purple-200 bg-purple-50 px-6 py-3 text-sm font-semibold text-purple-700 transition hover:bg-purple-100"
         >
-          ✨ Ask AI
+          ✨ Open Buying Assistant
         </Link>
       </div>
     </main>

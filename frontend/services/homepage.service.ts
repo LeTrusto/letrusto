@@ -1,12 +1,13 @@
 import { API_BASE_URL, IS_STATIC_GENERATION_BUILD } from "@/services/api";
 import { getAllProducts, type Product } from "@/services/product.service";
 import {
+  HOMEPAGE_TRENDING_SEARCHES,
   HOMEPAGE_CATEGORY_CONFIG,
-  HOMEPAGE_COMING_SOON_VERTICALS,
   HOMEPAGE_POPULAR_COMPARISONS,
   HOMEPAGE_TRUST_SIGNALS,
+  type HomeFeaturedBrand,
+  type HomeTrendingSearch,
   type HomepageCategoryConfig,
-  type HomepageComingSoonItem,
   type HomepageComparisonItem,
   type TrustSignal,
 } from "@/config/homepage";
@@ -23,14 +24,18 @@ export type HomeGuideSummary = {
   category: string;
 };
 
+export type HomeProductRailItem = Product;
+
 export type HomepageDataSources = {
   "categories.showcase": HomeCategoryCard[];
   "trust.default": TrustSignal[];
   "comparisons.popular": HomepageComparisonItem[];
-  "comingSoon.hostingSaas": HomepageComingSoonItem;
-  "comingSoon.beauty": HomepageComingSoonItem;
-  "comingSoon.petCare": HomepageComingSoonItem;
   "guides.latest": HomeGuideSummary[];
+  "products.trending": HomeProductRailItem[];
+  "products.featured": HomeProductRailItem[];
+  "products.newArrivals": HomeProductRailItem[];
+  "brands.featured": HomeFeaturedBrand[];
+  "searches.trending": HomeTrendingSearch[];
 };
 
 const CATEGORY_MATCH_RE = /[^a-z0-9-]/g;
@@ -68,6 +73,33 @@ function buildCategoryShowcase(allProducts: Product[]): HomeCategoryCard[] {
       productCountText: productCount > 0 ? `${productCount} live picks` : "Coming Soon",
     };
   });
+}
+
+function buildFeaturedBrands(allProducts: Product[]): HomeFeaturedBrand[] {
+  const brandMap = new Map<string, { count: number; category: string }>();
+
+  for (const product of allProducts) {
+    const existing = brandMap.get(product.brand);
+    if (existing) {
+      existing.count += 1;
+      continue;
+    }
+
+    brandMap.set(product.brand, {
+      count: 1,
+      category: product.category,
+    });
+  }
+
+  return Array.from(brandMap.entries())
+    .sort((left, right) => right[1].count - left[1].count)
+    .slice(0, 8)
+    .map(([name, info]) => ({
+      name,
+      category: info.category,
+      href: `/search?brand=${encodeURIComponent(name)}`,
+      note: `${info.count} product${info.count === 1 ? "" : "s"} in catalog`,
+    }));
 }
 
 async function getLatestGuides(limit: number): Promise<HomeGuideSummary[]> {
@@ -125,15 +157,21 @@ async function getLatestGuides(limit: number): Promise<HomeGuideSummary[]> {
 }
 
 export async function getHomepageDataSources(): Promise<HomepageDataSources> {
-  const [allProducts, guides] = await Promise.all([getAllProducts(), getLatestGuides(4)]);
+  const [allProducts, guides, collections] = await Promise.all([
+    getAllProducts(),
+    getLatestGuides(4),
+    import("@/services/product.service").then(({ getHomeCollections }) => getHomeCollections()),
+  ]);
 
   return {
     "categories.showcase": buildCategoryShowcase(allProducts),
     "trust.default": HOMEPAGE_TRUST_SIGNALS,
     "comparisons.popular": HOMEPAGE_POPULAR_COMPARISONS,
-    "comingSoon.hostingSaas": HOMEPAGE_COMING_SOON_VERTICALS.hostingSaas,
-    "comingSoon.beauty": HOMEPAGE_COMING_SOON_VERTICALS.beauty,
-    "comingSoon.petCare": HOMEPAGE_COMING_SOON_VERTICALS.petCare,
     "guides.latest": guides,
+    "products.trending": collections.trending.slice(0, 4),
+    "products.featured": collections.featured.slice(0, 4),
+    "products.newArrivals": collections.newArrivals.slice(0, 4),
+    "brands.featured": buildFeaturedBrands(allProducts),
+    "searches.trending": HOMEPAGE_TRENDING_SEARCHES,
   };
 }

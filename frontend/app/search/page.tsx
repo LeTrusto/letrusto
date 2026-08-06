@@ -153,40 +153,41 @@ export default async function SearchPage({
   const results = search.items;
   const pagination = search.pagination;
   const pageOptions = [12, 24, 36];
+  const hasResults = results.length > 0;
 
   return (
-    <main className="min-h-screen bg-gray-50 p-10">
-      <div className="max-w-7xl mx-auto">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(125,211,252,0.12),_transparent_24%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-5 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
 
-        <div className="mb-10 flex flex-col gap-4 rounded-[2rem] border border-purple-100 bg-white p-8 shadow-xl shadow-purple-100/40 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mb-10 flex flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-purple-500">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
               Product Discovery
             </p>
-            <h1 className="mt-3 text-4xl font-bold text-gray-900">Search Results</h1>
-            <p className="mt-3 text-gray-500">
+            <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950">Search Results</h1>
+            <p className="mt-3 max-w-3xl text-slate-600">
               {query ? (
                 <>
-                  Showing {pagination.totalItems} result{pagination.totalItems === 1 ? "" : "s"} for <span className="font-semibold text-gray-900">{query}</span>.
+                  Showing {pagination.totalItems} result{pagination.totalItems === 1 ? "" : "s"} for <span className="font-semibold text-slate-950">{query}</span>.
                 </>
               ) : (
                 <>
-                  Browse all {pagination.totalItems} curated products and refine by category, price, rating, or AI score.
+                  Browse all {pagination.totalItems} curated products and refine by category, price, rating, or recommendation score.
                 </>
               )}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-purple-50 px-5 py-4 text-sm text-purple-700">
+          <div className="rounded-2xl bg-slate-100 px-5 py-4 text-sm text-slate-700">
             Sort: <span className="font-semibold capitalize">{sortBy.replace("-", " ")}</span>
           </div>
         </div>
 
         <SearchEnhancements query={query} />
 
-        <form className="mb-10 grid gap-4 rounded-[2rem] border border-purple-100 bg-white p-6 shadow-sm lg:grid-cols-6" method="get">
+        <form className="mb-10 grid gap-4 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-6" method="get">
           <div className="lg:col-span-2">
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="q">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="q">
               Search
             </label>
             <input
@@ -194,8 +195,8 @@ export default async function SearchPage({
               name="q"
               defaultValue={query}
               list="search-page-suggestions"
-              placeholder="iphone, coding laptop, music"
-              className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400"
+              placeholder="Search products, brands or ask a buying question..."
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
             />
             <datalist id="search-page-suggestions">
               {results.slice(0, 20).map((product) => (
@@ -205,10 +206,10 @@ export default async function SearchPage({
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="sort">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="sort">
               Sort By
             </label>
-            <select id="sort" name="sort" defaultValue={sortBy} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
+            <select id="sort" name="sort" defaultValue={sortBy} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100">
               <option value="relevance">Relevance</option>
               <option value="price-low">Lowest Price</option>
               <option value="price-high">Highest Price</option>
@@ -218,10 +219,10 @@ export default async function SearchPage({
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="category">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="category">
               Category
             </label>
-            <select id="category" name="category" defaultValue={filters.category} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
+            <select id="category" name="category" defaultValue={filters.category} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100">
               <option value="all">All</option>
               {Object.entries(metadata.categoryPluralLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -232,10 +233,10 @@ export default async function SearchPage({
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="price">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="price">
               Price
             </label>
-            <select id="price" name="price" defaultValue={filters.price} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
+            <select id="price" name="price" defaultValue={filters.price} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100">
               <option value="all">All Prices</option>
               <option value="under-30000">Under ₹30,000</option>
               <option value="30000-80000">₹30,000-₹80,000</option>
@@ -244,10 +245,10 @@ export default async function SearchPage({
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="rating">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="rating">
               Rating
             </label>
-            <select id="rating" name="rating" defaultValue={filters.rating} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
+            <select id="rating" name="rating" defaultValue={filters.rating} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100">
               <option value="all">All Ratings</option>
               <option value="4-plus">4+</option>
               <option value="4.5-plus">4.5+</option>
@@ -255,20 +256,20 @@ export default async function SearchPage({
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="aiScore">
-              AI Score
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="aiScore">
+              Recommendation Score
             </label>
-            <select id="aiScore" name="aiScore" defaultValue={filters.aiScore} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
+            <select id="aiScore" name="aiScore" defaultValue={filters.aiScore} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100">
               <option value="all">All Scores</option>
               <option value="above-90">Above 90</option>
             </select>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="brand">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="brand">
               Brand
             </label>
-            <select id="brand" name="brand" defaultValue={brand || ""} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
+            <select id="brand" name="brand" defaultValue={brand || ""} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100">
               <option value="">All Brands</option>
               {metadata.brands.map((brandName) => (
                 <option key={brandName} value={brandName}>
@@ -279,7 +280,7 @@ export default async function SearchPage({
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="minPrice">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="minPrice">
               Min Price
             </label>
             <input
@@ -289,12 +290,12 @@ export default async function SearchPage({
               type="number"
               min={0}
               placeholder="0"
-              className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="maxPrice">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="maxPrice">
               Max Price
             </label>
             <input
@@ -304,12 +305,12 @@ export default async function SearchPage({
               type="number"
               min={0}
               placeholder="250000"
-              className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="minRating">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="minRating">
               Min Rating
             </label>
             <input
@@ -321,15 +322,15 @@ export default async function SearchPage({
               max={5}
               step="0.1"
               placeholder="4.0"
-              className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="pageSize">
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="pageSize">
               Page Size
             </label>
-            <select id="pageSize" name="pageSize" defaultValue={String(pageSize)} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
+            <select id="pageSize" name="pageSize" defaultValue={String(pageSize)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100">
               {pageOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -339,27 +340,29 @@ export default async function SearchPage({
           </div>
 
           <div className="lg:col-span-6 flex flex-wrap gap-3 pt-2">
-            <button className="rounded-2xl bg-gradient-to-r from-fuchsia-600 to-purple-600 px-6 py-3 font-semibold text-white transition hover:from-fuchsia-700 hover:to-purple-700" type="submit">
+            <button className="rounded-2xl bg-slate-950 px-6 py-3 font-semibold text-white transition hover:bg-slate-800" type="submit">
               Apply Filters
             </button>
-            <a href="/search" className="rounded-2xl border border-gray-200 px-6 py-3 font-semibold text-gray-700 transition hover:bg-gray-50">
+            <a href="/search" className="rounded-2xl border border-slate-200 px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
               Reset
             </a>
           </div>
         </form>
 
-        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-          {results.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              highlightLabel={query ? "Discovery Match" : metadata.productSpotlightBadges[product.id]}
-            />
-          ))}
-        </div>
+        {hasResults ? (
+          <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+            {results.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                highlightLabel={query ? "Discovery Match" : metadata.productSpotlightBadges[product.id]}
+              />
+            ))}
+          </div>
+        ) : null}
 
         {pagination.totalPages > 1 ? (
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3 rounded-3xl border border-purple-100 bg-white p-4">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3 rounded-3xl border border-slate-200 bg-white p-4">
             <a
               href={buildSearchHref({
                 q: query,
@@ -376,12 +379,12 @@ export default async function SearchPage({
                 page: Math.max(1, pagination.page - 1),
                 pageSize,
               })}
-              className={`rounded-xl px-4 py-2 font-semibold ${pagination.hasPreviousPage ? "border border-purple-200 text-purple-700 hover:bg-purple-50" : "pointer-events-none border border-gray-100 text-gray-300"}`}
+              className={`rounded-xl px-4 py-2 font-semibold ${pagination.hasPreviousPage ? "border border-slate-200 text-slate-700 hover:bg-slate-50" : "pointer-events-none border border-gray-100 text-gray-300"}`}
             >
               Previous
             </a>
 
-            <span className="rounded-xl bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
+            <span className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
               Page {pagination.page} of {pagination.totalPages}
             </span>
 
@@ -401,17 +404,25 @@ export default async function SearchPage({
                 page: Math.min(pagination.totalPages, pagination.page + 1),
                 pageSize,
               })}
-              className={`rounded-xl px-4 py-2 font-semibold ${pagination.hasNextPage ? "border border-purple-200 text-purple-700 hover:bg-purple-50" : "pointer-events-none border border-gray-100 text-gray-300"}`}
+              className={`rounded-xl px-4 py-2 font-semibold ${pagination.hasNextPage ? "border border-slate-200 text-slate-700 hover:bg-slate-50" : "pointer-events-none border border-gray-100 text-gray-300"}`}
             >
               Next
             </a>
           </div>
         ) : null}
 
-        {results.length === 0 && (
-          <div className="mt-16 rounded-[2rem] border border-dashed border-purple-200 bg-white p-10 text-center text-gray-500 shadow-lg shadow-purple-100/30">
-            <h2 className="text-2xl font-bold text-gray-900">No products matched your filters.</h2>
-            <p className="mt-3">Adjust the search term, widen the price range, or clear the filters to discover more products.</p>
+        {!hasResults && (
+          <div className="mt-16 rounded-[2rem] border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500 shadow-sm">
+            <h2 className="text-2xl font-bold text-slate-950">No products matched your filters.</h2>
+            <p className="mt-3">Adjust the search term, widen the price range, or clear filters to discover more relevant options.</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <a href="/search" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">
+                Reset search
+              </a>
+              <a href="/guides" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                Explore guides
+              </a>
+            </div>
           </div>
         )}
 

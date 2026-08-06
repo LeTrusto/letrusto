@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const FOOTER_LINKS = {
   Product: [
-    { label: "AI Advisor", href: "/ai" },
+    { label: "Buying Assistant", href: "/ai" },
     { label: "Buying Guides", href: "/guides" },
     { label: "Browse Products", href: "/search" },
     { label: "Compare", href: "/compare" },
@@ -10,11 +10,11 @@ const FOOTER_LINKS = {
     { label: "Favourites", href: "/favorites" },
   ],
   Categories: [
-    { label: "Smartphones", href: "/search?category=smartphones" },
-    { label: "Laptops", href: "/search?category=laptop" },
-    { label: "Web Hosting", href: "/search?category=web-hosting" },
-    { label: "Headphones", href: "/search?category=headphones" },
-    { label: "Gaming", href: "/search?category=gaming" },
+    { label: "Smartphones", href: "/category/smartphones" },
+    { label: "Laptops", href: "/category/laptop" },
+    { label: "Hosting", href: "/category/hosting" },
+    { label: "Headphones", href: "/category/headphones" },
+    { label: "Gaming", href: "/category/gaming" },
   ],
   Company: [
     { label: "Support", href: "/support" },
@@ -40,7 +40,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-gray-500">
-              India&apos;s AI Buying Advisor. Compare products, get personalised recommendations, and shop smarter.
+              Research-backed product recommendations, comparisons, and buying guidance for shoppers who want more clarity before they buy.
             </p>
             <div className="mt-5 flex gap-3">
               {[
@@ -94,7 +94,7 @@ export default function Footer() {
             © {new Date().getFullYear()} LeTrusto. All rights reserved.
           </p>
           <p className="text-xs text-gray-400">
-            Built with ❤️ for smarter shopping in India
+            Built for clearer, more confident buying decisions
           </p>
         </div>
       </div>

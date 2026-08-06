@@ -36,7 +36,7 @@ export default function AIRecommendation() {
           />
 
           <button className="mt-6 w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl py-4 text-lg font-bold hover:scale-[1.02] transition">
-            Ask AI
+            Open assistant
           </button>
 
         </div>

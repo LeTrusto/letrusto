@@ -126,17 +126,17 @@ export default async function ElectronicsCategoryPage({
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_right,_#dbeafe,_transparent_50%),radial-gradient(circle_at_bottom_left,_#e9d5ff,_transparent_45%),linear-gradient(135deg,#0f172a,#312e81,#0f172a)] py-18 text-white md:py-24">
         <div className="mx-auto max-w-7xl px-6">
           <p className="inline-flex rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
-            AI Buying Advisor
+            Guided electronics discovery
           </p>
           <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight md:text-6xl">
             Electronics decisions, guided by intelligence not catalog noise.
           </h1>
           <p className="mt-5 max-w-2xl text-white/85 md:text-lg">
-            LeTrusto helps you compare trade-offs, understand value, and pick confidently with AI-backed recommendations.
+            LeTrusto helps you compare trade-offs, understand value, and pick confidently with recommendation-first guidance.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/ai" className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-indigo-700">
-              Ask AI Advisor
+              Open Buying Assistant
             </Link>
             <Link href="/compare" className="rounded-xl border border-white/40 px-5 py-3 text-sm font-semibold text-white">
               Open Comparison Lab

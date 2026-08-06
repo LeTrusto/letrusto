@@ -42,12 +42,12 @@ export default function HomeLatestGuidesSection({
             <Link
               key={guide.slug}
               href={`/articles/${guide.slug}`}
-              className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="group rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
             >
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
                 {formatBadge(guide.category)}
               </span>
-              <h3 className="mt-2.5 text-base font-bold leading-snug text-slate-900 group-hover:text-violet-700">
+              <h3 className="mt-2.5 text-base font-bold leading-snug text-slate-900 group-hover:text-sky-700">
                 {guide.title}
               </h3>
               <p className="mt-2 line-clamp-3 text-sm text-slate-600">{guide.excerpt}</p>

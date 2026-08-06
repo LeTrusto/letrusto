@@ -2,9 +2,11 @@ import Hero from "@/components/Hero";
 import HomeCategoryShowcase from "@/components/homepage/HomeCategoryShowcase";
 import HomeTrustSignalsSection from "@/components/homepage/HomeTrustSignalsSection";
 import HomeLatestGuidesSection from "@/components/homepage/HomeLatestGuidesSection";
-import HomeAskAiCtaSection from "@/components/homepage/HomeAskAiCtaSection";
 import HomePopularComparisonsSection from "@/components/homepage/HomePopularComparisonsSection";
-import HomeComingSoonVerticalSection from "@/components/homepage/HomeComingSoonVerticalSection";
+import HomeFeaturedBrandsSection from "@/components/homepage/HomeFeaturedBrandsSection";
+import HomeNewsletterSection from "@/components/homepage/HomeNewsletterSection";
+import HomeProductRailSection from "@/components/homepage/HomeProductRailSection";
+import HomeTrendingSearchesSection from "@/components/homepage/HomeTrendingSearchesSection";
 import type { HomepageSectionConfig } from "@/config/homepage";
 import type { HomepageDataSources } from "@/services/homepage.service";
 
@@ -69,29 +71,6 @@ export default function HomepageSectionRenderer({
       );
     }
 
-    case "comingSoonVertical": {
-      const source = section.dataSource;
-      const item =
-        source === "comingSoon.hostingSaas"
-          ? dataSources["comingSoon.hostingSaas"]
-          : source === "comingSoon.beauty"
-            ? dataSources["comingSoon.beauty"]
-            : source === "comingSoon.petCare"
-              ? dataSources["comingSoon.petCare"]
-              : null;
-
-      if (!item) {
-        return null;
-      }
-
-      return (
-        <HomeComingSoonVerticalSection
-          title={section.title ?? item.title}
-          item={item}
-        />
-      );
-    }
-
     case "guides": {
       const items = resolveItems(dataSources, "guides.latest", section.maxItems);
       return (
@@ -105,10 +84,55 @@ export default function HomepageSectionRenderer({
       );
     }
 
-    case "askAiCta":
+    case "productRail": {
+      const dataKey = section.dataSource;
+      const items =
+        dataKey === "products.trending"
+          ? resolveItems(dataSources, "products.trending", section.maxItems)
+          : dataKey === "products.featured"
+            ? resolveItems(dataSources, "products.featured", section.maxItems)
+            : dataKey === "products.newArrivals"
+              ? resolveItems(dataSources, "products.newArrivals", section.maxItems)
+              : [];
+
       return (
-        <HomeAskAiCtaSection
-          title={section.title ?? "Ask LeTrusto AI"}
+        <HomeProductRailSection
+          title={section.title ?? "Featured Products"}
+          subtitle={section.subtitle}
+          ctaLabel={section.ctaLabel}
+          ctaHref={section.ctaHref}
+          items={items}
+          highlightLabel={section.highlightLabel}
+        />
+      );
+    }
+
+    case "featuredBrands": {
+      const items = resolveItems(dataSources, "brands.featured", section.maxItems);
+      return (
+        <HomeFeaturedBrandsSection
+          title={section.title ?? "Featured Brands"}
+          subtitle={section.subtitle}
+          items={items}
+        />
+      );
+    }
+
+    case "trendingSearches": {
+      const items = resolveItems(dataSources, "searches.trending", section.maxItems);
+      return (
+        <HomeTrendingSearchesSection
+          title={section.title ?? "Trending Searches"}
+          subtitle={section.subtitle}
+          items={items}
+        />
+      );
+    }
+
+    case "newsletter":
+      return (
+        <HomeNewsletterSection
+          title={section.title ?? "Stay in the loop"}
           subtitle={section.subtitle}
           ctaLabel={section.ctaLabel}
           ctaHref={section.ctaHref}

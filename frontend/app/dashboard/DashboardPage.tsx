@@ -200,7 +200,7 @@ export default function DashboardPage() {
             {[
               { href: "/favorites", label: "My Wishlist", icon: Heart },
               { href: "/compare", label: "Compare", icon: Scale },
-              { href: "/ai", label: "AI Advisor", icon: Sparkles },
+              { href: "/ai", label: "Buying Assistant", icon: Sparkles },
               { href: "/notifications", label: "Notifications", icon: Bell },
               { href: "/deals", label: "Today's Deals", icon: TrendingDown },
               { href: "/support", label: "Support", icon: User },

@@ -84,7 +84,7 @@ export default function RootLayout({
             name: "LeTrusto",
             url: "https://letrusto.com",
             logo: "https://letrusto.com/images/logo/logo.png",
-            description: "India's AI Buying Advisor. Compare products, get personalised recommendations, and shop smarter.",
+            description: "Research-backed buying guidance with product comparisons, recommendations, and editorial clarity.",
             sameAs: ["https://twitter.com/letrusto", "https://instagram.com/letrusto"],
           }}
         />
