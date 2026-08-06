@@ -85,7 +85,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden items-center gap-1 xl:flex">
           <Link href="/" onClick={closeAllMenus} className={navItemClass}>Home</Link>
 
           {/* Categories dropdown */}
@@ -158,7 +158,7 @@ export default function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
-          <Link href="/search" onClick={closeAllMenus} className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-slate-300 hover:text-slate-900 lg:hidden" aria-label="Search products">
+          <Link href="/search" onClick={closeAllMenus} className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-slate-300 hover:text-slate-900 xl:hidden" aria-label="Search products">
             <Search className="h-4 w-4" />
           </Link>
 
@@ -177,7 +177,7 @@ export default function Navbar() {
 
           {!isLoading && (
             user ? (
-              <div className="relative hidden lg:block" ref={userMenuRef}>
+              <div className="relative hidden xl:block" ref={userMenuRef}>
                 <button
                   onClick={() => {
                     setMenusPath(pathname);
@@ -215,7 +215,7 @@ export default function Navbar() {
                 </AnimatePresence>
               </div>
             ) : (
-              <Link href="/login" onClick={closeAllMenus} className="hidden items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-slate-300 hover:text-slate-950 lg:flex">
+              <Link href="/login" onClick={closeAllMenus} className="hidden items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-slate-300 hover:text-slate-950 xl:flex">
                 <LogIn className="h-4 w-4" /> Sign In
               </Link>
             )
@@ -227,7 +227,7 @@ export default function Navbar() {
               setMenusPath(pathname);
               setMobileOpen((o) => !o);
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-500 lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-500 xl:hidden"
             aria-label="Toggle menu"
           >
             {mobileMenuVisible ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -243,7 +243,7 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="border-t border-gray-100 bg-white px-5 pb-4 lg:hidden"
+            className="border-t border-gray-100 bg-white px-5 pb-4 xl:hidden"
           >
             <nav className="mt-3 flex flex-col gap-1">
               {[

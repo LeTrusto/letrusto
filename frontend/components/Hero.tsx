@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { ArrowRight, Loader2, Search, Sparkles } from "lucide-react";
-import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
@@ -36,8 +35,8 @@ export default function Hero() {
       <div className="pointer-events-none absolute top-10 right-0 h-72 w-72 rounded-full bg-orange-100/40 blur-3xl" />
       <div className="pointer-events-none absolute -left-10 top-24 h-56 w-56 rounded-full bg-pink-100/30 blur-3xl" />
 
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div>
+      <div className="relative mx-auto max-w-7xl px-6">
+        <div className="max-w-5xl">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -159,27 +158,6 @@ export default function Hero() {
           </motion.form>
 
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.3 }}
-            className="mt-4 flex flex-col gap-2 sm:flex-row"
-          >
-            <Link
-              href={query.trim() ? `/ai?q=${encodeURIComponent(query.trim())}` : "/ai"}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-fuchsia-300 hover:text-slate-950"
-            >
-              <Sparkles className="h-4 w-4 text-fuchsia-600" />
-              Open Buying Assistant
-            </Link>
-            <Link
-              href="/compare"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-orange-300 hover:text-slate-950"
-            >
-              Start Comparison
-            </Link>
-          </motion.div>
-
-          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.45 }}
@@ -193,50 +171,6 @@ export default function Hero() {
             ))}
           </motion.div>
         </div>
-
-        <motion.aside
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.18 }}
-          className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_-36px_rgba(15,23,42,0.28)] backdrop-blur"
-        >
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Start here</p>
-          <div className="mt-4 space-y-4">
-            {[
-              {
-                title: "Compare two products side by side",
-                description: "Open a structured comparison and focus on the trade-offs that actually matter.",
-                href: "/compare?first=iphone16pro&second=galaxy-s25",
-                label: "Open comparison",
-              },
-              {
-                title: "Browse curated buying guides",
-                description: "Read editorial guidance before spending time on scattered reviews.",
-                href: "/guides",
-                label: "See guides",
-              },
-              {
-                title: "Get tailored help when the shortlist is messy",
-                description: "Use the Buying Assistant when you need help balancing budget, priorities, and edge cases.",
-                href: "/ai",
-                label: "Open assistant",
-              },
-            ].map((item) => (
-              <Link
-                key={item.title}
-                href={item.href}
-                className="group block rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-5 transition hover:border-slate-300 hover:bg-white hover:shadow-md"
-              >
-                <h2 className="text-lg font-bold tracking-tight text-slate-950">{item.title}</h2>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.description}</p>
-                <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-violet-700 transition group-hover:text-fuchsia-700">
-                  {item.label}
-                  <ArrowRight className="h-4 w-4" />
-                </span>
-              </Link>
-            ))}
-          </div>
-        </motion.aside>
       </div>
     </section>
   );
