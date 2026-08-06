@@ -29,7 +29,7 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(168,85,247,0.16),_transparent_30%),radial-gradient(circle_at_85%_0%,_rgba(251,113,133,0.14),_transparent_28%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] py-20 md:py-24">
+    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(168,85,247,0.16),_transparent_30%),radial-gradient(circle_at_85%_0%,_rgba(251,113,133,0.14),_transparent_28%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] py-18 md:py-22">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
       <div className="pointer-events-none absolute -top-24 left-1/2 h-[440px] w-[440px] -translate-x-1/2 rounded-full bg-fuchsia-200/25 blur-3xl" />
       <div className="pointer-events-none absolute top-10 right-0 h-72 w-72 rounded-full bg-orange-100/40 blur-3xl" />
@@ -41,7 +41,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="-mx-2 mb-5 flex snap-x gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="-mx-2 mb-4 flex snap-x gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {chips.map((chip, index) => (
               <button
@@ -79,7 +79,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.08 }}
-            className="text-5xl font-black tracking-tight text-slate-950 md:text-7xl"
+            className="text-4xl font-black tracking-tight text-slate-950 md:text-6xl"
           >
             Know Before{" "}
             <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 bg-clip-text text-transparent">
@@ -91,7 +91,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.16 }}
-            className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-600 md:text-xl"
+            className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-600 md:text-[1.15rem]"
           >
             LeTrusto helps shoppers compare products, understand trade-offs, and move from research to confident decisions with less noise.
           </motion.p>
@@ -101,11 +101,11 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.24 }}
             onSubmit={handleSearch}
-            className="mt-10 rounded-[2rem] bg-gradient-to-r from-purple-200/70 via-pink-200/70 to-orange-200/70 p-[1.2px] shadow-[0_24px_80px_-32px_rgba(15,23,42,0.34)] transition duration-300 focus-within:-translate-y-0.5"
+            className="mt-7 rounded-[1.7rem] bg-gradient-to-r from-purple-200/70 via-pink-200/70 to-orange-200/70 p-[1.2px] shadow-[0_22px_64px_-32px_rgba(15,23,42,0.32)] transition duration-300 focus-within:-translate-y-0.5 focus-within:shadow-[0_28px_80px_-36px_rgba(139,92,246,0.34)]"
           >
-            <div className="overflow-hidden rounded-[calc(2rem-1.2px)] border border-white/80 bg-white/95 backdrop-blur">
-              <div className="flex items-start gap-4 px-6 py-6 md:px-7 md:py-7">
-                <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-100 to-orange-100 text-fuchsia-700 transition-colors duration-300">
+            <div className="overflow-hidden rounded-[calc(1.7rem-1.2px)] border border-white/80 bg-white/95 backdrop-blur">
+              <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5 sm:py-4 md:px-6">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-100 to-orange-100 text-fuchsia-700 transition-colors duration-300 sm:mt-0">
                   <Search className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="flex-1">
@@ -113,14 +113,14 @@ export default function Hero() {
                   <textarea
                     id="hero-search"
                     ref={textareaRef}
-                    rows={2}
+                    rows={1}
                     disabled={isPending}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     onInput={(event) => {
                       const target = event.currentTarget;
                       target.style.height = "0px";
-                      target.style.height = `${Math.min(target.scrollHeight, 188)}px`;
+                      target.style.height = `${Math.min(target.scrollHeight, 136)}px`;
                     }}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && !event.shiftKey) {
@@ -130,18 +130,13 @@ export default function Hero() {
                     }}
                     aria-describedby="hero-search-hint"
                     placeholder="Ask anything before you buy: budget, use-case, or model comparisons."
-                    className="min-h-[82px] w-full resize-none bg-transparent text-[17px] leading-7 text-slate-900 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-70 md:text-lg"
+                    className="min-h-[56px] w-full resize-none bg-transparent py-[14px] text-[18px] leading-7 text-slate-900 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-70"
                   />
-                  <p id="hero-search-hint" className="mt-2 text-sm text-slate-500">
-                    Press Enter to search. Use Shift+Enter for a new line.
-                  </p>
                 </div>
-              </div>
-              <div className="flex justify-end border-t border-slate-100 bg-slate-50/85 px-5 py-4 md:px-6">
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="inline-flex min-w-[156px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex min-w-[148px] items-center justify-center gap-2 self-end rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:self-center"
                 >
                   {isPending ? (
                     <>
@@ -159,11 +154,15 @@ export default function Hero() {
             </div>
           </motion.form>
 
+          <p id="hero-search-hint" className="mt-2 text-sm text-slate-500">
+            Press Enter to search. Use Shift+Enter for a new line.
+          </p>
+
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.45 }}
-            className="mt-8 flex flex-wrap items-center gap-6 text-sm text-slate-500"
+            className="mt-6 flex flex-wrap items-center gap-6 text-sm text-slate-500"
           >
             {["Clear comparisons", "Transparent affiliate disclosure", "Growing product catalog"].map((item) => (
               <span key={item} className="inline-flex items-center gap-2">
