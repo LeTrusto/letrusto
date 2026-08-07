@@ -35,10 +35,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const article = await getArticle(slug);
   if (!article) return { title: "Article Not Found" };
+  const title = article.meta_title ?? article.title;
+  const description = article.meta_description ?? article.excerpt;
   return {
-    title: article.meta_title ?? article.title,
-    description: article.meta_description ?? article.excerpt,
-    openGraph: { title: article.title, description: article.excerpt, type: "article" },
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      url: `https://letrusto.com/articles/${slug}`,
+      siteName: "LeTrusto",
+      images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
+    },
+    twitter: { card: "summary_large_image", title, description, images: ["/images/og-default.svg"] },
     alternates: { canonical: `https://letrusto.com/articles/${slug}` },
   };
 }
@@ -54,12 +64,31 @@ export default async function ArticlePage({ params }: Props) {
     headline: article.title,
     description: article.excerpt,
     datePublished: article.created_at,
-    publisher: { "@type": "Organization", name: "LeTrusto", url: "https://letrusto.com" },
+    dateModified: article.created_at,
+    mainEntityOfPage: `https://letrusto.com/articles/${slug}`,
+    author: { "@type": "Organization", name: "LeTrusto" },
+    publisher: {
+      "@type": "Organization",
+      name: "LeTrusto",
+      url: "https://letrusto.com",
+      logo: { "@type": "ImageObject", url: "https://letrusto.com/images/logo/logo.png" },
+    },
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://letrusto.com" },
+      { "@type": "ListItem", position: 2, name: "Guides", item: "https://letrusto.com/guides" },
+      { "@type": "ListItem", position: 3, name: article.title, item: `https://letrusto.com/articles/${slug}` },
+    ],
   };
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <Script id="article-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+      <Script id="article-breadcrumb-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-2 text-sm text-gray-400">

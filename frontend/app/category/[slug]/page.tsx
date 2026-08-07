@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 
 import ProductCard from "@/components/ProductCard";
+import SchemaOrg from "@/components/SchemaOrg";
 import { CATALOG_TREE, getCategoryLabel } from "@/constants/index";
 import { getCatalogMetadata, getProductSearch } from "@/services/product.service";
 
@@ -76,11 +78,40 @@ function resolveComingSoonProfile(slug: string): ComingSoonProfile {
   );
 }
 
+function CategoryBreadcrumbSchema({ slug, label }: { slug: string; label: string }) {
+  return (
+    <Script
+      id={`category-breadcrumb-${slug}`}
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: "https://letrusto.com" },
+            { "@type": "ListItem", position: 2, name: "Categories", item: "https://letrusto.com/categories" },
+            { "@type": "ListItem", position: 3, name: label, item: `https://letrusto.com/category/${slug}` },
+          ],
+        }),
+      }}
+    />
+  );
+}
+
 function ComingSoonCategory({ slug, label }: { slug: string; label: string }) {
   const profile = resolveComingSoonProfile(slug);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50">
+      <SchemaOrg
+        type="WebPage"
+        data={{
+          name: `${label} Recommendations`,
+          url: `https://letrusto.com/category/${slug}`,
+          description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+        }}
+      />
+      <CategoryBreadcrumbSchema slug={slug} label={label} />
       <section className="mx-auto max-w-6xl px-6 py-16 md:py-20">
         <article className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm md:p-12">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" aria-hidden="true" />
@@ -150,10 +181,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const label = getCategoryLabel(slug);
   return {
-    title: label,
+    title: `${label} Recommendations`,
     description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
     alternates: {
       canonical: `/category/${slug}`,
+    },
+    openGraph: {
+      title: `${label} Recommendations`,
+      description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+      url: `/category/${slug}`,
+      siteName: "LeTrusto",
+      type: "website",
+      images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${label} Recommendations`,
+      description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+      images: ["/images/og-default.svg"],
     },
   };
 }
@@ -178,6 +223,15 @@ export default async function CategoryPage({ params }: Props) {
 
   return (
     <main className="min-h-screen bg-white">
+      <SchemaOrg
+        type="WebPage"
+        data={{
+          name: `${label} Recommendations`,
+          url: `https://letrusto.com/category/${slug}`,
+          description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+        }}
+      />
+      <CategoryBreadcrumbSchema slug={slug} label={label} />
       <section className="bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 py-14 text-white">
         <div className="mx-auto max-w-7xl px-6">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">AI Category Hub</p>

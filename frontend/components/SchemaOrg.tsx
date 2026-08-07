@@ -1,5 +1,5 @@
 type SchemaOrgProps = {
-  type: "WebSite" | "Product" | "BreadcrumbList" | "Organization";
+  type: "WebSite" | "WebPage" | "Product" | "BreadcrumbList" | "FAQPage" | "Organization";
   data: Record<string, unknown>;
 };
 

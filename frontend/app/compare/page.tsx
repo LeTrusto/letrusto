@@ -7,10 +7,24 @@ import { getAllProducts, getCompareProducts } from "@/services/product.service";
 import { getSearchParamValue } from "@/utils/helpers";
 
 export const metadata: Metadata = {
-  title: "Product Compare",
+  title: "Product Comparison",
   description: "Compare two products side by side with AI analysis, key specs, and value insights.",
   alternates: {
     canonical: "/compare",
+  },
+  openGraph: {
+    title: "Product Comparison",
+    description: "Compare two products side by side with AI analysis, key specs, and value insights.",
+    url: "/compare",
+    siteName: "LeTrusto",
+    type: "website",
+    images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Product Comparison",
+    description: "Compare two products side by side with AI analysis, key specs, and value insights.",
+    images: ["/images/og-default.svg"],
   },
 };
 

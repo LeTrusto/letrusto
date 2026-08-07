@@ -1,11 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import SchemaOrg from "@/components/SchemaOrg";
+
 export const metadata: Metadata = {
-  title: "About",
+  title: "About LeTrusto",
   description: "Learn how LeTrusto approaches recommendations, editorial standards, trust, privacy, and affiliate transparency.",
   alternates: {
     canonical: "/about",
+  },
+  openGraph: {
+    title: "About LeTrusto",
+    description: "Learn how LeTrusto approaches recommendations, editorial standards, trust, privacy, and affiliate transparency.",
+    url: "/about",
+    siteName: "LeTrusto",
+    type: "website",
+    images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About LeTrusto",
+    description: "Learn how LeTrusto approaches recommendations, editorial standards, trust, privacy, and affiliate transparency.",
+    images: ["/images/og-default.svg"],
   },
 };
 
@@ -39,6 +55,27 @@ export default function AboutPage() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.12),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(251,113,133,0.1),_transparent_22%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
+      <SchemaOrg
+        type="WebPage"
+        data={{
+          name: "About LeTrusto",
+          url: "https://letrusto.com/about",
+          description: "Learn how LeTrusto approaches recommendations, editorial standards, trust, privacy, and affiliate transparency.",
+        }}
+      />
+      <SchemaOrg
+        type="FAQPage"
+        data={{
+          mainEntity: faqItems.map((item) => ({
+            "@type": "Question",
+            name: item.q,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: item.a,
+            },
+          })),
+        }}
+      />
       <section className="mx-auto max-w-6xl px-6 py-14 md:py-18">
         <div className="max-w-4xl">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">About LeTrusto</p>

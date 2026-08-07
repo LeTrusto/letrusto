@@ -3,13 +3,28 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 import CategoryArtwork from "@/components/homepage/CategoryArtwork";
+import SchemaOrg from "@/components/SchemaOrg";
 import { CATALOG_TREE } from "@/constants/index";
 
 export const metadata: Metadata = {
-  title: "Categories",
+  title: "Browse Categories",
   description: "Browse all LeTrusto product categories and jump directly to comparisons and recommendations.",
   alternates: {
     canonical: "/categories",
+  },
+  openGraph: {
+    title: "Browse Categories",
+    description: "Browse all LeTrusto product categories and jump directly to comparisons and recommendations.",
+    url: "/categories",
+    siteName: "LeTrusto",
+    type: "website",
+    images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Browse Categories",
+    description: "Browse all LeTrusto product categories and jump directly to comparisons and recommendations.",
+    images: ["/images/og-default.svg"],
   },
 };
 
@@ -24,6 +39,14 @@ export default function CategoriesPage() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(125,211,252,0.12),_transparent_24%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
+      <SchemaOrg
+        type="WebPage"
+        data={{
+          name: "Browse Categories",
+          url: "https://letrusto.com/categories",
+          description: "Browse all LeTrusto product categories and jump directly to comparisons and recommendations.",
+        }}
+      />
       <section className="mx-auto max-w-7xl px-6 py-14 md:py-18">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Browse the catalog</p>

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import Navbar from "@/components/Navbar";
@@ -21,12 +21,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://letrusto.com"),
+  applicationName: "LeTrusto",
   title: {
-    default: "LeTrusto — Know Before You Buy",
+    default: "LeTrusto",
     template: "%s | LeTrusto",
   },
   description:
-    "LeTrusto is your AI Buying Advisor. Compare electronics, get personalised recommendations, track prices, and shop smarter.",
+    "LeTrusto helps people compare products, discover trusted recommendations, and buy with confidence.",
   keywords: [
     "AI buying advisor",
     "electronics comparison",
@@ -41,17 +42,39 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: "https://letrusto.com",
     siteName: "LeTrusto",
-    title: "LeTrusto — AI Buying Advisor",
-    description: "Compare electronics, get AI recommendations, and track price drops.",
-    images: [{ url: "/images/og-default.png", width: 1200, height: 630 }],
+    title: "LeTrusto",
+    description: "Compare products, get AI recommendations, and shop with confidence.",
+    images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "LeTrusto — AI Buying Advisor",
-    description: "Compare electronics, get AI recommendations, and track price drops.",
-    images: ["/images/og-default.png"],
+    title: "LeTrusto",
+    description: "Compare products, get AI recommendations, and shop with confidence.",
+    images: ["/images/og-default.svg"],
+  },
+  manifest: "/site.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "LeTrusto",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
+    shortcut: ["/favicon.ico"],
+    other: [
+      { rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#111827" },
+    ],
   },
   robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({

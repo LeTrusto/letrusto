@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SchemaOrg from "@/components/SchemaOrg";
 
 import { API_BASE_URL, IS_API_CONFIGURED } from "@/services/api";
 
@@ -13,11 +14,27 @@ type Article = {
 };
 
 export const metadata: Metadata = {
-	title: "Buying Guides and Reviews",
+	title: "Buying Guides",
 	description:
 		"Expert buying guides, product comparisons, and honest reviews to help you make better purchase decisions.",
 	alternates: {
 		canonical: "/guides",
+	},
+	openGraph: {
+		title: "Buying Guides",
+		description:
+			"Expert buying guides, product comparisons, and honest reviews to help you make better purchase decisions.",
+		url: "/guides",
+		siteName: "LeTrusto",
+		type: "website",
+		images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "Buying Guides",
+		description:
+			"Expert buying guides, product comparisons, and honest reviews to help you make better purchase decisions.",
+		images: ["/images/og-default.svg"],
 	},
 };
 
@@ -55,6 +72,14 @@ export default async function GuidesPage() {
 
 	return (
 		<main className="mx-auto max-w-4xl px-6 py-12">
+			<SchemaOrg
+				type="WebPage"
+				data={{
+					name: "Buying Guides",
+					url: "https://letrusto.com/guides",
+					description: "Expert buying guides, product comparisons, and honest reviews to help you make better purchase decisions.",
+				}}
+			/>
 			<div className="mb-10">
 				<h1 className="text-4xl font-black text-gray-900">Buying Guides and Reviews</h1>
 				<p className="mt-3 text-lg text-gray-500">Expert guides to help you decide before you buy.</p>
