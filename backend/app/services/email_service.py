@@ -77,29 +77,30 @@ def _render_label_value(label: str, value: str) -> str:
     )
 
 
-def _html_document(preheader: str, body: str) -> str:
+def _html_document(preheader: str, body: str, logo_url: str = "https://letrusto.com/images/logo/logo.png") -> str:
     return (
         "<!doctype html>"
         '<html lang="en">'
-        '  <body style="margin:0;background:#f8fafc;padding:0;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">'
+        '  <body style="margin:0;background:#f1f5f9;padding:0;font-family:Segoe UI,Arial,Helvetica,sans-serif;color:#0f172a;">'
         f'    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">{escape(preheader)}</div>'
-        '    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;padding:32px 16px;">'
+        '    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:32px 16px;">'
         '      <tr>'
         '        <td align="center">'
-        '          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border:1px solid #e2e8f0;border-radius:24px;overflow:hidden;">'
+        '          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px;background:#ffffff;border:1px solid #dbe4ee;border-radius:18px;overflow:hidden;">'
         '            <tr>'
-        '              <td style="padding:28px 32px 12px 32px;background:linear-gradient(135deg,#0f172a 0%,#312e81 50%,#ec4899 100%);">'
-        '                <img src="https://letrusto.com/images/logo/logo.png" alt="LeTrusto" width="160" style="display:block;height:auto;max-width:160px;margin:0 0 8px 0;" />'
+        '              <td style="padding:24px 32px 18px 32px;background:#0f172a;">'
+        f'                <img src="{escape(logo_url)}" alt="LeTrusto" width="160" style="display:block;height:auto;max-width:160px;margin:0;" />'
         '              </td>'
         '            </tr>'
         '            <tr>'
         f'              <td style="padding:32px;">{body}</td>'
         '            </tr>'
         '          </table>'
-        '          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;">'
+        '          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px;">'
         '            <tr>'
         '              <td style="padding:16px 12px 0 12px;text-align:center;color:#64748b;font-size:12px;line-height:1.6;">'
-        '                © LeTrusto • <a href="https://letrusto.com" style="color:#4f46e5;text-decoration:none;">letrusto.com</a>'
+        '                This email was generated automatically by LeTrusto.<br />'
+        '                © LeTrusto • <a href="https://letrusto.com" style="color:#1d4ed8;text-decoration:none;">letrusto.com</a>'
         '              </td>'
         '            </tr>'
         '          </table>'
@@ -117,33 +118,41 @@ def _text_block(lines: list[str]) -> str:
 
 def _support_admin_template(context: Mapping[str, Any]) -> RenderedEmail:
     subject = f"[LeTrusto Support] Ticket #{context['ticket_id']} - {context['subject']}"
+    customer_email = str(context["customer_email"])
+    mailto_link = f"mailto:{escape(customer_email)}"
+
     rows = "".join(
         [
             _render_label_value("Ticket ID", f"#{context['ticket_id']}"),
             _render_label_value("Customer Name", str(context['customer_name'])),
-            _render_label_value("Customer Email", str(context['customer_email'])),
+            _render_label_value("Customer Email", customer_email),
             _render_label_value("Subject", str(context['subject'])),
-            _render_label_value("Category", str(context['category'])),
-            _render_label_value("Priority", str(context['priority'])),
             _render_label_value("Message", str(context['message'])),
-            _render_label_value("Created Time", str(context['created_time'])),
-            _render_label_value("Browser", str(context['browser'])),
-            _render_label_value("Platform", str(context['platform'])),
-            _render_label_value("IP", str(context['ip'])),
+            _render_label_value("Submitted Time", str(context['created_time'])),
         ]
     )
     html = _html_document(
         f"New support ticket #{context['ticket_id']} from {context['customer_email']}",
         (
-            '<h1 style="margin:0 0 12px 0;font-size:28px;line-height:1.2;color:#0f172a;">New Support Ticket</h1>'
-            '<p style="margin:0 0 24px 0;font-size:15px;line-height:1.7;color:#475569;">'
-            "A new ticket was submitted on LeTrusto and saved to the database. Review the details below."
+            '<h1 style="margin:0 0 10px 0;font-size:27px;line-height:1.2;color:#0f172a;">New Support Ticket</h1>'
+            '<p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#475569;">'
+            "A new support request was submitted on LeTrusto."
             "</p>"
-            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">{rows}</table>'
-            '<div style="margin-top:28px;padding:16px 18px;border-radius:18px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:14px;line-height:1.7;">'
-            f"<strong style='color:#0f172a;'>Action:</strong> Reply through your support inbox at {escape(str(context['support_email']))}."
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">'
+            '<tr><td style="padding:18px 20px;">'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">'
+            f"{rows}"
+            "</table>"
+            "</td></tr></table>"
+            '<div style="margin-top:24px;text-align:left;">'
+            f'<a href="{mailto_link}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 18px;border-radius:8px;">Reply to Customer</a>'
+            "</div>"
+            '<div style="margin-top:18px;padding:14px 16px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:13px;line-height:1.7;">'
+            f"Support Inbox: {escape(str(context['support_email']))}<br />"
+            "This email was generated automatically by LeTrusto."
             '</div>'
         ),
+        logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
     )
     text = _text_block(
         [
@@ -151,14 +160,11 @@ def _support_admin_template(context: Mapping[str, Any]) -> RenderedEmail:
             f"Customer Name: {context['customer_name']}",
             f"Customer Email: {context['customer_email']}",
             f"Subject: {context['subject']}",
-            f"Category: {context['category']}",
-            f"Priority: {context['priority']}",
             f"Message: {context['message']}",
-            f"Created Time: {context['created_time']}",
-            f"Browser: {context['browser']}",
-            f"Platform: {context['platform']}",
-            f"IP: {context['ip']}",
+            f"Submitted Time: {context['created_time']}",
             f"Support Inbox: {context['support_email']}",
+            f"Reply: mailto:{context['customer_email']}",
+            "This email was generated automatically by LeTrusto.",
         ]
     )
     return RenderedEmail(subject=subject, html=html, text=text)
@@ -169,32 +175,39 @@ def _support_confirmation_template(context: Mapping[str, Any]) -> RenderedEmail:
     html = _html_document(
         f"LeTrusto Support received ticket #{context['ticket_id']}",
         (
-            '<h1 style="margin:0 0 12px 0;font-size:28px;line-height:1.2;color:#0f172a;">Thanks for contacting LeTrusto</h1>'
-            '<p style="margin:0 0 24px 0;font-size:15px;line-height:1.7;color:#475569;">'
-            f"We’ve received your request and saved ticket <strong>#{context['ticket_id']}</strong>. "
-            "Our team will review it and reply within 24–48 hours."
+            '<h1 style="margin:0 0 10px 0;font-size:27px;line-height:1.2;color:#0f172a;">Thank You for Contacting LeTrusto</h1>'
+            '<p style="margin:0 0 20px 0;font-size:15px;line-height:1.7;color:#475569;">'
+            "Your support request has been received successfully."
             "</p>"
-            '<div style="padding:20px 22px;border-radius:20px;background:#f8fafc;border:1px solid #e2e8f0;">'
-            '<p style="margin:0 0 10px 0;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;">Support Summary</p>'
-            f"<p style='margin:0;font-size:15px;line-height:1.7;color:#0f172a;'>{escape(str(context['subject']))}</p>"
-            f"<p style='margin:12px 0 0 0;font-size:14px;line-height:1.7;color:#475569;'>Category: {escape(str(context['category']))} • Priority: {escape(str(context['priority']))}</p>"
+            '<div style="padding:18px 20px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;">'
+            '<p style="margin:0 0 8px 0;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;">Ticket Confirmation</p>'
+            f"<p style='margin:0;font-size:18px;line-height:1.5;color:#0f172a;font-weight:700;'>Ticket #{escape(str(context['ticket_id']))}</p>"
             '</div>'
-            '<div style="margin-top:24px;padding:18px 22px;border-radius:20px;background:linear-gradient(135deg,#eef2ff 0%,#fdf2f8 100%);border:1px solid #e2e8f0;">'
+            '<div style="margin-top:16px;padding:18px 20px;border-radius:12px;border:1px solid #e2e8f0;">'
+            f"<p style='margin:0 0 8px 0;font-size:14px;color:#0f172a;'><strong>Subject:</strong> {escape(str(context['subject']))}</p>"
+            f"<p style='margin:0;font-size:14px;color:#475569;'><strong>Submitted Time:</strong> {escape(str(context['created_time']))}</p>"
+            '</div>'
+            '<div style="margin-top:18px;padding:16px 18px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;">'
             f"<p style='margin:0 0 10px 0;font-size:14px;line-height:1.7;color:#0f172a;'>If you need to add more details, reply to this email or write to <a href='mailto:{escape(str(context['support_email']))}' style='color:#4f46e5;text-decoration:none;font-weight:700;'>{escape(str(context['support_email']))}</a>.</p>"
             f"<p style='margin:0;font-size:14px;line-height:1.7;color:#0f172a;'>Visit <a href='{escape(str(context['website_url']))}' style='color:#4f46e5;text-decoration:none;font-weight:700;'>LeTrusto</a> anytime for comparisons, guides, and AI buying help.</p>"
             '</div>'
+            '<div style="margin-top:16px;color:#64748b;font-size:12px;line-height:1.6;">'
+            "This email was generated automatically by LeTrusto."
+            '</div>'
         ),
+        logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
     )
     text = _text_block(
         [
             "We've received your request – LeTrusto Support",
             f"Ticket ID: #{context['ticket_id']}",
-            f"Support summary: {context['subject']}",
-            f"Category: {context['category']}",
-            f"Priority: {context['priority']}",
+            "Thank you for contacting LeTrusto.",
+            f"Subject: {context['subject']}",
+            f"Submitted Time: {context['created_time']}",
             "Expected response: 24–48 hours",
             f"Support email: {context['support_email']}",
             f"Website: {context['website_url']}",
+            "This email was generated automatically by LeTrusto.",
         ]
     )
     return RenderedEmail(subject=subject, html=html, text=text)
