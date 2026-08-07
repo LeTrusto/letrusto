@@ -30,6 +30,10 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    RESEND_API_KEY: str = ""
+    SUPPORT_EMAIL: str = "hello@letrusto.com"
+    FROM_EMAIL: str = "support@letrusto.com"
+
     AI_PROVIDER: str = "heuristic"
     AI_SESSION_TTL_MINUTES: int = 120
 

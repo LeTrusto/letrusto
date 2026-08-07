@@ -10,6 +10,7 @@ from app.db.session import SessionLocal, get_db  # noqa: F401 — re-exported fo
 from app.models.entities import User
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.product_repository import ProductRepository
+from app.services.email_service import EmailService
 from app.services.admin_service import AdminService
 from app.services.ai_service import AIService, InMemorySessionStore
 from app.services.analytics_service import AnalyticsService
@@ -60,7 +61,11 @@ def get_deal_service(db: Session = Depends(get_db)) -> DealService:
 
 
 def get_support_service(db: Session = Depends(get_db)) -> SupportService:
-    return SupportService(db)
+    return SupportService(db, email_service=get_email_service())
+
+
+def get_email_service() -> EmailService:
+    return EmailService.from_settings(settings)
 
 
 def get_admin_service(db: Session = Depends(get_db)) -> AdminService:

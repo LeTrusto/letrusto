@@ -37,6 +37,18 @@ uvicorn app.main:app --reload --port 8000
 
 Docs: http://localhost:8000/docs
 
+## Support Email
+
+Support ticket submissions are saved to the database and also sent via Resend.
+
+Required environment variables:
+
+- `RESEND_API_KEY`
+- `SUPPORT_EMAIL` (defaults to `hello@letrusto.com`)
+- `FROM_EMAIL` (defaults to `support@letrusto.com`)
+
+If email delivery fails, ticket creation still succeeds and the error is logged.
+
 ## Frontend switch
 
 Set frontend API base URL only:
