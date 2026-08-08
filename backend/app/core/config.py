@@ -1,7 +1,12 @@
 import os
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
+_ENV_FILE = _BACKEND_DIR / ".env"
 
 
 def _normalise_db_url(url: str) -> str:
@@ -15,7 +20,7 @@ def _normalise_db_url(url: str) -> str:
 
 class Settings(BaseSettings):
     # env_file is only read when .env exists; real env vars always take precedence
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=str(_ENV_FILE), env_file_encoding="utf-8", extra="ignore")
 
     APP_NAME: str = "LeTrusto Backend"
     APP_ENV: str = "development"
