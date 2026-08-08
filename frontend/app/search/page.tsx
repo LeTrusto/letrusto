@@ -17,7 +17,7 @@ import { getSearchParamValue } from "@/utils/helpers";
 
 export const metadata: Metadata = {
   title: "Search",
-  description: "Search and filter products across categories, brands, price bands, and AI scores.",
+  description: "Search and filter AI tools and software across categories, providers, and recommendation scores.",
   robots: {
     index: false,
     follow: true,
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Search",
-    description: "Search and filter products across categories, brands, price bands, and AI scores.",
+    description: "Search and filter AI tools and software across categories, providers, and recommendation scores.",
     url: "/search",
     siteName: "LeTrusto",
     type: "website",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Search",
-    description: "Search and filter products across categories, brands, price bands, and AI scores.",
+    description: "Search and filter AI tools and software across categories, providers, and recommendation scores.",
     images: ["/images/og-default.svg"],
   },
 };
@@ -178,14 +178,14 @@ export default async function SearchPage({
           data={{
             name: "Search",
             url: "https://letrusto.com/search",
-            description: "Search and filter products across categories, brands, price bands, and AI scores.",
+            description: "Search and filter AI tools and software across categories, providers, and recommendation scores.",
           }}
         />
 
         <div className="mb-10 flex flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
-              Product Discovery
+              AI Tool Discovery
             </p>
             <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950">Search Results</h1>
             <p className="mt-3 max-w-3xl text-slate-600">
@@ -195,7 +195,7 @@ export default async function SearchPage({
                 </>
               ) : (
                 <>
-                  Browse all {pagination.totalItems} curated products and refine by category, price, rating, or recommendation score.
+                  Browse all {pagination.totalItems} indexed tools and refine by category, provider, rating, or recommendation score.
                 </>
               )}
             </p>
@@ -218,7 +218,7 @@ export default async function SearchPage({
               name="q"
               defaultValue={query}
               list="search-page-suggestions"
-              placeholder="Search products, brands or ask a buying question..."
+              placeholder="Search AI tools, software providers, or ask a buying question..."
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-4 focus:ring-sky-100"
             />
             <datalist id="search-page-suggestions">

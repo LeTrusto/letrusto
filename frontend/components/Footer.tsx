@@ -2,19 +2,19 @@ import Link from "next/link";
 
 const FOOTER_LINKS = {
   Product: [
-    { label: "Buying Assistant", href: "/ai" },
+    { label: "Ask LeTrusto", href: "/ai" },
+    { label: "AI Tools", href: "/ai-tools" },
     { label: "Buying Guides", href: "/guides" },
-    { label: "Browse Products", href: "/search" },
+    { label: "Search", href: "/search" },
     { label: "Compare", href: "/compare" },
-    { label: "Deals Centre", href: "/deals" },
     { label: "Favourites", href: "/favorites" },
   ],
   Categories: [
-    { label: "Smartphones", href: "/category/smartphones" },
-    { label: "Laptops", href: "/category/laptop" },
-    { label: "Hosting", href: "/category/hosting" },
-    { label: "Headphones", href: "/category/headphones" },
-    { label: "Gaming", href: "/category/gaming" },
+    { label: "AI Assistants", href: "/category/ai-assistants" },
+    { label: "AI Writing", href: "/category/ai-writing" },
+    { label: "AI Image & Design", href: "/category/ai-image-design" },
+    { label: "AI Video & Audio", href: "/category/ai-video-audio" },
+    { label: "AI Coding & Developer Tools", href: "/category/ai-coding-developer-tools" },
   ],
   Company: [
     { label: "Support", href: "/support" },
@@ -40,7 +40,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-gray-500">
-              Research-backed product recommendations, comparisons, and buying guidance for shoppers who want more clarity before they buy.
+              Research-backed AI tool and software recommendations, comparisons, and buying guidance for teams that want clarity before they pay.
             </p>
             <div className="mt-5 flex gap-3">
               {[

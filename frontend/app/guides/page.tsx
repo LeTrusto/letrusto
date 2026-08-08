@@ -13,17 +13,39 @@ type Article = {
 	created_at: string;
 };
 
+const AI_GUIDE_KEYWORDS = [
+	"ai",
+	"tool",
+	"assistant",
+	"software",
+	"saas",
+	"automation",
+	"writing",
+	"design",
+	"video",
+	"audio",
+	"coding",
+	"developer",
+	"workflow",
+	"productivity",
+];
+
+function isAiGuide(article: Article): boolean {
+	const haystack = `${article.title} ${article.excerpt} ${article.slug} ${article.category}`.toLowerCase();
+	return AI_GUIDE_KEYWORDS.some((keyword) => haystack.includes(keyword));
+}
+
 export const metadata: Metadata = {
 	title: "Buying Guides",
 	description:
-		"Expert buying guides, product comparisons, and honest reviews to help you make better purchase decisions.",
+		"Expert buying guides, software comparisons, and honest reviews to help you choose the right AI tools.",
 	alternates: {
 		canonical: "/guides",
 	},
 	openGraph: {
 		title: "Buying Guides",
 		description:
-			"Expert buying guides, product comparisons, and honest reviews to help you make better purchase decisions.",
+			"Expert buying guides, software comparisons, and honest reviews to help you choose the right AI tools.",
 		url: "/guides",
 		siteName: "LeTrusto",
 		type: "website",
@@ -33,7 +55,7 @@ export const metadata: Metadata = {
 		card: "summary_large_image",
 		title: "Buying Guides",
 		description:
-			"Expert buying guides, product comparisons, and honest reviews to help you make better purchase decisions.",
+			"Expert buying guides, software comparisons, and honest reviews to help you choose the right AI tools.",
 		images: ["/images/og-default.svg"],
 	},
 };
@@ -68,7 +90,7 @@ async function getArticles(): Promise<Article[]> {
 }
 
 export default async function GuidesPage() {
-	const articles = await getArticles();
+	const articles = (await getArticles()).filter(isAiGuide);
 
 	return (
 		<main className="mx-auto max-w-4xl px-6 py-12">
@@ -77,12 +99,12 @@ export default async function GuidesPage() {
 				data={{
 					name: "Buying Guides",
 					url: "https://letrusto.com/guides",
-					description: "Expert buying guides, product comparisons, and honest reviews to help you make better purchase decisions.",
+					description: "Expert buying guides, software comparisons, and honest reviews to help you choose the right AI tools.",
 				}}
 			/>
 			<div className="mb-10">
-				<h1 className="text-4xl font-black text-gray-900">Buying Guides and Reviews</h1>
-				<p className="mt-3 text-lg text-gray-500">Expert guides to help you decide before you buy.</p>
+				<h1 className="text-4xl font-black text-gray-900">AI Tools Buying Guides and Reviews</h1>
+				<p className="mt-3 text-lg text-gray-500">Expert guides to help you choose the right tool before you pay.</p>
 			</div>
 
 			{articles.length === 0 ? (
@@ -90,7 +112,7 @@ export default async function GuidesPage() {
 					<p className="text-4xl">📚</p>
 					<h2 className="mt-4 text-xl font-bold text-gray-900">Coming soon</h2>
 					<p className="mt-2 text-gray-500">
-						Our editorial team is writing detailed buying guides. Check back soon!
+						Our editorial team is preparing AI tools and software buying guides. Check back soon!
 					</p>
 					<Link
 						href="/ai"

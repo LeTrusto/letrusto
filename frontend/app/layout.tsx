@@ -30,15 +30,15 @@ export const metadata: Metadata = {
     template: "%s | LeTrusto",
   },
   description:
-    "LeTrusto helps people compare products, discover trusted recommendations, and buy with confidence.",
+    "LeTrusto is an AI-powered buying advisor for AI tools and software recommendations.",
   keywords: [
-    "AI buying advisor",
-    "electronics comparison",
-    "product reviews",
-    "price tracker",
-    "best smartphones",
-    "best laptops",
-    "India shopping",
+    "AI tools",
+    "software buying advisor",
+    "AI software comparison",
+    "AI recommendations",
+    "buying guides",
+    "research before buying",
+    "know before you buy",
   ],
   openGraph: {
     type: "website",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     url: "https://letrusto.com",
     siteName: "LeTrusto",
     title: "LeTrusto",
-    description: "Compare products, get AI recommendations, and shop with confidence.",
+    description: "AI-powered buying advisor for AI tools and software.",
     images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
   },
   twitter: {
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     site: "@letrusto",
     creator: "@letrusto",
     title: "LeTrusto",
-    description: "Compare products, get AI recommendations, and shop with confidence.",
+    description: "AI-powered buying advisor for AI tools and software.",
     images: ["/images/og-default.svg"],
   },
   authors: [{ name: "LeTrusto", url: "https://letrusto.com" }],
@@ -102,7 +102,7 @@ export default function RootLayout({
             "@id": "https://letrusto.com/#website",
             name: "LeTrusto",
             url: "https://letrusto.com",
-            description: "AI Buying Advisor — Compare electronics, get personalised recommendations, track prices.",
+            description: "AI-powered buying advisor for AI tools and software recommendations.",
             potentialAction: {
               "@type": "SearchAction",
               target: "https://letrusto.com/search?q={search_term_string}",
@@ -122,7 +122,7 @@ export default function RootLayout({
               width: 512,
               height: 512,
             },
-            description: "Research-backed buying guidance with product comparisons, recommendations, and editorial clarity.",
+            description: "Research-backed buying guidance for AI tools and software comparisons.",
             sameAs: ["https://x.com/letrusto", "https://instagram.com/letrusto"],
           }}
         />

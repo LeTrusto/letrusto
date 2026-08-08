@@ -423,6 +423,11 @@ export const ALL_BRANDS: string[] = [
 
 // ── Category label maps ───────────────────────────────────────────────────────
 export const CATEGORY_LABELS: Record<string, string> = {
+  "ai-assistants": "AI Assistants",
+  "ai-writing": "AI Writing",
+  "ai-image-design": "AI Image & Design",
+  "ai-video-audio": "AI Video & Audio",
+  "ai-coding-developer-tools": "AI Coding & Developer Tools",
   phone: "Phone",
   laptop: "Laptop",
   headphones: "Headphones",

@@ -7,10 +7,10 @@ import { useRouter } from "next/navigation";
 import { useProducts } from "@/hooks/useProducts";
 
 const trendingSearches = [
-  "phone under 30000",
-  "laptop for coding",
-  "headphones for office",
-  "camera for travel",
+  "best AI assistant for startups",
+  "AI writing tool for SEO",
+  "AI coding assistant",
+  "AI video tool for creators",
 ];
 
 export default function SearchBar() {
@@ -48,8 +48,8 @@ export default function SearchBar() {
           <input
             type="text"
             list="search-suggestions"
-            aria-label="Search products"
-            placeholder="Search products, compare phones, laptops, cameras..."
+            aria-label="Search AI tools"
+            placeholder="Search AI tools, compare software, and evaluate options..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {

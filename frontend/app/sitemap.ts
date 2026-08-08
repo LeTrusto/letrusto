@@ -7,6 +7,7 @@ const BASE_URL = "https://letrusto.com";
 
 const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/`, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
+  { url: `${BASE_URL}/ai-tools`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
   { url: `${BASE_URL}/articles`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
   { url: `${BASE_URL}/categories`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.85 },
   { url: `${BASE_URL}/guides`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.85 },

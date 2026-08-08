@@ -9,14 +9,14 @@ import { getAllProducts, getCompareProducts } from "@/services/product.service";
 import { getSearchParamValue } from "@/utils/helpers";
 
 export const metadata: Metadata = {
-  title: "Product Comparison",
-  description: "Compare two products side by side with AI analysis, key specs, and value insights.",
+  title: "AI Tool Comparison",
+  description: "Compare two tools side by side with AI analysis, key strengths, and value insights.",
   alternates: {
     canonical: "/compare",
   },
   openGraph: {
-    title: "Product Comparison",
-    description: "Compare two products side by side with AI analysis, key specs, and value insights.",
+    title: "AI Tool Comparison",
+    description: "Compare two tools side by side with AI analysis, key strengths, and value insights.",
     url: "/compare",
     siteName: "LeTrusto",
     type: "website",
@@ -24,8 +24,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Product Comparison",
-    description: "Compare two products side by side with AI analysis, key specs, and value insights.",
+    title: "AI Tool Comparison",
+    description: "Compare two tools side by side with AI analysis, key strengths, and value insights.",
     images: ["/images/og-default.svg"],
   },
 };
@@ -70,25 +70,25 @@ export default async function ComparePage({
       <SchemaOrg
         type="WebPage"
         data={{
-          name: "Product Comparison",
+          name: "AI Tool Comparison",
           url: "https://letrusto.com/compare",
-          description: "Compare two products side by side with AI analysis, key specs, and value insights.",
+          description: "Compare two tools side by side with AI analysis, key strengths, and value insights.",
         }}
       />
       <Script id="compare-breadcrumb-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <div className="max-w-7xl mx-auto">
         <h1 className="text-5xl font-bold text-center mb-3">
-          Product Comparison
+          AI Tool Comparison
         </h1>
 
         <p className="text-center text-gray-500 mb-12">
-          Compare products side by side using LeTrusto AI
+          Compare options side by side using LeTrusto AI
         </p>
 
         <form className="mb-10 grid gap-4 rounded-[2rem] border border-purple-100 bg-white p-6 shadow-sm md:grid-cols-3" method="get">
           <div>
             <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="first">
-              First Product
+              First Option
             </label>
             <select id="first" name="first" defaultValue={firstProduct.id} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
               {catalog.map((product) => (
@@ -101,7 +101,7 @@ export default async function ComparePage({
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="second">
-              Second Product
+              Second Option
             </label>
             <select id="second" name="second" defaultValue={secondProduct.id} className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-purple-400">
               {catalog.map((product) => (

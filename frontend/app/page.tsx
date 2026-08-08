@@ -6,15 +6,15 @@ import { HOMEPAGE_SECTIONS } from "@/config/homepage";
 import { getHomepageDataSources } from "@/services/homepage.service";
 
 export const metadata: Metadata = {
-  title: "AI Buying Advisor",
+  title: "AI Tools and Software Buying Advisor",
   description:
-    "LeTrusto helps people compare products, discover trusted recommendations, and buy with confidence.",
+    "LeTrusto helps teams compare AI tools, discover trusted software recommendations, and choose confidently before they pay.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "LeTrusto",
-    description: "Compare products, get AI recommendations, and shop with confidence.",
+    description: "AI-powered buying advisor for AI tools and software.",
     url: "/",
     siteName: "LeTrusto",
     type: "website",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "LeTrusto",
-    description: "Compare products, get AI recommendations, and shop with confidence.",
+    description: "AI-powered buying advisor for AI tools and software.",
     images: ["/images/og-default.svg"],
   },
 };
@@ -41,7 +41,7 @@ export default async function Home() {
         data={{
           name: "LeTrusto",
           url: "https://letrusto.com",
-          description: "LeTrusto helps people compare products, discover trusted recommendations, and buy with confidence.",
+          description: "LeTrusto helps teams compare AI tools, discover trusted software recommendations, and choose confidently before they pay.",
         }}
       />
       {sections.map((section) => (

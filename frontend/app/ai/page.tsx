@@ -4,14 +4,14 @@ import AIConversationExperience from "@/components/AIConversationExperience";
 import { askAssistant } from "@/services/ai.service";
 
 export const metadata: Metadata = {
-  title: "Buying Assistant",
-  description: "Describe your needs and get AI-guided product recommendations in seconds.",
+  title: "Ask LeTrusto",
+  description: "Describe your needs and get AI-guided software recommendations in seconds.",
   alternates: {
     canonical: "/ai",
   },
   openGraph: {
-    title: "Buying Assistant",
-    description: "Describe your needs and get AI-guided product recommendations in seconds.",
+    title: "Ask LeTrusto",
+    description: "Describe your needs and get AI-guided software recommendations in seconds.",
     url: "/ai",
     siteName: "LeTrusto",
     type: "website",
@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Buying Assistant",
-    description: "Describe your needs and get AI-guided product recommendations in seconds.",
+    title: "Ask LeTrusto",
+    description: "Describe your needs and get AI-guided software recommendations in seconds.",
     images: ["/images/og-default.svg"],
   },
 };

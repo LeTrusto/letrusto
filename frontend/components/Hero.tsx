@@ -17,15 +17,15 @@ export default function Hero() {
 
     const trimmed = query.trim();
     startTransition(() => {
-      router.push(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search");
+      router.push(trimmed ? `/ai?q=${encodeURIComponent(trimmed)}` : "/ai");
     });
   }
 
   const chips = [
-    "Best phone under 30000",
-    "Laptop for coding",
-    "Headphones for office",
-    "Best web hosting",
+    "Best AI assistant for research",
+    "AI writing tool for SEO",
+    "AI coding assistant for startups",
+    "AI video tool for creators",
   ];
 
   return (
@@ -52,7 +52,7 @@ export default function Hero() {
                   if (isPending) return;
                   setQuery(chip);
                   startTransition(() => {
-                    router.push(`/search?q=${encodeURIComponent(chip)}`);
+                    router.push(`/ai?q=${encodeURIComponent(chip)}`);
                   });
                 }}
                 className="group shrink-0 snap-start rounded-full border border-violet-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold tracking-[0.01em] text-slate-700 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-pink-300 hover:shadow-md focus-visible:border-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-60"
@@ -72,7 +72,7 @@ export default function Hero() {
             className="inline-flex w-fit items-center gap-2 rounded-full border border-violet-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm"
           >
             <Sparkles className="h-4 w-4 text-fuchsia-600" />
-            Research-backed buying decisions
+            AI tools and software buying advisor
           </motion.div>
 
           <motion.h1
@@ -81,9 +81,9 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.08 }}
             className="text-4xl font-black tracking-tight text-slate-950 md:text-6xl"
           >
-            Know Before{" "}
+            Find the right AI tool{" "}
             <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 bg-clip-text text-transparent">
-              You Buy
+              before you pay
             </span>
           </motion.h1>
 
@@ -93,7 +93,7 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.16 }}
             className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-600 md:text-[1.15rem]"
           >
-            LeTrusto helps shoppers compare products, understand trade-offs, and move from research to confident decisions with less noise.
+            LeTrusto helps teams and creators compare AI tools, understand software trade-offs, and choose confidently before subscription spend.
           </motion.p>
 
           <motion.form
@@ -129,7 +129,7 @@ export default function Hero() {
                       }
                     }}
                     aria-describedby="hero-search-hint"
-                    placeholder="Ask anything before you buy: budget, use-case, or model comparisons."
+                    placeholder="Ask LeTrusto which AI tool fits your workflow, budget, or team size."
                     className="min-h-[56px] w-full resize-none bg-transparent py-[14px] text-[18px] leading-7 text-slate-900 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-70"
                   />
                 </div>
@@ -145,7 +145,7 @@ export default function Hero() {
                     </>
                   ) : (
                     <>
-                      Search
+                      Ask LeTrusto
                       <ArrowRight className="h-4 w-4" />
                     </>
                   )}
@@ -164,7 +164,7 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.45 }}
             className="mt-6 flex flex-wrap items-center gap-6 text-sm text-slate-500"
           >
-            {["Clear comparisons", "Transparent affiliate disclosure", "Growing product catalog"].map((item) => (
+            {["AI tool comparisons", "Transparent affiliate disclosure", "Research-first recommendations"].map((item) => (
               <span key={item} className="inline-flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-fuchsia-500" aria-hidden="true" />
                 {item}

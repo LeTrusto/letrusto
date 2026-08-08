@@ -61,16 +61,13 @@ function resolveCategoryCount(items: Product[], hints: string[]) {
 }
 
 function buildCategoryShowcase(allProducts: Product[]): HomeCategoryCard[] {
-  const launchedCategories = new Set(["electronics"]);
-
   return HOMEPAGE_CATEGORY_CONFIG.map((entry) => {
-    const rawCount = resolveCategoryCount(allProducts, entry.categoryHints);
-    const productCount = launchedCategories.has(entry.id) ? rawCount : 0;
+    const productCount = resolveCategoryCount(allProducts, entry.categoryHints);
 
     return {
       ...entry,
       productCount,
-      productCountText: productCount > 0 ? `${productCount} live picks` : "Coming Soon",
+      productCountText: productCount > 0 ? `${productCount} tools indexed` : "Ready for content",
     };
   });
 }
@@ -102,33 +99,30 @@ function buildFeaturedBrands(allProducts: Product[]): HomeFeaturedBrand[] {
     }));
 }
 
+const AI_GUIDE_KEYWORDS = [
+  "ai",
+  "tool",
+  "assistant",
+  "software",
+  "saas",
+  "automation",
+  "writing",
+  "design",
+  "video",
+  "audio",
+  "coding",
+  "developer",
+  "workflow",
+  "productivity",
+];
+
+function isAiGuide(item: HomeGuideSummary) {
+  const haystack = `${item.title} ${item.excerpt} ${item.slug} ${item.category}`.toLowerCase();
+  return AI_GUIDE_KEYWORDS.some((keyword) => haystack.includes(keyword));
+}
+
 async function getLatestGuides(limit: number): Promise<HomeGuideSummary[]> {
-  const fallback: HomeGuideSummary[] = [
-    {
-      slug: "best-web-hosting-india-2026",
-      title: "Best Web Hosting in India 2026",
-      excerpt: "Performance, uptime, pricing, and support compared for Indian buyers.",
-      category: "guide",
-    },
-    {
-      slug: "iphone-16-pro-vs-samsung-s25-ultra",
-      title: "iPhone 16 Pro vs Galaxy S25 Ultra",
-      excerpt: "Camera, battery, and long-term value compared side by side.",
-      category: "comparison",
-    },
-    {
-      slug: "best-phone-under-20000-india-2026",
-      title: "Best Phone Under ₹20,000",
-      excerpt: "Top budget picks with strong real-world performance and reliability.",
-      category: "guide",
-    },
-    {
-      slug: "hostinger-vs-bluehost-india",
-      title: "Hostinger vs Bluehost India",
-      excerpt: "A practical comparison for startup and SMB hosting needs.",
-      category: "comparison",
-    },
-  ];
+  const fallback: HomeGuideSummary[] = [];
 
   if (IS_STATIC_GENERATION_BUILD) {
     return fallback.slice(0, limit);
@@ -148,7 +142,7 @@ async function getLatestGuides(limit: number): Promise<HomeGuideSummary[]> {
     }
 
     const body = (await response.json()) as { items?: HomeGuideSummary[] };
-    return (body.items ?? fallback).slice(0, limit);
+    return (body.items ?? fallback).filter(isAiGuide).slice(0, limit);
   } catch {
     return fallback.slice(0, limit);
   } finally {

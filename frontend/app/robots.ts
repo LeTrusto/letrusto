@@ -8,6 +8,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: [
           "/",
           "/about",
+          "/ai-tools",
           "/articles",
           "/categories",
           "/category",

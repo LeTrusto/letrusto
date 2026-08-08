@@ -16,14 +16,39 @@ type ComingSoonProfile = {
 };
 
 const COMING_SOON_PROFILES: Record<string, ComingSoonProfile> = {
+  "ai-assistants": {
+    illustration: "ASSIST",
+    description: "We are curating trusted AI assistant recommendations for work, research, and team decision support.",
+    expected: ["General assistants", "Reasoning quality", "Team workflows", "Security and trust"],
+  },
+  "ai-writing": {
+    illustration: "WRITE",
+    description: "We are curating AI writing tools for drafting, editing, SEO workflows, and content operations.",
+    expected: ["Drafting", "Editing and tone", "SEO workflows", "Team collaboration"],
+  },
+  "ai-image-design": {
+    illustration: "DESIGN",
+    description: "We are curating AI image and design tools for marketing, product, and creative teams.",
+    expected: ["Image generation", "Brand assets", "Mockups", "Creative speed"],
+  },
+  "ai-video-audio": {
+    illustration: "MEDIA",
+    description: "We are curating AI video and audio tools for creators and media teams.",
+    expected: ["Video editing", "Voice generation", "Repurposing", "Production quality"],
+  },
+  "ai-coding-developer-tools": {
+    illustration: "DEV",
+    description: "We are curating AI coding and developer tools for faster shipping and higher code quality.",
+    expected: ["Code generation", "Debugging", "Code review", "Developer workflows"],
+  },
   hosting: {
     illustration: "HOST",
-    description: "We're carefully curating the best products and recommendations for this category.",
+    description: "We're curating trusted hosting recommendations for software teams and creators.",
     expected: ["Hostinger", "Cloudways", "Namecheap", "Google Workspace", "Website Builders", "AI Tools"],
   },
   saas: {
     illustration: "SAAS",
-    description: "We're carefully curating the best products and recommendations for this category.",
+    description: "We're curating trusted SaaS recommendations for business workflows and growth teams.",
     expected: ["CRM", "Project Management", "Automation", "Knowledge Base", "Collaboration", "Analytics"],
   },
   beauty: {
@@ -72,8 +97,8 @@ function resolveComingSoonProfile(slug: string): ComingSoonProfile {
   return (
     COMING_SOON_PROFILES[slug] ?? {
       illustration: "SOON",
-      description: "We're carefully curating the best products and recommendations for this category.",
-      expected: ["Top Picks", "Trusted Reviews", "Comparisons", "Buying Guides"],
+      description: "We're curating trusted AI tools and software recommendations for this category.",
+      expected: ["Top tools", "Trusted reviews", "Comparisons", "Buying guides"],
     }
   );
 }
@@ -106,9 +131,9 @@ function ComingSoonCategory({ slug, label }: { slug: string; label: string }) {
       <SchemaOrg
         type="WebPage"
         data={{
-          name: `${label} Recommendations`,
+          name: `${label} AI Tools`,
           url: `https://letrusto.com/category/${slug}`,
-          description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+          description: `Explore ${label} tools, comparisons, and buying guidance on LeTrusto.`,
         }}
       />
       <CategoryBreadcrumbSchema slug={slug} label={label} />
@@ -142,7 +167,7 @@ function ComingSoonCategory({ slug, label }: { slug: string; label: string }) {
                   href="/ai"
                   className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
                 >
-                  Open assistant
+                  Ask LeTrusto
                 </Link>
               </div>
             </div>
@@ -181,14 +206,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const label = getCategoryLabel(slug);
   return {
-    title: `${label} Recommendations`,
-    description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+    title: `${label} AI Tools`,
+    description: `Explore ${label} tools, comparisons, and buying guidance on LeTrusto.`,
     alternates: {
       canonical: `/category/${slug}`,
     },
     openGraph: {
-      title: `${label} Recommendations`,
-      description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+      title: `${label} AI Tools`,
+      description: `Explore ${label} tools, comparisons, and buying guidance on LeTrusto.`,
       url: `/category/${slug}`,
       siteName: "LeTrusto",
       type: "website",
@@ -196,8 +221,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${label} Recommendations`,
-      description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+      title: `${label} AI Tools`,
+      description: `Explore ${label} tools, comparisons, and buying guidance on LeTrusto.`,
       images: ["/images/og-default.svg"],
     },
   };
@@ -226,9 +251,9 @@ export default async function CategoryPage({ params }: Props) {
       <SchemaOrg
         type="WebPage"
         data={{
-          name: `${label} Recommendations`,
+          name: `${label} AI Tools`,
           url: `https://letrusto.com/category/${slug}`,
-          description: `Explore ${label} recommendations and buying guidance on LeTrusto.`,
+          description: `Explore ${label} tools, comparisons, and buying guidance on LeTrusto.`,
         }}
       />
       <CategoryBreadcrumbSchema slug={slug} label={label} />
@@ -237,7 +262,7 @@ export default async function CategoryPage({ params }: Props) {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">AI Category Hub</p>
           <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">{label}</h1>
           <p className="mt-4 max-w-2xl text-white/90 md:text-lg">
-            LeTrusto ranks options by practical value, trust indicators, and real-world priorities.
+            LeTrusto ranks tools by practical value, trust indicators, and real-world workflow fit.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href={`/ai?q=Best ${label}`} className="rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-violet-700">

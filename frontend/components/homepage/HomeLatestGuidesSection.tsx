@@ -32,6 +32,22 @@ export default function HomeLatestGuidesSection({
   ctaHref,
   items,
 }: HomeLatestGuidesSectionProps) {
+  if (items.length === 0) {
+    return (
+      <section className="mx-auto mt-16 w-full max-w-7xl px-6">
+        <HomeSectionHeader title={title} subtitle={subtitle} ctaLabel={ctaLabel} ctaHref={ctaHref} />
+        <div className="rounded-[1.75rem] border border-dashed border-slate-200 bg-white p-8 text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Ready for content</p>
+          <h3 className="mt-2 text-2xl font-black text-slate-900">AI tools buying guides are being curated</h3>
+          <p className="mt-3 text-sm text-slate-600">Use Ask LeTrusto while we publish verified software buying guides.</p>
+          <Link href="/ai" className="mt-5 inline-flex rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">
+            Ask LeTrusto
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="mx-auto mt-16 w-full max-w-7xl px-6">
       <HomeSectionHeader title={title} subtitle={subtitle} ctaLabel={ctaLabel} ctaHref={ctaHref} />
