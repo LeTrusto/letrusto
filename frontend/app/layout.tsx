@@ -22,6 +22,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://letrusto.com"),
   applicationName: "LeTrusto",
+  alternates: {
+    canonical: "/",
+  },
   title: {
     default: "LeTrusto",
     template: "%s | LeTrusto",
@@ -48,10 +51,15 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    site: "@letrusto",
+    creator: "@letrusto",
     title: "LeTrusto",
     description: "Compare products, get AI recommendations, and shop with confidence.",
     images: ["/images/og-default.svg"],
   },
+  authors: [{ name: "LeTrusto", url: "https://letrusto.com" }],
+  creator: "LeTrusto",
+  publisher: "LeTrusto",
   manifest: "/site.webmanifest",
   appleWebApp: {
     capable: true,
@@ -91,6 +99,7 @@ export default function RootLayout({
         <SchemaOrg
           type="WebSite"
           data={{
+            "@id": "https://letrusto.com/#website",
             name: "LeTrusto",
             url: "https://letrusto.com",
             description: "AI Buying Advisor — Compare electronics, get personalised recommendations, track prices.",
@@ -104,11 +113,17 @@ export default function RootLayout({
         <SchemaOrg
           type="Organization"
           data={{
+            "@id": "https://letrusto.com/#organization",
             name: "LeTrusto",
             url: "https://letrusto.com",
-            logo: "https://letrusto.com/images/logo/logo.png",
+            logo: {
+              "@type": "ImageObject",
+              url: "https://letrusto.com/android-chrome-512x512.png",
+              width: 512,
+              height: 512,
+            },
             description: "Research-backed buying guidance with product comparisons, recommendations, and editorial clarity.",
-            sameAs: ["https://twitter.com/letrusto", "https://instagram.com/letrusto"],
+            sameAs: ["https://x.com/letrusto", "https://instagram.com/letrusto"],
           }}
         />
         <AuthProvider>

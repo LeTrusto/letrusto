@@ -25,6 +25,21 @@ export const metadata: Metadata = {
 };
 
 export default function SupportPageRoute() {
+  const faqItems = [
+    {
+      question: "How can I contact LeTrusto support?",
+      answer: "Use the Contact and Report tab to submit a support ticket and our team will respond by email.",
+    },
+    {
+      question: "How long does support usually take?",
+      answer: "Most support responses are handled within 24 to 48 hours depending on ticket volume.",
+    },
+    {
+      question: "Can I report incorrect product information?",
+      answer: "Yes. Choose the appropriate report category when submitting your support request.",
+    },
+  ];
+
   return (
     <>
       <SchemaOrg
@@ -33,6 +48,19 @@ export default function SupportPageRoute() {
           name: "Support Centre",
           url: "https://letrusto.com/support",
           description: "Get help with LeTrusto — FAQ, contact us, report issues, and submit feedback.",
+        }}
+      />
+      <SchemaOrg
+        type="FAQPage"
+        data={{
+          mainEntity: faqItems.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: item.answer,
+            },
+          })),
         }}
       />
       <SupportPage />

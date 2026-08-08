@@ -5,18 +5,26 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
-        disallow: [
-          "/admin",
+        allow: [
+          "/",
+          "/about",
           "/articles",
-          "/contact",
+          "/categories",
+          "/category",
+          "/compare",
+          "/deals",
+          "/guides",
+          "/products",
+          "/search",
+          "/support",
+        ],
+        disallow: [
           "/dashboard",
           "/favorites",
-          "/login",
           "/notifications",
+          "/login",
           "/register",
-          "/report-issue",
-          "/search",
+          "/api",
         ],
       },
     ],

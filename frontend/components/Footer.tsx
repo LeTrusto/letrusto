@@ -44,16 +44,15 @@ export default function Footer() {
             </p>
             <div className="mt-5 flex gap-3">
               {[
-                { label: "Twitter / X", href: "https://x.com", icon: "𝕏" },
-                { label: "Instagram", href: "https://instagram.com", icon: "📷" },
-                { label: "YouTube", href: "https://youtube.com", icon: "▶" },
+                { label: "Twitter / X", href: "https://x.com/letrusto", icon: "𝕏" },
+                { label: "Instagram", href: "https://instagram.com/letrusto", icon: "📷" },
               ].map((s) => (
                 <a
                   key={s.label}
                   href={s.href}
                   aria-label={s.label}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="me noopener noreferrer"
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-sm text-gray-500 transition hover:border-purple-300 hover:text-purple-600"
                 >
                   {s.icon}

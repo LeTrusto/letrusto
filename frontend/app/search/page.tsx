@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import ProductCard from "@/components/ProductCard";
+import SchemaOrg from "@/components/SchemaOrg";
 import SearchEnhancements from "@/components/SearchEnhancements";
 import {
   getCatalogMetadata,
@@ -23,6 +24,20 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: "/search",
+  },
+  openGraph: {
+    title: "Search",
+    description: "Search and filter products across categories, brands, price bands, and AI scores.",
+    url: "/search",
+    siteName: "LeTrusto",
+    type: "website",
+    images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Search",
+    description: "Search and filter products across categories, brands, price bands, and AI scores.",
+    images: ["/images/og-default.svg"],
   },
 };
 
@@ -158,6 +173,14 @@ export default async function SearchPage({
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(125,211,252,0.12),_transparent_24%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-5 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
+        <SchemaOrg
+          type="WebPage"
+          data={{
+            name: "Search",
+            url: "https://letrusto.com/search",
+            description: "Search and filter products across categories, brands, price bands, and AI scores.",
+          }}
+        />
 
         <div className="mb-10 flex flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm lg:flex-row lg:items-end lg:justify-between">
           <div>

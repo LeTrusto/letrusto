@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Script from "next/script";
 import { Crown, TrendingDown } from "lucide-react";
 
+import SchemaOrg from "@/components/SchemaOrg";
 import { getAIComparisonSummary } from "@/services/ai.service";
 import { getAllProducts, getCompareProducts } from "@/services/product.service";
 import { getSearchParamValue } from "@/utils/helpers";
@@ -54,9 +56,26 @@ export default async function ComparePage({
   const winner = firstScore >= secondScore ? firstProduct : secondProduct;
   const valueWinner = firstProduct.priceValue <= secondProduct.priceValue ? firstProduct : secondProduct;
   const aiSummary = await getAIComparisonSummary(firstProduct.id, secondProduct.id);
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://letrusto.com" },
+      { "@type": "ListItem", position: 2, name: "Compare", item: "https://letrusto.com/compare" },
+    ],
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 p-10">
+      <SchemaOrg
+        type="WebPage"
+        data={{
+          name: "Product Comparison",
+          url: "https://letrusto.com/compare",
+          description: "Compare two products side by side with AI analysis, key specs, and value insights.",
+        }}
+      />
+      <Script id="compare-breadcrumb-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <div className="max-w-7xl mx-auto">
         <h1 className="text-5xl font-bold text-center mb-3">
           Product Comparison
