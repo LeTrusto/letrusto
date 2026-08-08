@@ -4,6 +4,7 @@ from app.api.v1.endpoints import (
     admin,
     affiliate,
     ai,
+    ai_tools,
     analytics,
     articles,
     auth,
@@ -23,6 +24,7 @@ from app.api.v1.endpoints import (
 api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(ai.router)
+api_router.include_router(ai_tools.router)
 api_router.include_router(search.router)
 api_router.include_router(compare.router)
 api_router.include_router(recommendations.router)

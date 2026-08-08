@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,6 +32,70 @@ class Brand(Base):
     slug: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
 
     products: Mapped[list["Product"]] = relationship(back_populates="brand")
+
+
+class AIToolCategory(Base):
+    __tablename__ = "ai_tool_categories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    slug: Mapped[str] = mapped_column(String(120), nullable=False, unique=True, index=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    tools: Mapped[list["AITool"]] = relationship(back_populates="category")
+
+
+class AITool(Base):
+    __tablename__ = "ai_tools"
+    __table_args__ = (
+        Index("ix_ai_tools_category_status", "category_id", "lifecycle_status"),
+        Index("ix_ai_tools_last_verified", "last_verified_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slug: Mapped[str] = mapped_column(String(160), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    website_url: Mapped[str] = mapped_column(Text, nullable=False)
+    logo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    category_id: Mapped[int] = mapped_column(ForeignKey("ai_tool_categories.id", ondelete="RESTRICT"), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft", index=True)
+
+    pricing_model: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    pricing_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    pricing_currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    pricing_period: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    has_free_plan: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    has_free_trial: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    trial_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pricing_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pricing_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    affiliate_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    affiliate_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    letrusto_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    why_letrusto_recommends: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    use_cases: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    features: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    pros: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    cons: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    best_for: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    not_ideal_for: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    tags: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    platforms: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    integrations: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    category: Mapped[AIToolCategory] = relationship(back_populates="tools")
 
 
 class Product(Base):

@@ -8,11 +8,13 @@ from app.core.config import get_settings
 from app.core.exceptions import UnauthorizedError
 from app.db.session import SessionLocal, get_db  # noqa: F401 — re-exported for endpoints
 from app.models.entities import User
+from app.repositories.ai_tool_repository import AIToolRepository
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.product_repository import ProductRepository
 from app.services.email_service import EmailService
 from app.services.admin_service import AdminService
 from app.services.ai_service import AIService, InMemorySessionStore
+from app.services.ai_tool_service import AIToolService
 from app.services.analytics_service import AnalyticsService
 from app.services.auth_service import AuthService
 from app.services.deal_service import DealService
@@ -38,6 +40,10 @@ def get_favorite_service(db: Session = Depends(get_db)) -> FavoriteService:
 
 def get_ai_service(db: Session = Depends(get_db)) -> AIService:
     return AIService(ProductRepository(db), llm_provider, session_store)
+
+
+def get_ai_tool_service(db: Session = Depends(get_db)) -> AIToolService:
+    return AIToolService(AIToolRepository(db))
 
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:

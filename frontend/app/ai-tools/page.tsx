@@ -5,6 +5,7 @@ import { ArrowUpRight } from "lucide-react";
 import CategoryArtwork from "@/components/homepage/CategoryArtwork";
 import SchemaOrg from "@/components/SchemaOrg";
 import { AI_TOOLS_PUBLIC_CATEGORIES } from "@/config/aiTools";
+import { getAiTools } from "@/services/ai-tools.service";
 
 export const metadata: Metadata = {
   title: "AI Tools",
@@ -28,7 +29,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AIToolsPage() {
+export default async function AIToolsPage() {
+  const tools = await getAiTools();
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(125,211,252,0.12),_transparent_24%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
       <SchemaOrg
@@ -84,6 +87,43 @@ export default function AIToolsPage() {
             </Link>
           ))}
         </div>
+
+        <section className="mt-14">
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Published Tools</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Verified AI Tool Profiles</h2>
+            </div>
+            <span className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
+              {tools.items.length} published
+            </span>
+          </div>
+
+          {tools.items.length === 0 ? (
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 text-slate-600 shadow-sm">
+              No published tools are available yet.
+            </div>
+          ) : (
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {tools.items.map((tool) => (
+                <Link
+                  key={tool.slug}
+                  href={`/ai-tools/${tool.slug}`}
+                  className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-sky-200"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{tool.category.name}</p>
+                  <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950 group-hover:text-sky-700">{tool.name}</h3>
+                  <p className="mt-1 text-sm font-semibold text-slate-600">{tool.provider}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{tool.description}</p>
+                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-900 group-hover:text-sky-700">
+                    Open profile
+                    <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
       </section>
     </main>
   );
