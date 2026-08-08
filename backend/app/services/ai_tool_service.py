@@ -4,6 +4,9 @@ from app.schemas.common import Pagination
 from app.schemas.ai_tool import (
     AIToolCompareResponse,
     AIToolDTO,
+    AIToolRecommendationIntent,
+    AIToolRecommendationRequest,
+    AIToolRecommendationResponse,
     AIToolRecommendationCandidateRequest,
     AIToolRecommendationCandidateResponse,
     AIToolsCatalogResponse,
@@ -11,11 +14,15 @@ from app.schemas.ai_tool import (
     PaginatedAIToolsResponse,
 )
 from app.services.ai_tool_mapper import to_ai_tool_dto
+from app.services.ai_tool_intent_router import AIToolIntentRouter
+from app.services.ai_tool_recommendation_service import AIToolRecommendationService
 
 
 class AIToolService:
-    def __init__(self, repository: AIToolRepository) -> None:
+    def __init__(self, repository: AIToolRepository, intent_router: AIToolIntentRouter | None = None) -> None:
         self.repository = repository
+        self.intent_router = intent_router or AIToolIntentRouter()
+        self.recommendation_service = AIToolRecommendationService(repository)
 
     def list_tools(self) -> AIToolsCatalogResponse:
         items = [to_ai_tool_dto(tool) for tool in self.repository.list_published()]
@@ -78,4 +85,30 @@ class AIToolService:
                 "Stage 2 returns recommendation-ready published tools only. "
                 "Recommendation intelligence will be introduced in Stage 3."
             ),
+        )
+
+    def recommend(self, request: AIToolRecommendationRequest) -> AIToolRecommendationResponse:
+        normalized_request = request
+        if request.query and self._intent_is_empty(request.intent):
+            normalized_request = self.intent_router.build_request(request.query, limit=request.limit)
+
+        return self.recommendation_service.recommend(normalized_request)
+
+    @staticmethod
+    def _intent_is_empty(intent: AIToolRecommendationIntent | None) -> bool:
+        if intent is None:
+            return True
+
+        return not any(
+            [
+                intent.category,
+                intent.useCases,
+                intent.requiredFeatures,
+                intent.platforms,
+                intent.integrations,
+                intent.budget,
+                intent.pricingPreference,
+                intent.experienceLevel,
+                intent.constraints,
+            ]
         )

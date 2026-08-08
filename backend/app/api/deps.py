@@ -14,6 +14,8 @@ from app.repositories.product_repository import ProductRepository
 from app.services.email_service import EmailService
 from app.services.admin_service import AdminService
 from app.services.ai_service import AIService, InMemorySessionStore
+from app.services.ai_tool_intent_router import AIToolIntentRouter
+from app.services.ai_tool_recommendation_service import AIToolRecommendationService
 from app.services.ai_tool_service import AIToolService
 from app.services.analytics_service import AnalyticsService
 from app.services.auth_service import AuthService
@@ -28,6 +30,7 @@ from app.services.user_service import UserService
 settings = get_settings()
 session_store = InMemorySessionStore(ttl_minutes=settings.AI_SESSION_TTL_MINUTES)
 llm_provider = build_llm_provider(settings.AI_PROVIDER)
+ai_tool_intent_router = AIToolIntentRouter()
 
 
 def get_product_service(db: Session = Depends(get_db)) -> ProductService:
@@ -39,11 +42,17 @@ def get_favorite_service(db: Session = Depends(get_db)) -> FavoriteService:
 
 
 def get_ai_service(db: Session = Depends(get_db)) -> AIService:
-    return AIService(ProductRepository(db), llm_provider, session_store)
+    return AIService(
+        ProductRepository(db),
+        llm_provider,
+        session_store,
+        ai_tool_intent_router=ai_tool_intent_router,
+        ai_tool_recommendation_service=AIToolRecommendationService(AIToolRepository(db)),
+    )
 
 
 def get_ai_tool_service(db: Session = Depends(get_db)) -> AIToolService:
-    return AIToolService(AIToolRepository(db))
+    return AIToolService(AIToolRepository(db), intent_router=ai_tool_intent_router)
 
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:

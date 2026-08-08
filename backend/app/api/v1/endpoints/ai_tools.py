@@ -4,6 +4,8 @@ from app.api.deps import get_ai_tool_service
 from app.schemas.ai_tool import (
     AIToolCompareResponse,
     AIToolDTO,
+    AIToolRecommendationRequest,
+    AIToolRecommendationResponse,
     AIToolRecommendationCandidateRequest,
     AIToolRecommendationCandidateResponse,
     AIToolsCatalogResponse,
@@ -70,6 +72,14 @@ def get_recommendations_alias(
     service: AIToolService = Depends(get_ai_tool_service),
 ) -> AIToolRecommendationCandidateResponse:
     return service.recommendation_candidates(AIToolRecommendationCandidateRequest(category=category, limit=limit))
+
+
+@router.post("/recommendations", response_model=AIToolRecommendationResponse)
+def recommend_ai_tools(
+    payload: AIToolRecommendationRequest,
+    service: AIToolService = Depends(get_ai_tool_service),
+) -> AIToolRecommendationResponse:
+    return service.recommend(payload)
 
 
 @router.get("/{slug}", response_model=AIToolDTO)

@@ -18,6 +18,7 @@ from app.ai.providers.base import GenerationRequest, LLMProvider
 from app.core.exceptions import NotFoundError
 from app.models.entities import Product
 from app.repositories.product_repository import ProductRepository
+from app.schemas.ai_tool import AIToolRecommendationResponse
 from app.schemas.ai import (
     AssistantMessageResponse,
     BuyingGuideResponse,
@@ -27,6 +28,8 @@ from app.schemas.ai import (
     ReviewSummaryResponse,
     ShoppingIntentDTO,
 )
+from app.services.ai_tool_intent_router import AIToolIntentRouter
+from app.services.ai_tool_recommendation_service import AIToolRecommendationService
 from app.schemas.product import ProductDTO
 from app.services.product_mapper import to_product_dto
 
@@ -115,10 +118,14 @@ class AIService:
         repository: ProductRepository,
         provider: LLMProvider,
         session_store: InMemorySessionStore,
+        ai_tool_intent_router: AIToolIntentRouter | None = None,
+        ai_tool_recommendation_service: AIToolRecommendationService | None = None,
     ) -> None:
         self.repository = repository
         self.provider = provider
         self.session_store = session_store
+        self.ai_tool_intent_router = ai_tool_intent_router
+        self.ai_tool_recommendation_service = ai_tool_recommendation_service
 
     def chat_assistant(self, message: str, session_id: str | None = None, limit: int = 4) -> AssistantMessageResponse:
         context = self.session_store.get_or_create(session_id)
@@ -127,7 +134,13 @@ class AIService:
         merged_intent = self._merge_intent(parsed_intent, context.last_intent)
         workflow = self._build_recommendation_workflow(merged_intent, limit=max(1, limit))
 
-        draft_reply = self._build_assistant_reply(message, workflow)
+        ai_tool_reply = self._build_ai_tool_reply(message, limit=max(1, limit))
+        if ai_tool_reply:
+            draft_reply = ai_tool_reply
+        elif self._is_general_knowledge_query(message):
+            draft_reply = self._build_general_knowledge_reply(message)
+        else:
+            draft_reply = self._build_assistant_reply(message, workflow)
         llm_text = self.provider.generate(
             GenerationRequest(
                 systemPrompt=ASSISTANT_SYSTEM_PROMPT,
@@ -146,6 +159,39 @@ class AIService:
             reply=llm_text,
             workflow=workflow,
         )
+
+    def _build_ai_tool_reply(self, message: str, limit: int) -> str | None:
+        if not self.ai_tool_intent_router or not self.ai_tool_recommendation_service:
+            return None
+
+        if not self.ai_tool_intent_router.is_ai_tool_request(message):
+            return None
+
+        try:
+            request = self.ai_tool_intent_router.build_request(message, limit=limit)
+            recommendation = self.ai_tool_recommendation_service.recommend(request)
+        except Exception:
+            return None
+
+        return self._format_ai_tool_recommendation_reply(recommendation)
+
+    @staticmethod
+    def _format_ai_tool_recommendation_reply(recommendation: AIToolRecommendationResponse) -> str:
+        if recommendation.status != "ok" or not recommendation.results:
+            return recommendation.message
+
+        lines = ["I routed this request through the AI tool recommendation engine."]
+        for result in recommendation.results[:3]:
+            reasons = "; ".join(result.explanation.whyRecommended[:2])
+            lines.append(
+                f"- {result.aiTool.name} ({result.overallMatchScore}% match, {result.resultLabel.replace('_', ' ')})"
+                + (f": {reasons}" if reasons else "")
+            )
+
+        if recommendation.results[0].explanation.tradeOffs:
+            lines.append("Trade-offs: " + "; ".join(recommendation.results[0].explanation.tradeOffs[:2]))
+
+        return "\n".join(lines)
 
     def recommendation_workflow(self, query: str, limit: int = 4) -> RecommendationWorkflowResponse:
         intent = self._parse_intent(query)
@@ -523,6 +569,21 @@ class AIService:
         )
 
     @staticmethod
+    def _build_general_knowledge_reply(user_message: str) -> str:
+        lowered = user_message.lower().strip()
+        if "generative ai" in lowered:
+            return (
+                "Generative AI is a class of AI systems that learn patterns from data and generate new content, "
+                "such as text, images, audio, video, or code. It is useful for drafting and ideation, but outputs "
+                "should still be reviewed for accuracy and bias."
+            )
+
+        return (
+            "I can explain AI concepts and best practices directly. If you also want recommendations, share your "
+            "use case, budget, and preferred platforms."
+        )
+
+    @staticmethod
     def _is_greeting(message: str) -> bool:
         cleaned = message.lower().strip()
         return cleaned in GREETING_WORDS
@@ -531,6 +592,35 @@ class AIService:
     def _is_compare_query(message: str) -> bool:
         cleaned = message.lower()
         return "compare" in cleaned or " vs " in cleaned or " versus " in cleaned
+
+    @staticmethod
+    def _is_general_knowledge_query(message: str) -> bool:
+        lowered = message.lower().strip()
+        if not lowered:
+            return False
+
+        question_like = lowered.endswith("?") or lowered.startswith(("what is", "what are", "explain", "define", "how does"))
+        if not question_like:
+            return False
+
+        recommendation_signals = (
+            "recommend",
+            "best",
+            "budget",
+            "under",
+            "buy",
+            "compare",
+            "vs",
+            "tool",
+            "software",
+            "phone",
+            "laptop",
+            "headphone",
+            "smartwatch",
+            "television",
+            "camera",
+        )
+        return not any(signal in lowered for signal in recommendation_signals)
 
     @staticmethod
     def _extract_budget(text: str) -> tuple[int | None, int | None]:

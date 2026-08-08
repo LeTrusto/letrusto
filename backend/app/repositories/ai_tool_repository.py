@@ -1,7 +1,9 @@
+import uuid
+
 from sqlalchemy import Select, Text, func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.entities import AITool, AIToolCategory
+from app.models.entities import AITool, AIToolCategory, AIToolFactProvenance
 from app.schemas.ai_tool import AIToolSearchQuery
 
 
@@ -67,3 +69,16 @@ class AIToolRepository:
 
         stmt = stmt.order_by(AITool.last_verified_at.desc(), AITool.name.asc())
         return list(self.db.scalars(stmt).unique().all())
+
+    def get_fact_provenance(self, tool_ids: list[uuid.UUID]) -> dict[str, list[AIToolFactProvenance]]:
+        if not tool_ids:
+            return {}
+
+        stmt = select(AIToolFactProvenance).where(AIToolFactProvenance.ai_tool_id.in_(tool_ids))
+        rows = list(self.db.scalars(stmt).all())
+
+        grouped: dict[str, list[AIToolFactProvenance]] = {}
+        for row in rows:
+            key = str(row.ai_tool_id)
+            grouped.setdefault(key, []).append(row)
+        return grouped

@@ -15,15 +15,24 @@ class AnalyticsService:
 
     def record_event(self, req: AnalyticsEventRequest, user_id: uuid.UUID | None = None) -> None:
         product_id: uuid.UUID | None = None
+        ai_tool_id: uuid.UUID | None = None
         if req.product_id:
             try:
                 product_id = uuid.UUID(req.product_id)
+            except ValueError:
+                pass
+        if req.ai_tool_id:
+            try:
+                ai_tool_id = uuid.UUID(req.ai_tool_id)
             except ValueError:
                 pass
         event = AnalyticsEvent(
             event_type=req.event_type,
             user_id=user_id,
             product_id=product_id,
+            ai_tool_id=ai_tool_id,
+            ai_tool_slug=req.ai_tool_slug,
+            recommendation_id=req.recommendation_id,
             session_id=req.session_id,
             payload=json.dumps(req.payload),
         )

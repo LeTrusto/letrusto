@@ -96,6 +96,26 @@ class AITool(Base):
     )
 
     category: Mapped[AIToolCategory] = relationship(back_populates="tools")
+    fact_provenance: Mapped[list["AIToolFactProvenance"]] = relationship(
+        back_populates="ai_tool", cascade="all, delete-orphan"
+    )
+
+
+class AIToolFactProvenance(Base):
+    __tablename__ = "ai_tool_fact_provenance"
+    __table_args__ = (
+        Index("ix_ai_tool_fact_provenance_tool_fact", "ai_tool_id", "fact_type", "fact_key"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ai_tool_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("ai_tools.id", ondelete="CASCADE"), nullable=False, index=True)
+    fact_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    fact_key: Mapped[str] = mapped_column(String(160), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_kind: Mapped[str] = mapped_column(String(40), nullable=False, default="official_provider")
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    ai_tool: Mapped[AITool] = relationship(back_populates="fact_provenance")
 
 
 class Product(Base):
@@ -461,12 +481,18 @@ class AiMessage(Base):
 
 class AnalyticsEvent(Base):
     __tablename__ = "analytics_events"
-    __table_args__ = (Index("ix_analytics_events_type_created", "event_type", "created_at"),)
+    __table_args__ = (
+        Index("ix_analytics_events_type_created", "event_type", "created_at"),
+        Index("ix_analytics_events_recommendation_created", "recommendation_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     event_type: Mapped[str] = mapped_column(String(60), nullable=False)
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     product_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    ai_tool_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("ai_tools.id", ondelete="SET NULL"), nullable=True, index=True)
+    ai_tool_slug: Mapped[str | None] = mapped_column(String(160), nullable=True, index=True)
+    recommendation_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     session_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     payload: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
