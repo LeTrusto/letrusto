@@ -1,5 +1,11 @@
 import { apiRequest, buildQueryString, withApiFallback } from "@/services/api";
-import type { AITool, AIToolCompareResponse, AIToolsCatalogResponse, AIToolSearchResponse } from "@/types/ai-tools";
+import type {
+  AITool,
+  AIToolCompareResponse,
+  AIToolRecommendationCandidateResponse,
+  AIToolsCatalogResponse,
+  AIToolSearchResponse,
+} from "@/types/ai-tools";
 
 function toNumber(value: unknown): number | null {
   if (value === null || value === undefined) {
@@ -98,5 +104,27 @@ export async function compareAiTools(first?: string, second?: string) {
         secondTool: normalizeAITool(response.secondTool),
       })),
     () => null
+  );
+}
+
+export async function getAiToolRecommendationCandidates(options?: {
+  category?: string;
+  limit?: number;
+}) {
+  return withApiFallback(
+    () =>
+      apiRequest<AIToolRecommendationCandidateResponse>(
+        `/ai-tools/recommendations${buildQueryString({
+          category: options?.category,
+          limit: options?.limit,
+        })}`
+      ).then((response) => ({
+        note: response.note,
+        items: response.items.map(normalizeAITool),
+      })),
+    () => ({
+      items: [],
+      note: "Stage 2 returns recommendation-ready published tools only.",
+    })
   );
 }

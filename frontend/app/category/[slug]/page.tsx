@@ -4,7 +4,9 @@ import Script from "next/script";
 
 import ProductCard from "@/components/ProductCard";
 import SchemaOrg from "@/components/SchemaOrg";
+import { AI_TOOLS_PUBLIC_CATEGORIES } from "@/config/aiTools";
 import { CATALOG_TREE, getCategoryLabel } from "@/constants/index";
+import { getAiTools } from "@/services/ai-tools.service";
 import { getCatalogMetadata, getProductSearch } from "@/services/product.service";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -101,6 +103,40 @@ function resolveComingSoonProfile(slug: string): ComingSoonProfile {
       expected: ["Top tools", "Trusted reviews", "Comparisons", "Buying guides"],
     }
   );
+}
+
+function isAiCategorySlug(slug: string) {
+  return AI_TOOLS_PUBLIC_CATEGORIES.some((category) => category.id === slug);
+}
+
+function toDateLabel(value: string | null) {
+  if (!value) {
+    return "Not available";
+  }
+
+  return new Date(value).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatPricing(toolPricing: {
+  model: string | null;
+  amount: number | null;
+  currency: string | null;
+  period: string | null;
+  notes: string | null;
+}) {
+  if (!toolPricing.model) {
+    return "Not publicly verified";
+  }
+
+  if (toolPricing.amount !== null && toolPricing.currency && toolPricing.period) {
+    return `${toolPricing.currency} ${toolPricing.amount} / ${toolPricing.period}`;
+  }
+
+  return toolPricing.notes || toolPricing.model.replace("_", " ");
 }
 
 function CategoryBreadcrumbSchema({ slug, label }: { slug: string; label: string }) {
@@ -231,6 +267,65 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params;
   const label = getCategoryLabel(slug);
+
+  if (isAiCategorySlug(slug)) {
+    const toolsResponse = await getAiTools();
+    const tools = toolsResponse.items.filter((tool) => tool.category.slug === slug);
+
+    if (tools.length === 0) {
+      return <ComingSoonCategory slug={slug} label={label} />;
+    }
+
+    return (
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(125,211,252,0.11),_transparent_24%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
+        <SchemaOrg
+          type="WebPage"
+          data={{
+            name: `${label} AI Tools`,
+            url: `https://letrusto.com/category/${slug}`,
+            description: `Explore ${label} tools, comparisons, and buying guidance on LeTrusto.`,
+          }}
+        />
+        <CategoryBreadcrumbSchema slug={slug} label={label} />
+
+        <section className="mx-auto max-w-7xl px-6 py-14 md:py-18">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">AI Category</p>
+          <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">{label}</h1>
+          <p className="mt-3 max-w-3xl text-slate-600">
+            Compare published AI tools in this category with transparent details for pricing, strengths, and integrations.
+          </p>
+
+          <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {tools.map((tool) => (
+              <article key={tool.slug} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{tool.category.name}</p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">{tool.name}</h2>
+                <p className="text-sm font-semibold text-slate-600">{tool.provider}</p>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600">{tool.description}</p>
+
+                <div className="mt-4 space-y-1.5 text-sm text-slate-700">
+                  <p><span className="font-semibold">Best for:</span> {tool.bestFor.length > 0 ? tool.bestFor.join(", ") : "Not publicly listed"}</p>
+                  <p><span className="font-semibold">Pricing:</span> {formatPricing(tool.pricing)}</p>
+                  <p><span className="font-semibold">Platforms:</span> {tool.platforms.length > 0 ? tool.platforms.join(", ") : "Not publicly listed"}</p>
+                  <p><span className="font-semibold">Integrations:</span> {tool.integrations.length > 0 ? tool.integrations.join(", ") : "Not publicly listed"}</p>
+                  <p><span className="font-semibold">Last verified:</span> {toDateLabel(tool.lastVerifiedAt)}</p>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link href={`/ai-tools/${tool.slug}`} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+                    View profile
+                  </Link>
+                  <Link href={`/compare?first=${tool.slug}`} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-500">
+                    Compare
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   const [searchResult, metadata] = await Promise.all([
     getProductSearch({ category: slug, pageSize: 24, sortBy: "ai-high" }),

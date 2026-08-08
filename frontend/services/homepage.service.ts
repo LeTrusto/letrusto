@@ -1,5 +1,5 @@
 import { API_BASE_URL, IS_STATIC_GENERATION_BUILD } from "@/services/api";
-import { getAllProducts, type Product } from "@/services/product.service";
+import { getAiTools } from "@/services/ai-tools.service";
 import {
   HOMEPAGE_TRENDING_SEARCHES,
   HOMEPAGE_CATEGORY_CONFIG,
@@ -11,6 +11,7 @@ import {
   type HomepageComparisonItem,
   type TrustSignal,
 } from "@/config/homepage";
+import type { Product } from "@/types/products";
 
 export type HomeCategoryCard = HomepageCategoryConfig & {
   productCount: number;
@@ -38,31 +39,9 @@ export type HomepageDataSources = {
   "searches.trending": HomeTrendingSearch[];
 };
 
-const CATEGORY_MATCH_RE = /[^a-z0-9-]/g;
-
-function normalize(text: string) {
-  return text.toLowerCase().replace(CATEGORY_MATCH_RE, "");
-}
-
-function includesHint(source: string, hint: string) {
-  const sourceNorm = normalize(source);
-  const hintNorm = normalize(hint);
-  return sourceNorm.includes(hintNorm);
-}
-
-function resolveCategoryCount(items: Product[], hints: string[]) {
-  return items.filter((product) => {
-    const source = [product.category, product.parentCategory, product.name, product.tags?.join(" ")]
-      .filter(Boolean)
-      .join(" ");
-
-    return hints.some((hint) => includesHint(source, hint));
-  }).length;
-}
-
-function buildCategoryShowcase(allProducts: Product[]): HomeCategoryCard[] {
+function buildCategoryShowcase(categoryCounts: Map<string, number>): HomeCategoryCard[] {
   return HOMEPAGE_CATEGORY_CONFIG.map((entry) => {
-    const productCount = resolveCategoryCount(allProducts, entry.categoryHints);
+    const productCount = categoryCounts.get(entry.id) ?? 0;
 
     return {
       ...entry,
@@ -72,23 +51,26 @@ function buildCategoryShowcase(allProducts: Product[]): HomeCategoryCard[] {
   });
 }
 
-function buildFeaturedBrands(allProducts: Product[]): HomeFeaturedBrand[] {
-  const brandMap = new Map<string, { count: number; category: string }>();
+function buildFeaturedBrandsFromTools(params: {
+  provider: string;
+  category: string;
+}[]): HomeFeaturedBrand[] {
+  const providerMap = new Map<string, { count: number; category: string }>();
 
-  for (const product of allProducts) {
-    const existing = brandMap.get(product.brand);
+  for (const item of params) {
+    const existing = providerMap.get(item.provider);
     if (existing) {
       existing.count += 1;
       continue;
     }
 
-    brandMap.set(product.brand, {
+    providerMap.set(item.provider, {
       count: 1,
-      category: product.category,
+      category: item.category,
     });
   }
 
-  return Array.from(brandMap.entries())
+  return Array.from(providerMap.entries())
     .sort((left, right) => right[1].count - left[1].count)
     .slice(0, 8)
     .map(([name, info]) => ({
@@ -151,21 +133,28 @@ async function getLatestGuides(limit: number): Promise<HomeGuideSummary[]> {
 }
 
 export async function getHomepageDataSources(): Promise<HomepageDataSources> {
-  const [allProducts, guides, collections] = await Promise.all([
-    getAllProducts(),
-    getLatestGuides(4),
-    import("@/services/product.service").then(({ getHomeCollections }) => getHomeCollections()),
-  ]);
+  const [toolsResponse, guides] = await Promise.all([getAiTools(), getLatestGuides(4)]);
+
+  const categoryCounts = new Map<string, number>();
+  for (const tool of toolsResponse.items) {
+    const current = categoryCounts.get(tool.category.slug) ?? 0;
+    categoryCounts.set(tool.category.slug, current + 1);
+  }
+
+  const toolProviderRows = toolsResponse.items.map((tool) => ({
+    provider: tool.provider,
+    category: tool.category.name,
+  }));
 
   return {
-    "categories.showcase": buildCategoryShowcase(allProducts),
+    "categories.showcase": buildCategoryShowcase(categoryCounts),
     "trust.default": HOMEPAGE_TRUST_SIGNALS,
     "comparisons.popular": HOMEPAGE_POPULAR_COMPARISONS,
     "guides.latest": guides,
-    "products.trending": collections.trending.slice(0, 4),
-    "products.featured": collections.featured.slice(0, 4),
-    "products.newArrivals": collections.newArrivals.slice(0, 4),
-    "brands.featured": buildFeaturedBrands(allProducts),
+    "products.trending": [],
+    "products.featured": [],
+    "products.newArrivals": [],
+    "brands.featured": buildFeaturedBrandsFromTools(toolProviderRows),
     "searches.trending": HOMEPAGE_TRENDING_SEARCHES,
   };
 }

@@ -54,8 +54,17 @@ def compare_ai_tools(
     return service.compare(first, second)
 
 
-@router.get("/recommendations", response_model=AIToolRecommendationCandidateResponse)
+@router.get("/recommendation-candidates", response_model=AIToolRecommendationCandidateResponse)
 def get_recommendation_candidates(
+    category: str | None = None,
+    limit: int = Query(default=4, ge=1, le=20),
+    service: AIToolService = Depends(get_ai_tool_service),
+) -> AIToolRecommendationCandidateResponse:
+    return service.recommendation_candidates(AIToolRecommendationCandidateRequest(category=category, limit=limit))
+
+
+@router.get("/recommendations", response_model=AIToolRecommendationCandidateResponse)
+def get_recommendations_alias(
     category: str | None = None,
     limit: int = Query(default=4, ge=1, le=20),
     service: AIToolService = Depends(get_ai_tool_service),

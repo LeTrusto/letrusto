@@ -1,49 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import ProductCard from "@/components/ProductCard";
 import { askAssistant } from "@/services/ai.service";
-import type { AssistantMessageResponse, RecommendationWorkflow } from "@/types/ai";
+import type { RecommendationWorkflow } from "@/types/ai";
 
 const AI_SESSION_KEY = "letrusto:ai-session-id";
 
 type Props = {
-  initialQuery: string;
-  initialWorkflow: RecommendationWorkflow | null;
-  initialAssistantReply: string;
-  initialSessionId?: string;
+  initialQuery?: string;
 };
 
-export default function AIConversationExperience({
-  initialQuery,
-  initialWorkflow,
-  initialAssistantReply,
-  initialSessionId,
-}: Props) {
+export default function AIConversationExperience({ initialQuery = "" }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [sessionId, setSessionId] = useState<string | undefined>(() => {
     if (typeof window === "undefined") {
-      return initialSessionId;
+      return undefined;
     }
 
-    return window.localStorage.getItem(AI_SESSION_KEY) ?? initialSessionId;
+    return window.localStorage.getItem(AI_SESSION_KEY) ?? undefined;
   });
-  const [workflow, setWorkflow] = useState<RecommendationWorkflow | null>(initialWorkflow);
-  const [assistantReply, setAssistantReply] = useState<string>(initialAssistantReply);
+  const [workflow, setWorkflow] = useState<RecommendationWorkflow | null>(null);
+  const [assistantReply, setAssistantReply] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!initialSessionId) {
-      return;
-    }
-
-    window.localStorage.setItem(AI_SESSION_KEY, initialSessionId);
-  }, [initialSessionId]);
-
-  const ranked = workflow?.rankedRecommendations ?? [];
-  const topProducts = ranked.map((item) => item.product);
 
   async function handleAsk(nextQuery?: string) {
     const message = (nextQuery ?? query).trim();
@@ -55,12 +35,15 @@ export default function AIConversationExperience({
     setError(null);
 
     try {
-      const response: AssistantMessageResponse = await askAssistant(message, sessionId, 6);
-      setWorkflow(response.workflow);
-      setAssistantReply(response.reply);
-      setSessionId(response.sessionId);
-      window.localStorage.setItem(AI_SESSION_KEY, response.sessionId);
+      const result = await askAssistant(message, sessionId, 6);
+      setWorkflow(result.workflow);
+      setAssistantReply(result.reply);
+      setSessionId(result.sessionId);
       setQuery(message);
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(AI_SESSION_KEY, result.sessionId);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to get assistant response.");
     } finally {
@@ -69,71 +52,51 @@ export default function AIConversationExperience({
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-16 px-6">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-2">
-          🤖 LeTrusto AI Recommendation
-        </h1>
-
-        <p className="text-gray-500 mb-6">
-          Ask naturally about budget, use-case, and category. The assistant remembers session context for follow-up questions.
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.16),_transparent_32%),radial-gradient(circle_at_12%_24%,_rgba(251,191,36,0.18),_transparent_34%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-6 py-16">
+      <div className="mx-auto max-w-6xl">
+        <h1 className="text-4xl font-black tracking-tight text-slate-950">Ask LeTrusto</h1>
+        <p className="mt-3 max-w-3xl text-slate-600">
+          Describe what you are evaluating and the assistant will help you refine priorities and next steps.
         </p>
 
-        <div className="rounded-3xl border border-purple-100 bg-white p-6 shadow-sm">
+        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <label className="block text-sm font-semibold text-slate-800" htmlFor="assistant-query">Your message</label>
           <textarea
+            id="assistant-query"
             rows={4}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Example: Need a laptop under 80000 for coding and battery life"
-            className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-purple-400"
+            placeholder="Example: I need help choosing an AI writing tool for a small team budget"
+            className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500"
           />
 
           <button
             type="button"
             onClick={() => void handleAsk()}
             disabled={isLoading}
-            className="mt-4 w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-purple-600 px-6 py-3 font-semibold text-white transition hover:from-fuchsia-700 hover:to-purple-700 disabled:opacity-60"
+            className="mt-7 w-full rounded-2xl bg-gradient-to-r from-cyan-600 to-sky-600 px-6 py-3.5 font-semibold text-white transition hover:from-cyan-700 hover:to-sky-700 disabled:opacity-60"
           >
-            {isLoading ? "Thinking..." : "Ask LeTrusto AI"}
+            {isLoading ? "Thinking..." : "Ask LeTrusto"}
           </button>
 
-          {error ? (
-            <p className="mt-4 text-sm text-rose-600">{error}</p>
-          ) : null}
-        </div>
+          {error ? <p className="mt-4 text-sm text-rose-600">{error}</p> : null}
+        </section>
 
-        {workflow ? (
-          <section className="mt-8 rounded-3xl border border-purple-100 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900">AI Understanding</h2>
-            <p className="mt-3 text-gray-700">{assistantReply || workflow.explanation}</p>
+        {assistantReply ? (
+          <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-slate-900">Assistant Reply</h2>
+            <p className="mt-3 whitespace-pre-wrap text-slate-700">{assistantReply}</p>
 
-            <div className="mt-4 flex flex-wrap gap-2 text-sm">
-              {workflow.intent.category ? (
-                <span className="rounded-full bg-purple-100 px-3 py-1 font-semibold text-purple-700">Category: {workflow.intent.category}</span>
-              ) : null}
-              {workflow.intent.usage ? (
-                <span className="rounded-full bg-indigo-100 px-3 py-1 font-semibold text-indigo-700">Usage: {workflow.intent.usage}</span>
-              ) : null}
-              {workflow.intent.budgetMax ? (
-                <span className="rounded-full bg-emerald-100 px-3 py-1 font-semibold text-emerald-700">Budget: up to ₹{workflow.intent.budgetMax.toLocaleString()}</span>
-              ) : null}
-              {workflow.intent.priorities.map((priority) => (
-                <span key={priority} className="rounded-full bg-amber-100 px-3 py-1 font-semibold text-amber-700">
-                  Priority: {priority}
-                </span>
-              ))}
-            </div>
-
-            {workflow.followUpQuestions.length > 0 ? (
-              <div className="mt-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">Follow-up prompts</p>
+            {workflow?.followUpQuestions?.length ? (
+              <div className="mt-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Follow-up prompts</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {workflow.followUpQuestions.map((question) => (
                     <button
                       key={question}
                       type="button"
                       onClick={() => void handleAsk(question)}
-                      className="rounded-full border border-gray-200 px-3 py-1 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                      className="rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-slate-500"
                     >
                       {question}
                     </button>
@@ -143,35 +106,6 @@ export default function AIConversationExperience({
             ) : null}
           </section>
         ) : null}
-
-        <section className="mt-10">
-          <div className="mb-4 flex items-end justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">Ranked Recommendations</h2>
-          </div>
-
-          {topProducts.length > 0 ? (
-            <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-              {ranked.map((item) => (
-                <div key={item.product.id}>
-                  <ProductCard
-                    product={item.product}
-                    highlightLabel={`AI Score ${item.score.toFixed(1)}`}
-                    priority={item.product.id === ranked[0]?.product.id}
-                  />
-                  <ul className="mt-3 space-y-1 px-2 text-sm text-gray-600">
-                    {item.reasons.map((reason) => (
-                      <li key={`${item.product.id}-${reason}`}>• {reason}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-3xl border border-dashed border-purple-200 bg-white p-10 text-center shadow-sm">
-              <p className="text-gray-600">Ask the assistant to generate ranked recommendations.</p>
-            </div>
-          )}
-        </section>
       </div>
     </main>
   );

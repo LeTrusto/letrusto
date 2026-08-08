@@ -1,19 +1,16 @@
 import Image from "next/image";
 
+import { AI_CATEGORY_ARTWORK, AI_TOOLS_PUBLIC_CATEGORIES } from "@/config/aiTools";
+
 type CategoryArtworkProps = {
   id: string;
   className?: string;
 };
 
-const ART_IMAGES: Record<string, string> = {
+const LEGACY_ART_IMAGES: Record<string, string> = {
   electronics: "/images/categories/Electronics.png",
   hosting: "/images/categories/Hosting.png",
   saas: "/images/categories/SaaS.png",
-  "ai-assistants": "/images/categories/SaaS.png",
-  "ai-writing": "/images/categories/SaaS.png",
-  "ai-image-design": "/images/categories/Beauty.png",
-  "ai-video-audio": "/images/categories/Travel.png",
-  "ai-coding-developer-tools": "/images/categories/Hosting.png",
   beauty: "/images/categories/Beauty.png",
   "pet-care": "/images/categories/Pet.png",
   home: "/images/categories/Home Appliances.png",
@@ -24,7 +21,7 @@ const ART_IMAGES: Record<string, string> = {
   insurance: "/images/categories/Insurance.png",
 };
 
-const ART_LAYOUTS: Record<
+const LEGACY_ART_LAYOUTS: Record<
   string,
   {
     fit: "object-cover" | "object-contain";
@@ -50,36 +47,6 @@ const ART_LAYOUTS: Record<
     position: "object-center",
     frameInset: "inset-y-2 inset-x-4",
     panelBackground: "bg-[radial-gradient(circle_at_top,_rgba(245,243,255,0.96),_rgba(238,242,255,0.94))]",
-  },
-  "ai-assistants": {
-    fit: "object-contain",
-    position: "object-center",
-    frameInset: "inset-y-2 inset-x-4",
-    panelBackground: "bg-[radial-gradient(circle_at_top,_rgba(240,249,255,0.96),_rgba(238,242,255,0.94))]",
-  },
-  "ai-writing": {
-    fit: "object-contain",
-    position: "object-center",
-    frameInset: "inset-y-2 inset-x-4",
-    panelBackground: "bg-[radial-gradient(circle_at_top,_rgba(254,242,242,0.96),_rgba(255,247,237,0.94))]",
-  },
-  "ai-image-design": {
-    fit: "object-contain",
-    position: "object-center",
-    frameInset: "inset-y-2 inset-x-3",
-    panelBackground: "bg-[radial-gradient(circle_at_top,_rgba(255,241,242,0.95),_rgba(245,243,255,0.93))]",
-  },
-  "ai-video-audio": {
-    fit: "object-contain",
-    position: "object-center",
-    frameInset: "inset-y-2 inset-x-3",
-    panelBackground: "bg-[radial-gradient(circle_at_top,_rgba(239,246,255,0.96),_rgba(250,245,255,0.93))]",
-  },
-  "ai-coding-developer-tools": {
-    fit: "object-contain",
-    position: "object-center",
-    frameInset: "inset-y-2 inset-x-4",
-    panelBackground: "bg-[radial-gradient(circle_at_top,_rgba(241,245,249,0.96),_rgba(224,242,254,0.93))]",
   },
   beauty: {
     fit: "object-contain",
@@ -132,8 +99,11 @@ const ART_LAYOUTS: Record<
 };
 
 export default function CategoryArtwork({ id, className }: CategoryArtworkProps) {
-  const imageSrc = ART_IMAGES[id] ?? ART_IMAGES.electronics;
-  const layout = ART_LAYOUTS[id] ?? ART_LAYOUTS.electronics;
+  const aiCategory = AI_TOOLS_PUBLIC_CATEGORIES.find((category) => category.id === id);
+  const aiArtwork = aiCategory ? AI_CATEGORY_ARTWORK[aiCategory.artworkKey] : null;
+
+  const imageSrc = aiArtwork?.src ?? LEGACY_ART_IMAGES[id] ?? LEGACY_ART_IMAGES.electronics;
+  const layout = aiArtwork ?? LEGACY_ART_LAYOUTS[id] ?? LEGACY_ART_LAYOUTS.electronics;
 
   return (
     <div className={`group relative overflow-hidden rounded-[1.35rem] border border-slate-200 ${className ?? ""}`}>

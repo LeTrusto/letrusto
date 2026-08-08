@@ -70,3 +70,8 @@ export type AIToolCompareResponse = {
   firstTool: AITool;
   secondTool: AITool;
 };
+
+export type AIToolRecommendationCandidateResponse = {
+  items: AITool[];
+  note: string;
+};
