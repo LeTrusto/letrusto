@@ -34,7 +34,8 @@ export const SOFTWARE_AFFILIATES: SoftwareAffiliate[] = [
     toolSlug: "elevenlabs",
     providerName: "ElevenLabs",
     status: "active",
-    affiliateUrl: null, // Injected at runtime from the tool record's affiliateUrl field
+    // Confirmed PartnerStack affiliate tracking URL — set in DB via migration 20260810_01.
+    affiliateUrl: "https://try.elevenlabs.io/l893urztlad5",
     officialUrl: "https://elevenlabs.io",
     network: "PartnerStack",
     verifiedDate: "2026-08-10",
