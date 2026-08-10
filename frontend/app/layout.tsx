@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import AffiliateDisclosure from "@/components/AffiliateDisclosure";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import SchemaOrg from "@/components/SchemaOrg";
 import { AuthProvider } from "@/lib/authContext";
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    locale: "en_IN",
+    locale: "en_US",
     url: "https://letrusto.com",
     siteName: "LeTrusto",
     title: "LeTrusto",
@@ -128,6 +129,7 @@ export default function RootLayout({
         />
         <AuthProvider>
           <Navbar />
+          <AffiliateDisclosure />
           {children}
           <Footer />
         </AuthProvider>

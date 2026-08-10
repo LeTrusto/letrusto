@@ -17,12 +17,14 @@ const FOOTER_LINKS = {
     { label: "AI Coding & Developer Tools", href: "/category/ai-coding-developer-tools" },
   ],
   Company: [
+    { label: "About", href: "/about" },
+    { label: "Research Methodology", href: "/methodology" },
+    { label: "Affiliate Disclosure", href: "/affiliate-disclosure" },
     { label: "Support", href: "/support" },
     { label: "Contact Us", href: "/contact" },
-    { label: "Report Issue", href: "/report-issue" },
     { label: "Privacy Policy", href: "/privacy-policy" },
     { label: "Terms of Use", href: "/terms-of-use" },
-    { label: "About", href: "/about" },
+    { label: "Report Issue", href: "/report-issue" },
   ],
 };
 
@@ -84,7 +86,10 @@ export default function Footer() {
         {/* Affiliate disclosure */}
         <div className="mt-10 rounded-xl bg-gray-50 px-5 py-4 text-xs text-gray-400">
           <strong className="font-semibold text-gray-500">Affiliate Disclosure:</strong>{" "}
-          LeTrusto may earn a commission when you click affiliate links and make a purchase. This helps us keep the service free. We only recommend products we genuinely evaluate.
+          LeTrusto may earn a commission when you click affiliate links and make a purchase. This does not change the price you pay. We only recommend products we genuinely evaluate.{" "}
+          <Link href="/affiliate-disclosure" className="underline hover:text-gray-600">
+            Full disclosure
+          </Link>
         </div>
 
         {/* Bottom bar */}

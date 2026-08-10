@@ -117,6 +117,19 @@ export default async function AIToolDetailPage({ params }: Props) {
       <Script id="ai-tool-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
       <div className="mx-auto max-w-6xl space-y-8">
+        {/* Breadcrumb */}
+        <nav aria-label="Breadcrumb" className="text-xs text-slate-500">
+          <ol className="flex flex-wrap items-center gap-1">
+            <li><Link href="/" className="hover:text-slate-700">Home</Link></li>
+            <li aria-hidden="true" className="text-slate-300">/</li>
+            <li><Link href="/ai-tools" className="hover:text-slate-700">AI Tools</Link></li>
+            <li aria-hidden="true" className="text-slate-300">/</li>
+            <li><Link href={`/category/${tool.category.slug}`} className="hover:text-slate-700">{tool.category.name}</Link></li>
+            <li aria-hidden="true" className="text-slate-300">/</li>
+            <li className="font-medium text-slate-700" aria-current="page">{tool.name}</li>
+          </ol>
+        </nav>
+
         <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
@@ -160,6 +173,9 @@ export default async function AIToolDetailPage({ params }: Props) {
                 View official pricing
               </a>
             ) : null}
+            <p className="mt-4 text-xs text-slate-400">
+              Pricing verified against official sources. Software pricing changes — always confirm current rates with the provider.
+            </p>
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -231,30 +247,47 @@ export default async function AIToolDetailPage({ params }: Props) {
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
-            <a
-              href={tool.websiteUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              Visit Official Website
-            </a>
-
             {tool.affiliateAvailable && tool.affiliateUrl ? (
               <a
                 href={tool.affiliateUrl}
                 target="_blank"
-                rel="noreferrer"
-                className="rounded-xl border border-sky-300 bg-sky-50 px-5 py-3 text-sm font-semibold text-sky-700 hover:border-sky-500"
+                rel="noreferrer sponsored"
+                className="rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold text-white hover:bg-purple-700"
               >
-                Open Affiliate Offer
+                Visit {tool.name} →
+              </a>
+            ) : (
+              <a
+                href={tool.websiteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+              >
+                Visit Official Website
+              </a>
+            )}
+
+            {tool.affiliateAvailable && tool.affiliateUrl ? (
+              <a
+                href={tool.websiteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-500"
+              >
+                Official website (non-affiliate)
               </a>
             ) : null}
 
             <Link href="/ai-tools" className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-500">
-              Back to AI Tools
+              ← Back to AI Tools
             </Link>
           </div>
+          {tool.affiliateAvailable && tool.affiliateUrl ? (
+            <p className="mt-4 text-xs text-slate-400">
+              Affiliate link — LeTrusto may earn a commission when you purchase through this link at no extra cost to you.{" "}
+              <Link href="/affiliate-disclosure" className="underline hover:text-slate-600">Learn more</Link>
+            </p>
+          ) : null}
         </div>
       </div>
     </main>
