@@ -5,11 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "letrusto:search-history";
 const trendingSearches = [
-  "phone under 30000",
-  "laptop for coding",
-  "headphones for office",
-  "best camera for travel",
-  "gaming console",
+  "best AI assistant for teams",
+  "AI writing tool for SEO",
+  "AI coding assistant",
+  "AI video tool for creators",
+  "best email marketing tool",
 ];
 
 type SearchEnhancementsProps = {

@@ -11,6 +11,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 import { AI_TOOLS_PUBLIC_CATEGORIES } from "@/config/aiTools";
 
+function isActive(pathname: string, href: string, prefixes?: string[]): boolean {
+  if (href === "/") return pathname === "/";
+  if (pathname === href) return true;
+  return prefixes ? prefixes.some((p) => pathname.startsWith(p)) : pathname.startsWith(href);
+}
+
 export default function Navbar() {
   const { favoriteIds } = useFavorites();
   const pathname = usePathname();
@@ -27,10 +33,10 @@ export default function Navbar() {
   const userMenuVisible = userMenuOpen && isRouteCurrent;
   const mobileMenuVisible = mobileOpen && isRouteCurrent;
 
-  const navItemClass =
-    "inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[15px] font-semibold tracking-[0.01em] text-slate-700 transition hover:bg-slate-100 hover:text-slate-950";
-
-  const activeNavItemClass = "bg-slate-100 text-slate-950 shadow-sm";
+  const navItemBase =
+    "inline-flex items-center gap-2 rounded-[var(--radius-lg)] px-4 py-2.5 text-[0.9375rem] font-semibold text-slate-600 transition-colors duration-150 hover:text-[var(--lt-purple)] hover:bg-[var(--lt-gradient-soft)]";
+  const navItemActive =
+    "bg-[rgba(124,58,237,0.08)] text-[var(--lt-purple)]";
 
   const closeAllMenus = () => {
     setCategoriesOpen(false);
@@ -69,24 +75,26 @@ export default function Navbar() {
     };
   }, []);
 
+  const aiToolsActive = isActive(pathname, "/ai-tools", ["/ai-tools", "/category/"]);
+
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/95 shadow-sm backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-6">
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-white/95 shadow-[var(--shadow-sm)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-3.5 sm:px-6">
         {/* Logo */}
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
           <Image src="/images/logo/logo.png" alt="LeTrusto" width={60} height={52} priority className="h-10 w-auto" />
           <div className="hidden sm:block">
-            <span className="text-2xl font-black leading-none">
-              <span className="text-pink-600">Le</span>
+            <span className="text-[1.625rem] font-black leading-none tracking-tight">
+              <span className="bg-gradient-to-r from-[var(--lt-purple)] to-[var(--lt-pink)] bg-clip-text text-transparent">Le</span>
               <span className="text-slate-900">Trusto</span>
             </span>
-            <p className="text-[11px] font-medium text-gray-400">AI Tools and Software Advisor</p>
+            <p className="mt-0.5 text-xs font-medium text-slate-400">AI Tools and Software Advisor</p>
           </div>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 xl:flex">
-          <Link href="/" onClick={closeAllMenus} className={navItemClass}>Home</Link>
+        <nav className="hidden items-center gap-0.5 xl:flex">
+          <Link href="/" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/") ? navItemActive : ""}`}>Home</Link>
 
           {/* Categories dropdown */}
           <div className="relative" ref={categoriesRef}>
@@ -98,7 +106,7 @@ export default function Navbar() {
               aria-expanded={categoriesMenuVisible}
               aria-haspopup="menu"
               aria-controls="desktop-categories-menu"
-              className={`${navItemClass} gap-1`}
+              className={`${navItemBase} gap-1.5 ${aiToolsActive ? navItemActive : ""}`}
             >
               AI Tools
               <ChevronDown className={`h-3.5 w-3.5 transition ${categoriesMenuVisible ? "rotate-180" : ""}`} />
@@ -112,9 +120,9 @@ export default function Navbar() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.98 }}
                   transition={{ duration: 0.18, ease: "easeOut" }}
-                  className="absolute left-0 top-12 z-50 w-[28rem] rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.45)]"
+                  className="absolute left-0 top-14 z-50 w-[28rem] rounded-[var(--radius-2xl)] border border-[var(--border)] bg-white p-5 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.35)]"
                 >
-                  <p className="mb-1 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Browse AI tool categories</p>
+                  <p className="lt-label mb-1">Browse AI tool categories</p>
                   <p className="mb-4 text-sm text-slate-500">Find the right tool category before committing budget.</p>
                   <div className="grid grid-cols-2 gap-2">
                     {AI_TOOLS_PUBLIC_CATEGORIES.map((cat) => (
@@ -123,9 +131,9 @@ export default function Navbar() {
                         href={cat.href}
                         onClick={() => setCategoriesOpen(false)}
                         role="menuitem"
-                        className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"
+                        className="flex items-center gap-3 rounded-[var(--radius-lg)] px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-[var(--lt-gradient-soft)] hover:text-[var(--lt-purple)]"
                       >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-base">{cat.icon}</span>
+                        <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-slate-100 text-base">{cat.icon}</span>
                         <span>{cat.name}</span>
                       </Link>
                     ))}
@@ -133,7 +141,7 @@ export default function Navbar() {
                   <Link
                     href="/ai-tools"
                     onClick={() => setCategoriesOpen(false)}
-                    className="mt-4 flex items-center justify-center gap-1 rounded-2xl bg-slate-950 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    className="lt-btn lt-btn-md lt-btn-primary mt-4 w-full justify-center"
                   >
                     View all AI tool categories
                   </Link>
@@ -142,37 +150,37 @@ export default function Navbar() {
             </AnimatePresence>
           </div>
 
-          <Link href="/compare" onClick={closeAllMenus} className={`${navItemClass} ${pathname === "/compare" ? activeNavItemClass : ""}`}>
+          <Link href="/compare" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/compare") ? navItemActive : ""}`}>
             <Scale className="h-4 w-4" /> Compare
           </Link>
-          <Link href="/guides" onClick={closeAllMenus} className={`${navItemClass} ${pathname.startsWith("/articles") || pathname.startsWith("/guides") ? activeNavItemClass : ""}`}>
-            📚 Guides
+          <Link href="/guides" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/guides", ["/guides", "/articles"]) ? navItemActive : ""}`}>
+            Guides
           </Link>
-          <Link href="/about" onClick={closeAllMenus} className={`${navItemClass} ${pathname === "/about" ? activeNavItemClass : ""}`}>
+          <Link href="/about" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/about") ? navItemActive : ""}`}>
             About
           </Link>
-          <Link href="/ai" onClick={closeAllMenus} className={`${navItemClass} ${pathname === "/ai" ? activeNavItemClass : ""}`}>
+          <Link href="/ai" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/ai") ? navItemActive : ""}`}>
             <Sparkles className="h-4 w-4" /> Ask AI
           </Link>
         </nav>
 
         {/* Right actions */}
-        <div className="flex items-center gap-2">
-          <Link href="/search" onClick={closeAllMenus} className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-slate-300 hover:text-slate-900 xl:hidden" aria-label="Search AI tools">
-            <Search className="h-4 w-4" />
+        <div className="flex items-center gap-2.5">
+          <Link href="/search" onClick={closeAllMenus} className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border)] text-slate-500 transition hover:border-[var(--lt-purple-light)] hover:text-[var(--lt-purple)] xl:hidden" aria-label="Search AI tools">
+            <Search className="h-[1.125rem] w-[1.125rem]" />
           </Link>
 
-          <Link href="/favorites" onClick={closeAllMenus} className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-slate-300 hover:text-slate-900" aria-label="View favorites">
-            <Heart className="h-4 w-4" />
+          <Link href="/favorites" onClick={closeAllMenus} className="relative flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border)] text-slate-500 transition hover:border-[var(--lt-purple-light)] hover:text-[var(--lt-purple)]" aria-label="View favorites">
+            <Heart className="h-[1.125rem] w-[1.125rem]" />
             {favoriteIds.length > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-pink-500 text-[10px] font-bold text-white">
+              <span className="absolute -right-1 -top-1 flex h-[1.125rem] w-[1.125rem] items-center justify-center rounded-full bg-[var(--lt-pink)] text-[10px] font-bold text-white">
                 {favoriteIds.length}
               </span>
             )}
           </Link>
 
-          <Link href="/ai" onClick={closeAllMenus} className="hidden rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-800 sm:flex">
-            <Sparkles className="mr-1.5 h-4 w-4" /> Ask LeTrusto
+          <Link href="/ai" onClick={closeAllMenus} className="lt-btn lt-btn-md lt-btn-brand hidden sm:inline-flex">
+            <Sparkles className="h-4 w-4" /> Ask LeTrusto
           </Link>
 
           {!isLoading && (
@@ -185,7 +193,7 @@ export default function Navbar() {
                   }}
                   aria-expanded={userMenuVisible}
                   aria-haspopup="menu"
-                  className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-purple-300"
+                  className="lt-btn lt-btn-md lt-btn-secondary"
                 >
                   <User className="h-4 w-4" />
                   <span className="max-w-[100px] truncate">{user.full_name.split(" ")[0] || "Me"}</span>
@@ -198,16 +206,16 @@ export default function Navbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.98 }}
                       transition={{ duration: 0.18, ease: "easeOut" }}
-                      className="absolute right-0 top-12 z-50 min-w-[200px] rounded-2xl border border-gray-100 bg-white py-2 shadow-xl"
+                      className="absolute right-0 top-14 z-50 min-w-[220px] rounded-[var(--radius-xl)] border border-[var(--border)] bg-white py-2 shadow-[var(--shadow-md)]"
                     >
-                      <Link href="/dashboard" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-slate-50 hover:text-slate-950">
+                      <Link href="/dashboard" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-[var(--lt-gradient-soft)] hover:text-[var(--lt-purple)]">
                         <LayoutDashboard className="h-4 w-4" /> Dashboard
                       </Link>
-                      <Link href="/notifications" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-slate-50 hover:text-slate-950">
+                      <Link href="/notifications" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-[var(--lt-gradient-soft)] hover:text-[var(--lt-purple)]">
                         <Bell className="h-4 w-4" /> Notifications
                       </Link>
-                      <hr className="my-1 border-gray-100" />
-                      <button onClick={() => { setUserMenuOpen(false); void logout(); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
+                      <hr className="my-1.5 border-[var(--border)]" />
+                      <button onClick={() => { setUserMenuOpen(false); void logout(); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 transition hover:bg-red-50">
                         <LogOut className="h-4 w-4" /> Sign Out
                       </button>
                     </motion.div>
@@ -215,7 +223,7 @@ export default function Navbar() {
                 </AnimatePresence>
               </div>
             ) : (
-              <Link href="/login" onClick={closeAllMenus} className="hidden items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-slate-300 hover:text-slate-950 xl:flex">
+              <Link href="/login" onClick={closeAllMenus} className="lt-btn lt-btn-md lt-btn-secondary hidden xl:inline-flex">
                 <LogIn className="h-4 w-4" /> Sign In
               </Link>
             )
@@ -227,10 +235,10 @@ export default function Navbar() {
               setMenusPath(pathname);
               setMobileOpen((o) => !o);
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-gray-500 xl:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border)] text-slate-500 xl:hidden"
             aria-label="Toggle menu"
           >
-            {mobileMenuVisible ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            {mobileMenuVisible ? <X className="h-[1.125rem] w-[1.125rem]" /> : <Menu className="h-[1.125rem] w-[1.125rem]" />}
           </button>
         </div>
       </div>
@@ -243,15 +251,15 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="border-t border-gray-100 bg-white px-5 pb-4 xl:hidden"
+            className="border-t border-[var(--border)] bg-white px-5 pb-5 xl:hidden"
           >
-            <nav className="mt-3 flex flex-col gap-1">
+            <nav className="mt-3 flex flex-col gap-0.5">
               {[
                 { href: "/", label: "Home" },
                 { href: "/ai-tools", label: "AI Tools" },
                 { href: "/search", label: "Search" },
-                { href: "/ai", label: "✨ Ask AI" },
-                { href: "/guides", label: "📚 Buying Guides" },
+                { href: "/ai", label: "Ask AI" },
+                { href: "/guides", label: "Buying Guides" },
                 { href: "/compare", label: "Compare" },
                 { href: "/about", label: "About" },
                 { href: "/favorites", label: `Favorites (${favoriteIds.length})` },
@@ -260,23 +268,27 @@ export default function Navbar() {
                   key={href}
                   href={href}
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-slate-50 hover:text-slate-950"
+                  className={`rounded-[var(--radius-lg)] px-4 py-3.5 text-[0.9375rem] font-semibold transition ${
+                    isActive(pathname, href, href === "/guides" ? ["/guides", "/articles"] : undefined)
+                      ? "bg-[rgba(124,58,237,0.08)] text-[var(--lt-purple)]"
+                      : "text-slate-600 hover:bg-[var(--lt-gradient-soft)] hover:text-[var(--lt-purple)]"
+                  }`}
                 >
                   {label}
                 </Link>
               ))}
-              <hr className="my-1 border-gray-100" />
+              <hr className="my-2 border-[var(--border)]" />
               {user ? (
                 <>
-                  <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-slate-50 hover:text-slate-950">
+                  <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="rounded-[var(--radius-lg)] px-4 py-3.5 text-[0.9375rem] font-semibold text-slate-600 transition hover:bg-[var(--lt-gradient-soft)] hover:text-[var(--lt-purple)]">
                     Dashboard
                   </Link>
-                  <button onClick={() => { setMobileOpen(false); void logout(); }} className="rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50">
+                  <button onClick={() => { setMobileOpen(false); void logout(); }} className="rounded-[var(--radius-lg)] px-4 py-3.5 text-left text-[0.9375rem] font-semibold text-red-600 transition hover:bg-red-50">
                     Sign Out
                   </button>
                 </>
               ) : (
-                <Link href="/login" onClick={() => setMobileOpen(false)} className="rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white">
+                <Link href="/login" onClick={() => setMobileOpen(false)} className="lt-btn lt-btn-md lt-btn-primary w-full justify-center">
                   Sign In
                 </Link>
               )}

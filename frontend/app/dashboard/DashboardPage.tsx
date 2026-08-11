@@ -136,8 +136,8 @@ export default function DashboardPage() {
             <div className="py-8 text-center text-sm text-gray-400">
               <GitCompare className="mx-auto mb-2 h-8 w-8 opacity-30" />
               No saved comparisons yet.{" "}
-              <Link href="/compare" className="text-purple-600 hover:underline">
-                Try comparing products
+              <Link href="/compare" className="text-[var(--lt-purple)] hover:underline">
+                Try comparing AI tools
               </Link>
             </div>
           )}
@@ -198,11 +198,11 @@ export default function DashboardPage() {
           <h2 className="mb-4 text-lg font-bold text-slate-900">Quick Links</h2>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { href: "/favorites", label: "My Wishlist", icon: Heart },
-              { href: "/compare", label: "Compare", icon: Scale },
-              { href: "/ai", label: "Buying Assistant", icon: Sparkles },
+              { href: "/favorites", label: "My Favourites", icon: Heart },
+              { href: "/compare", label: "Compare Tools", icon: Scale },
+              { href: "/ai", label: "AI Assistant", icon: Sparkles },
               { href: "/notifications", label: "Notifications", icon: Bell },
-              { href: "/deals", label: "Today's Deals", icon: TrendingDown },
+              { href: "/guides", label: "Buying Guides", icon: TrendingDown },
               { href: "/support", label: "Support", icon: User },
             ].map(({ href, label, icon: Icon }) => (
               <Link

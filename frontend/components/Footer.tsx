@@ -30,18 +30,18 @@ const FOOTER_LINKS = {
 
 export default function Footer() {
   return (
-    <footer className="mt-auto border-t border-gray-100 bg-white">
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:gap-12">
+    <footer className="mt-auto border-t border-[var(--border)] bg-white">
+      <div className="mx-auto max-w-7xl px-6 py-14">
+        <div className="grid grid-cols-2 gap-10 md:grid-cols-4 lg:gap-14">
           {/* Brand column */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="inline-flex items-center gap-2">
-              <span className="text-2xl font-black">
-                <span className="text-pink-600">Le</span>
-                <span className="text-gray-900">Trusto</span>
+              <span className="text-[1.625rem] font-black tracking-tight">
+                <span className="bg-gradient-to-r from-[var(--lt-purple)] to-[var(--lt-pink)] bg-clip-text text-transparent">Le</span>
+                <span className="text-slate-900">Trusto</span>
               </span>
             </Link>
-            <p className="mt-3 text-sm leading-relaxed text-gray-500">
+            <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
               Research-backed AI tool and software recommendations, comparisons, and buying guidance for teams that want clarity before they pay.
             </p>
             <div className="mt-5 flex gap-3">
@@ -55,7 +55,7 @@ export default function Footer() {
                   aria-label={s.label}
                   target="_blank"
                   rel="me noopener noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 text-sm text-gray-500 transition hover:border-purple-300 hover:text-purple-600"
+                  className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border)] text-sm text-[var(--text-muted)] transition hover:border-[var(--lt-purple-light)] hover:text-[var(--lt-purple)]"
                 >
                   {s.icon}
                 </a>
@@ -66,13 +66,13 @@ export default function Footer() {
           {/* Link columns */}
           {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
             <div key={heading}>
-              <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-gray-900">{heading}</h3>
-              <ul className="space-y-2.5">
+              <h3 className="lt-label mb-4">{heading}</h3>
+              <ul className="space-y-3">
                 {links.map(({ label, href }) => (
                   <li key={label}>
                     <Link
                       href={href}
-                      className="text-sm text-gray-500 transition hover:text-purple-700"
+                      className="text-sm text-[var(--text-secondary)] transition hover:text-[var(--lt-purple)]"
                     >
                       {label}
                     </Link>
@@ -84,20 +84,20 @@ export default function Footer() {
         </div>
 
         {/* Affiliate disclosure */}
-        <div className="mt-10 rounded-xl bg-gray-50 px-5 py-4 text-xs text-gray-400">
-          <strong className="font-semibold text-gray-500">Affiliate Disclosure:</strong>{" "}
+        <div className="mt-12 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] px-5 py-4 text-xs leading-relaxed text-[var(--text-muted)]">
+          <strong className="font-semibold text-[var(--text-secondary)]">Affiliate Disclosure:</strong>{" "}
           LeTrusto may earn a commission when you click affiliate links and make a purchase. This does not change the price you pay. We only recommend products we genuinely evaluate.{" "}
-          <Link href="/affiliate-disclosure" className="underline hover:text-gray-600">
+          <Link href="/affiliate-disclosure" className="underline transition hover:text-[var(--lt-purple)]">
             Full disclosure
           </Link>
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-gray-100 pt-6 sm:flex-row">
-          <p className="text-xs text-gray-400">
+        <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-[var(--border)] pt-8 sm:flex-row">
+          <p className="text-xs text-[var(--text-muted)]">
             © {new Date().getFullYear()} LeTrusto. All rights reserved.
           </p>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-[var(--text-muted)]">
             Built for clearer, more confident buying decisions
           </p>
         </div>

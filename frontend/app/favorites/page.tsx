@@ -4,7 +4,7 @@ import FavoritesPage from "./FavoritesPage";
 
 export const metadata: Metadata = {
   title: "Favorites",
-  description: "Review products you have saved for later comparison and shopping.",
+  description: "Review AI tools and software you have saved for comparison.",
   robots: {
     index: false,
     follow: false,

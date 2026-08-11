@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import ProductCard from "@/components/ProductCard";
 import SchemaOrg from "@/components/SchemaOrg";
@@ -366,9 +367,9 @@ export default async function SearchPage({
             <button className="rounded-2xl bg-slate-950 px-6 py-3 font-semibold text-white transition hover:bg-slate-800" type="submit">
               Apply Filters
             </button>
-            <a href="/search" className="rounded-2xl border border-slate-200 px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
+            <Link href="/search" className="lt-btn lt-btn-md lt-btn-secondary">
               Reset
-            </a>
+            </Link>
           </div>
         </form>
 
@@ -436,15 +437,15 @@ export default async function SearchPage({
 
         {!hasResults && (
           <div className="mt-16 rounded-[2rem] border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500 shadow-sm">
-            <h2 className="text-2xl font-bold text-slate-950">No products matched your filters.</h2>
-            <p className="mt-3">Adjust the search term, widen the price range, or clear filters to discover more relevant options.</p>
+            <h2 className="text-2xl font-bold text-slate-950">No results matched your filters.</h2>
+            <p className="mt-3">Adjust the search term, widen the filters, or clear them to discover more relevant options.</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <a href="/search" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">
+              <Link href="/search" className="lt-btn lt-btn-md lt-btn-primary">
                 Reset search
-              </a>
-              <a href="/guides" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              </Link>
+              <Link href="/guides" className="lt-btn lt-btn-md lt-btn-secondary">
                 Explore guides
-              </a>
+              </Link>
             </div>
           </div>
         )}
