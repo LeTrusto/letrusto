@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
+import { CheckCircle2, XCircle, Sparkles, ExternalLink } from "lucide-react";
 
 import AffiliateCTA from "@/components/AffiliateCTA";
 import { getAiToolBySlug } from "@/services/ai-tools.service";
+import { getActiveSoftwareAffiliate } from "@/lib/softwareAffiliates";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -17,15 +19,24 @@ function formatPricing(toolPricing: {
   period: string | null;
   notes: string | null;
 }) {
-  if (!toolPricing.model) {
-    return "Not publicly verified";
-  }
-
+  if (!toolPricing.model) return "Not publicly verified";
   if (toolPricing.amount !== null && toolPricing.currency && toolPricing.period) {
     return `${toolPricing.currency} ${toolPricing.amount} / ${toolPricing.period}`;
   }
-
   return toolPricing.notes || toolPricing.model.replace("_", " ");
+}
+
+function pricingBadges(pricing: {
+  hasFreePlan: boolean | null;
+  hasFreeTrial: boolean | null;
+  trialDays: number | null;
+}) {
+  const badges: string[] = [];
+  if (pricing.hasFreePlan) badges.push("Free plan available");
+  if (pricing.hasFreeTrial) {
+    badges.push(pricing.trialDays ? `${pricing.trialDays}-day free trial` : "Free trial available");
+  }
+  return badges;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -33,27 +44,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tool = await getAiToolBySlug(slug);
 
   if (!tool) {
-    return {
-      title: "AI Tool Not Found",
-      description: "The requested AI tool page could not be found.",
-    };
+    return { title: "AI Tool Not Found", description: "The requested AI tool page could not be found." };
   }
 
-  const title = `${tool.name} Review`;
-  const description = `${tool.name} by ${tool.provider}. Category: ${tool.category.name}. ${tool.description}`;
+  const title = `${tool.name} — ${tool.category.name} | Review`;
+  const description = tool.description.length > 155
+    ? tool.description.slice(0, 152) + "..."
+    : tool.description;
 
   return {
     title,
     description,
-    alternates: {
-      canonical: `/ai-tools/${tool.slug}`,
-    },
+    alternates: { canonical: `/ai-tools/${tool.slug}` },
     openGraph: {
       title,
       description,
       url: `/ai-tools/${tool.slug}`,
       siteName: "LeTrusto",
-      type: "website",
+      type: "article",
       images: [{ url: tool.logoUrl || "/images/og-default.svg", width: 1200, height: 630 }],
     },
     twitter: {
@@ -75,18 +83,19 @@ export default async function AIToolDetailPage({ params }: Props) {
         <div className="lt-card mx-auto max-w-4xl rounded-[var(--radius-2xl)] p-10 text-center">
           <h1 className="lt-heading-1">AI Tool Not Found</h1>
           <p className="lt-body mt-3">This tool is unavailable or not currently published.</p>
-          <Link href="/ai-tools" className="lt-btn lt-btn-md lt-btn-primary mt-6">
-            Back to AI Tools
-          </Link>
+          <Link href="/ai-tools" className="lt-btn lt-btn-md lt-btn-primary mt-6">Back to AI Tools</Link>
         </div>
       </main>
     );
   }
 
   const pricingText = formatPricing(tool.pricing);
-  const lastVerifiedDate = tool.lastVerifiedAt
+  const lastVerified = tool.lastVerifiedAt
     ? new Date(tool.lastVerifiedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
-    : "Not available";
+    : null;
+  const pBadges = pricingBadges(tool.pricing);
+  const affiliate = getActiveSoftwareAffiliate(tool.slug);
+  const hasAffiliate = Boolean(affiliate?.affiliateUrl) || Boolean(tool.affiliateAvailable && tool.affiliateUrl);
 
   const schema = {
     "@context": "https://schema.org",
@@ -95,26 +104,18 @@ export default async function AIToolDetailPage({ params }: Props) {
     applicationCategory: tool.category.name,
     operatingSystem: tool.platforms.join(", ") || undefined,
     description: tool.description,
-    publisher: {
-      "@type": "Organization",
-      name: tool.provider,
-    },
+    publisher: { "@type": "Organization", name: tool.provider },
     offers: tool.pricing.pricingUrl
-      ? {
-          "@type": "Offer",
-          url: tool.pricing.pricingUrl,
-          priceCurrency: tool.pricing.currency || undefined,
-          price: tool.pricing.amount ?? undefined,
-        }
+      ? { "@type": "Offer", url: tool.pricing.pricingUrl, priceCurrency: tool.pricing.currency || undefined, price: tool.pricing.amount ?? undefined }
       : undefined,
     url: tool.websiteUrl,
   };
 
   return (
-    <main className="min-h-screen bg-[var(--surface-soft)] px-6 py-12">
+    <main className="min-h-screen bg-[var(--surface-soft)] px-6 pb-16 pt-10">
       <Script id="ai-tool-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
-      <div className="mx-auto max-w-6xl space-y-8">
+      <div className="mx-auto max-w-5xl space-y-10">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="text-xs text-[var(--text-muted)]">
           <ol className="flex flex-wrap items-center gap-1">
@@ -128,121 +129,216 @@ export default async function AIToolDetailPage({ params }: Props) {
           </ol>
         </nav>
 
-        <div className="lt-card rounded-[var(--radius-2xl)] p-8">
-          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0">
-              <p className="lt-label text-[var(--lt-purple)]">{tool.category.name}</p>
-              <h1 className="lt-heading-1 mt-2">{tool.name}</h1>
-              <p className="mt-2 text-lg text-[var(--text-secondary)]">Provider: {tool.provider}</p>
-              <p className="lt-body mt-4 max-w-3xl">{tool.description}</p>
+        {/* ── Hero ──────────────────────────────────────────── */}
+        <header className="lt-card rounded-[var(--radius-2xl)] p-8 md:p-10">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0 max-w-3xl">
+              <span className="lt-badge lt-badge-brand">{tool.category.name}</span>
+              <h1 className="lt-heading-1 mt-3">{tool.name}</h1>
+              <p className="mt-1 text-[var(--text-secondary)]">by {tool.provider}</p>
+              <p className="lt-body mt-4">{tool.description}</p>
+
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                {hasAffiliate ? (
+                  <a
+                    href={affiliate?.affiliateUrl || tool.affiliateUrl || "#"}
+                    target="_blank"
+                    rel="noreferrer sponsored"
+                    className="lt-btn lt-btn-lg lt-btn-brand"
+                  >
+                    Try {tool.name} <ExternalLink className="h-4 w-4" />
+                  </a>
+                ) : (
+                  <a href={tool.websiteUrl} target="_blank" rel="noreferrer" className="lt-btn lt-btn-lg lt-btn-primary">
+                    Visit {tool.name} <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+                <Link href="/compare" className="lt-btn lt-btn-lg lt-btn-secondary">Compare options</Link>
+              </div>
+
+              {hasAffiliate && (
+                <p className="mt-3 text-xs text-[var(--text-muted)]">
+                  Affiliate link — LeTrusto may earn a commission at no extra cost to you.{" "}
+                  <Link href="/affiliate-disclosure" className="underline hover:text-[var(--lt-purple)]">Disclosure</Link>
+                </p>
+              )}
             </div>
             {tool.logoUrl ? (
-              <Image
-                src={tool.logoUrl}
-                alt={`${tool.name} logo`}
-                width={64}
-                height={64}
-                className="h-16 w-16 rounded-xl border border-slate-200 bg-white object-contain p-2"
-                unoptimized
-              />
+              <Image src={tool.logoUrl} alt={`${tool.name} logo`} width={80} height={80}
+                className="h-20 w-20 shrink-0 rounded-[var(--radius-xl)] border border-[var(--border)] bg-white object-contain p-3"
+                unoptimized />
             ) : null}
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-2">
-            {tool.tags.map((tag) => (
-              <span key={tag} className="lt-badge">
-                {tag}
-              </span>
-            ))}
+          {tool.tags.length > 0 && (
+            <div className="mt-6 flex flex-wrap gap-2">
+              {tool.tags.map((tag) => <span key={tag} className="lt-badge">{tag}</span>)}
+            </div>
+          )}
+        </header>
+
+        {/* ── Who is it for? ────────────────────────────────── */}
+        {tool.bestFor.length > 0 && (
+          <section className="lt-card rounded-[var(--radius-2xl)] p-8">
+            <h2 className="lt-heading-2">Who is {tool.name} for?</h2>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+              {tool.bestFor.map((item) => (
+                <li key={item} className="flex items-start gap-3 text-[var(--text-secondary)]">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            {tool.notIdealFor.length > 0 && (
+              <>
+                <h3 className="lt-heading-3 mt-8">May not be the right fit for</h3>
+                <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {tool.notIdealFor.map((item) => (
+                    <li key={item} className="flex items-start gap-3 text-[var(--text-secondary)]">
+                      <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        )}
+
+        {/* ── Key Capabilities ──────────────────────────────── */}
+        {tool.features.length > 0 && (
+          <section className="lt-card rounded-[var(--radius-2xl)] p-8">
+            <h2 className="lt-heading-2">Key Capabilities</h2>
+            <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+              {tool.features.map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-[var(--text-secondary)]">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--lt-purple)]" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* ── Use Cases ─────────────────────────────────────── */}
+        {tool.useCases.length > 0 && (
+          <section className="lt-card rounded-[var(--radius-2xl)] p-8">
+            <h2 className="lt-heading-2">Common Use Cases</h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {tool.useCases.map((item) => (
+                <div key={item} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-sm font-medium text-[var(--text-primary)]">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Strengths & Limitations ───────────────────────── */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {tool.pros.length > 0 && (
+            <section className="lt-card rounded-[var(--radius-2xl)] border-emerald-200 bg-emerald-50/30 p-8">
+              <h2 className="lt-heading-3 text-emerald-800">Strengths</h2>
+              <ul className="mt-4 space-y-3">
+                {tool.pros.map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-emerald-900">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                    <span className="text-sm">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {tool.cons.length > 0 && (
+            <section className="lt-card rounded-[var(--radius-2xl)] border-rose-200 bg-rose-50/30 p-8">
+              <h2 className="lt-heading-3 text-rose-800">Limitations</h2>
+              <ul className="mt-4 space-y-3">
+                {tool.cons.map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-rose-900">
+                    <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />
+                    <span className="text-sm">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+
+        {/* ── Pricing ───────────────────────────────────────── */}
+        <section className="lt-card rounded-[var(--radius-2xl)] p-8">
+          <h2 className="lt-heading-2">Pricing</h2>
+          <p className="lt-body mt-3">{pricingText}</p>
+          {pBadges.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {pBadges.map((b) => <span key={b} className="lt-badge lt-badge-brand">{b}</span>)}
+            </div>
+          )}
+          {tool.pricing.pricingUrl && (
+            <a href={tool.pricing.pricingUrl} target="_blank" rel="noreferrer" className="lt-btn lt-btn-md lt-btn-secondary mt-5">
+              View official pricing <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
+          <p className="mt-5 text-xs text-[var(--text-muted)]">
+            Software pricing changes frequently. Always verify current rates with the provider.
+            {lastVerified && <> Last checked: {lastVerified}.</>}
+          </p>
+        </section>
+
+        {/* ── Platforms & Integrations ───────────────────────── */}
+        {(tool.platforms.length > 0 || tool.integrations.length > 0) && (
+          <section className="lt-card rounded-[var(--radius-2xl)] p-8">
+            <h2 className="lt-heading-2">Platforms &amp; Integrations</h2>
+            <div className="mt-4 grid gap-6 sm:grid-cols-2">
+              {tool.platforms.length > 0 && (
+                <div>
+                  <h3 className="lt-label mb-3">Platforms</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {tool.platforms.map((p) => <span key={p} className="lt-badge">{p}</span>)}
+                  </div>
+                </div>
+              )}
+              {tool.integrations.length > 0 && (
+                <div>
+                  <h3 className="lt-label mb-3">Integrations</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {tool.integrations.map((i) => <span key={i} className="lt-badge">{i}</span>)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ── LeTrusto Recommendation ───────────────────────── */}
+        {tool.whyLetrustoRecommends && (
+          <section className="lt-card rounded-[var(--radius-2xl)] border-[var(--lt-purple-light)] bg-[rgba(124,58,237,0.03)] p-8">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[var(--lt-purple)]" />
+              <h2 className="lt-heading-3 text-[var(--lt-purple-dark)]">LeTrusto Recommendation</h2>
+            </div>
+            <p className="lt-body mt-3">{tool.whyLetrustoRecommends}</p>
+            {lastVerified && <p className="mt-4 text-xs text-[var(--text-muted)]">Last verified: {lastVerified}</p>}
+          </section>
+        )}
+
+        {/* ── Explore More ──────────────────────────────────── */}
+        <section className="lt-card rounded-[var(--radius-2xl)] p-8">
+          <h2 className="lt-heading-3">Explore More</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <Link href={`/category/${tool.category.slug}`} className="lt-btn lt-btn-md lt-btn-secondary w-full justify-center">
+              More {tool.category.name}
+            </Link>
+            <Link href="/compare" className="lt-btn lt-btn-md lt-btn-secondary w-full justify-center">
+              Compare Tools
+            </Link>
+            <Link href="/ai" className="lt-btn lt-btn-md lt-btn-secondary w-full justify-center">
+              <Sparkles className="h-4 w-4" /> Ask LeTrusto
+            </Link>
           </div>
-        </div>
+        </section>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-slate-900">Pricing</h2>
-            <p className="mt-3 text-slate-700">{pricingText}</p>
-            {tool.pricing.pricingUrl ? (
-              <a
-                href={tool.pricing.pricingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-500"
-              >
-                View official pricing
-              </a>
-            ) : null}
-            <p className="mt-4 text-xs text-slate-400">
-              Pricing verified against official sources. Software pricing changes — always confirm current rates with the provider.
-            </p>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-slate-900">Why LeTrusto Recommends</h2>
-            <p className="mt-3 text-slate-700">{tool.whyLetrustoRecommends || "Not yet documented."}</p>
-            <p className="mt-4 text-sm text-slate-500">Last verified: {lastVerifiedDate}</p>
-          </section>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-3xl border border-emerald-200 bg-emerald-50/40 p-6">
-            <h2 className="text-xl font-bold text-emerald-800">Pros</h2>
-            <ul className="mt-3 space-y-2 text-emerald-900">
-              {tool.pros.length > 0 ? tool.pros.map((item) => <li key={item}>- {item}</li>) : <li>- Not publicly listed</li>}
-            </ul>
-          </section>
-
-          <section className="rounded-3xl border border-rose-200 bg-rose-50/40 p-6">
-            <h2 className="text-xl font-bold text-rose-800">Cons</h2>
-            <ul className="mt-3 space-y-2 text-rose-900">
-              {tool.cons.length > 0 ? tool.cons.map((item) => <li key={item}>- {item}</li>) : <li>- Not publicly listed</li>}
-            </ul>
-          </section>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900">Use Cases</h3>
-            <ul className="mt-3 space-y-2 text-slate-700">
-              {tool.useCases.length > 0 ? tool.useCases.map((item) => <li key={item}>- {item}</li>) : <li>- Not publicly listed</li>}
-            </ul>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900">Best For</h3>
-            <ul className="mt-3 space-y-2 text-slate-700">
-              {tool.bestFor.length > 0 ? tool.bestFor.map((item) => <li key={item}>- {item}</li>) : <li>- Not publicly listed</li>}
-            </ul>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900">Not Ideal For</h3>
-            <ul className="mt-3 space-y-2 text-slate-700">
-              {tool.notIdealFor.length > 0 ? tool.notIdealFor.map((item) => <li key={item}>- {item}</li>) : <li>- Not publicly listed</li>}
-            </ul>
-          </section>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900">Features</h3>
-            <ul className="mt-3 space-y-2 text-slate-700">
-              {tool.features.length > 0 ? tool.features.map((item) => <li key={item}>- {item}</li>) : <li>- Not publicly listed</li>}
-            </ul>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900">Platforms and Integrations</h3>
-            <p className="mt-3 text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Platforms</p>
-            <ul className="mt-2 space-y-2 text-slate-700">
-              {tool.platforms.length > 0 ? tool.platforms.map((item) => <li key={item}>- {item}</li>) : <li>- Not publicly listed</li>}
-            </ul>
-            <p className="mt-4 text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Integrations</p>
-            <ul className="mt-2 space-y-2 text-slate-700">
-              {tool.integrations.length > 0 ? tool.integrations.map((item) => <li key={item}>- {item}</li>) : <li>- Not publicly listed</li>}
-            </ul>
-          </section>
-        </div>
-
+        {/* ── Final CTA ─────────────────────────────────────── */}
         <AffiliateCTA
           toolSlug={tool.slug}
           toolName={tool.name}
