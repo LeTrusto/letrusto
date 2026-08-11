@@ -2,7 +2,7 @@
 
 import { X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const STORAGE_KEY = "lt_aff_disclosure_v1";
 
@@ -12,18 +12,14 @@ const STORAGE_KEY = "lt_aff_disclosure_v1";
  * Place between <Navbar /> and {children} in the root layout.
  */
 export default function AffiliateDisclosure() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) {
-        setVisible(true);
-      }
+      return !localStorage.getItem(STORAGE_KEY);
     } catch {
-      // localStorage unavailable (private mode, etc.) — show the banner
-      setVisible(true);
+      return true;
     }
-  }, []);
+  });
 
   function dismiss() {
     try {

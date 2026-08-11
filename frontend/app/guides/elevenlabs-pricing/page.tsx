@@ -647,7 +647,7 @@ export default async function ElevenLabsPricingGuidePage() {
             </p>
             <p>
               <strong className="text-slate-900">Move to Pro ($99/month)</strong> only when your
-              volume or professional needs consistently push against Creator's limits, or when you
+              volume or professional needs consistently push against Creator&apos;s limits, or when you
               need priority support and higher API access.
             </p>
             <p>

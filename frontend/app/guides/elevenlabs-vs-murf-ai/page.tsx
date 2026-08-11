@@ -180,7 +180,7 @@ export default async function ElevenLabsVsMurfPage() {
               <span className="mt-1 flex-shrink-0 text-purple-600">→</span>
               <span>
                 <strong>The decision depends on your primary workflow</strong>, not simply price.
-                If you narrate slides and training videos, Murf's integrations may save you
+                If you narrate slides and training videos, Murf&apos;s integrations may save you
                 significant time. If you produce podcasts, YouTube videos, or build voice
                 applications, ElevenLabs is the clearer choice.
               </span>

@@ -41,7 +41,7 @@ export default function AffiliateDisclosurePage() {
           </h2>
           <p className="mt-3">
             An affiliate link is a tracked URL that identifies LeTrusto as the
-            referral source when a user visits a provider's website. If you
+            referral source when a user visits a provider&apos;s website. If you
             purchase a product or sign up for a subscription after clicking one
             of these links, the provider may pay LeTrusto a commission as a
             referral fee.
