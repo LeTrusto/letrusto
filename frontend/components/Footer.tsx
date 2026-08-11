@@ -15,6 +15,7 @@ const FOOTER_LINKS = {
     { label: "AI Image & Design", href: "/category/ai-image-design" },
     { label: "AI Video & Audio", href: "/category/ai-video-audio" },
     { label: "AI Coding & Developer Tools", href: "/category/ai-coding-developer-tools" },
+    { label: "Marketing & Automation", href: "/category/marketing-automation" },
   ],
   Company: [
     { label: "About", href: "/about" },

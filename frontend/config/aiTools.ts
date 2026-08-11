@@ -9,7 +9,8 @@ export type AIToolsCategory = {
     | "writing-studio"
     | "image-design-canvas"
     | "video-audio-timeline"
-    | "coding-dev-workflow";
+    | "coding-dev-workflow"
+    | "marketing-automation";
   eyebrow: string;
   featuredBullets: string[];
   categoryHints: string[];
@@ -80,6 +81,17 @@ export const AI_TOOLS_PUBLIC_CATEGORIES: AIToolsCategory[] = [
     featuredBullets: ["Code generation", "Debugging", "Documentation", "Code review"],
     categoryHints: ["coding", "developer", "devtool", "programming"],
   },
+  {
+    id: "marketing-automation",
+    name: "Marketing & Automation",
+    description: "All-in-one CRM, marketing automation, and lead management platforms for agencies and businesses.",
+    href: "/category/marketing-automation",
+    icon: "📈",
+    artworkKey: "marketing-automation",
+    eyebrow: "New",
+    featuredBullets: ["CRM", "Email marketing", "Funnels", "Automation"],
+    categoryHints: ["marketing", "crm", "automation", "lead generation", "agency", "funnel"],
+  },
 ];
 
 export const AI_CATEGORY_ARTWORK: Record<AIToolsCategory["artworkKey"], AICategoryArtwork> = {
@@ -117,6 +129,13 @@ export const AI_CATEGORY_ARTWORK: Record<AIToolsCategory["artworkKey"], AICatego
     position: "object-center",
     frameInset: "inset-y-2 inset-x-3",
     panelBackground: "bg-[radial-gradient(circle_at_top,_rgba(241,245,249,0.97),_rgba(224,242,254,0.93))]",
+  },
+  "marketing-automation": {
+    src: "/images/categories/ai-assistants.svg",
+    fit: "object-contain",
+    position: "object-center",
+    frameInset: "inset-y-2 inset-x-4",
+    panelBackground: "bg-[radial-gradient(circle_at_top,_rgba(252,231,243,0.96),_rgba(245,243,255,0.93))]",
   },
 };
 
