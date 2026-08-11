@@ -73,9 +73,36 @@ export default function AffiliateDisclosurePage() {
               <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-600" aria-hidden="true" />
               <span>
                 <strong className="text-slate-900">ElevenLabs</strong> — AI
-                voice and audio platform. We are an approved affiliate partner
-                via PartnerStack. Affiliate links to ElevenLabs are clearly
+                voice and audio platform. Affiliate links to ElevenLabs are clearly
                 labelled on tool pages.
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-600" aria-hidden="true" />
+              <span>
+                <strong className="text-slate-900">HighLevel</strong> — All-in-one
+                marketing, CRM, and business automation platform.
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-600" aria-hidden="true" />
+              <span>
+                <strong className="text-slate-900">Moosend</strong> — Email
+                marketing and automation platform.
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-600" aria-hidden="true" />
+              <span>
+                <strong className="text-slate-900">beehiiv</strong> — Newsletter
+                platform for creators and media operators.
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-600" aria-hidden="true" />
+              <span>
+                <strong className="text-slate-900">Synthesia</strong> — AI video
+                generation platform.
               </span>
             </li>
           </ul>

@@ -45,8 +45,7 @@ export const SOFTWARE_AFFILIATES: SoftwareAffiliate[] = [
     toolSlug: "highlevel",
     providerName: "HighLevel",
     status: "active",
-    // TODO: Replace with real HighLevel affiliate tracking URL from dashboard.
-    affiliateUrl: null,
+    affiliateUrl: "https://affiliate.gohighlevel.com?sref=cc6kovb",
     officialUrl: "https://www.gohighlevel.com",
     network: null,
     verifiedDate: "2026-08-11",
@@ -57,8 +56,7 @@ export const SOFTWARE_AFFILIATES: SoftwareAffiliate[] = [
     toolSlug: "moosend",
     providerName: "Moosend",
     status: "active",
-    // TODO: Replace with real Moosend affiliate tracking URL from dashboard.
-    affiliateUrl: null,
+    affiliateUrl: "https://trymoo.moosend.com/kj491db9y05q",
     officialUrl: "https://moosend.com",
     network: null,
     verifiedDate: "2026-08-11",
@@ -69,13 +67,23 @@ export const SOFTWARE_AFFILIATES: SoftwareAffiliate[] = [
     toolSlug: "beehiiv",
     providerName: "beehiiv",
     status: "active",
-    // TODO: Replace with real beehiiv affiliate tracking URL from dashboard.
-    affiliateUrl: null,
+    affiliateUrl: "https://www.beehiiv.com/?via=letrusto",
     officialUrl: "https://www.beehiiv.com",
     network: null,
     verifiedDate: "2026-08-11",
     disclosureNote:
       "LeTrusto is an approved affiliate partner of beehiiv. We may earn a commission when you sign up through our link.",
+  },
+  {
+    toolSlug: "synthesia",
+    providerName: "Synthesia",
+    status: "active",
+    affiliateUrl: "https://www.synthesia.io/?via=basavanna",
+    officialUrl: "https://www.synthesia.io",
+    network: null,
+    verifiedDate: "2026-08-11",
+    disclosureNote:
+      "LeTrusto is an approved affiliate partner of Synthesia. We may earn a commission when you sign up through our link.",
   },
 ];
 
