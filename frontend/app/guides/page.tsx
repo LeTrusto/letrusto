@@ -101,6 +101,16 @@ export default async function GuidesPage() {
 		{ label: "AI Voice & Audio", slug: "best-ai-voice-tools", description: "Voice synthesis, transcription, and audio AI tools." },
 	];
 
+	const PUBLISHED_GUIDES = [
+		{ slug: "/guides/elevenlabs-pricing", title: "ElevenLabs Pricing: Which Plan Is Right for You?", category: "Pricing Guide", tool: "ElevenLabs" },
+		{ slug: "/guides/elevenlabs-vs-murf-ai", title: "ElevenLabs vs Murf AI: Which AI Voice Tool Is Right for You?", category: "Comparison", tool: "ElevenLabs" },
+		{ slug: "/guides/highlevel-pricing", title: "HighLevel Pricing: Plans, Features & What You Should Know", category: "Pricing Guide", tool: "HighLevel" },
+		{ slug: "/guides/moosend-pricing", title: "Moosend Pricing: Plans, Features & Who It Is For", category: "Pricing Guide", tool: "Moosend" },
+		{ slug: "/guides/beehiiv-pricing", title: "beehiiv Pricing: Plans, Features & Newsletter Costs", category: "Pricing Guide", tool: "beehiiv" },
+		{ slug: "/guides/synthesia-pricing", title: "Synthesia Pricing: Plans, Features & AI Video Costs", category: "Pricing Guide", tool: "Synthesia" },
+		{ slug: "/guides/beehiiv-vs-substack", title: "beehiiv vs Substack: Which Newsletter Platform Is Right for You?", category: "Comparison", tool: "beehiiv" },
+	];
+
 	return (
 		<main className="mx-auto max-w-4xl px-6 py-12">
 			<SchemaOrg
@@ -119,6 +129,26 @@ export default async function GuidesPage() {
 					Each guide explains what a tool does, who it is for, and where its trade-offs appear.
 				</p>
 			</div>
+
+			{/* Published guides */}
+			<section className="mb-10">
+				<h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-gray-500">Published Guides</h2>
+				<div className="space-y-3">
+					{PUBLISHED_GUIDES.map((guide) => (
+						<Link
+							key={guide.slug}
+							href={guide.slug}
+							className="group block rounded-[var(--radius-xl)] border border-[var(--border)] bg-white p-5 transition hover:border-[var(--lt-purple-light)] hover:shadow-[var(--shadow-md)]"
+						>
+							<div className="flex items-center gap-2 mb-1.5">
+								<span className="lt-badge lt-badge-brand">{guide.category}</span>
+								<span className="text-xs text-[var(--text-muted)]">{guide.tool}</span>
+							</div>
+							<h3 className="text-lg font-bold text-[var(--text-primary)] group-hover:text-[var(--lt-purple)]">{guide.title}</h3>
+						</Link>
+					))}
+				</div>
+			</section>
 
 			{/* Guide categories — always visible to establish the content structure */}
 			<section className="mb-10">
