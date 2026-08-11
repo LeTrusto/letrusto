@@ -1,5 +1,6 @@
 import { API_BASE_URL, IS_STATIC_GENERATION_BUILD } from "@/services/api";
 import { getAiTools } from "@/services/ai-tools.service";
+import type { AITool } from "@/types/ai-tools";
 import {
   HOMEPAGE_TRENDING_SEARCHES,
   HOMEPAGE_CATEGORY_CONFIG,
@@ -32,6 +33,7 @@ export type HomepageDataSources = {
   "trust.default": TrustSignal[];
   "comparisons.popular": HomepageComparisonItem[];
   "guides.latest": HomeGuideSummary[];
+  "tools.featured": AITool[];
   "products.trending": HomeProductRailItem[];
   "products.featured": HomeProductRailItem[];
   "products.newArrivals": HomeProductRailItem[];
@@ -104,7 +106,12 @@ function isAiGuide(item: HomeGuideSummary) {
 }
 
 async function getLatestGuides(limit: number): Promise<HomeGuideSummary[]> {
-  const fallback: HomeGuideSummary[] = [];
+  const fallback: HomeGuideSummary[] = [
+    { slug: "highlevel-pricing", title: "HighLevel Pricing: Plans, Features & What You Should Know", excerpt: "A clear breakdown of HighLevel plans for agencies and businesses.", category: "guide" },
+    { slug: "beehiiv-pricing", title: "beehiiv Pricing: Plans, Features & Newsletter Costs", excerpt: "beehiiv plans for creators — Launch, Scale, and Max explained.", category: "guide" },
+    { slug: "moosend-pricing", title: "Moosend Pricing: Plans, Features & Who It Is For", excerpt: "Moosend email marketing plans and subscriber-based pricing.", category: "guide" },
+    { slug: "beehiiv-vs-substack", title: "beehiiv vs Substack: Which Newsletter Platform Is Right for You?", excerpt: "Side-by-side comparison of monetization, growth, and publishing features.", category: "comparison" },
+  ];
 
   if (IS_STATIC_GENERATION_BUILD) {
     return fallback.slice(0, limit);
@@ -146,11 +153,18 @@ export async function getHomepageDataSources(): Promise<HomepageDataSources> {
     category: tool.category.name,
   }));
 
+  // Surface affiliate tools on homepage
+  const FEATURED_SLUGS = ["elevenlabs", "highlevel", "moosend", "beehiiv", "synthesia"];
+  const featuredTools = FEATURED_SLUGS
+    .map((slug) => toolsResponse.items.find((t) => t.slug === slug))
+    .filter((t): t is AITool => t !== undefined);
+
   return {
     "categories.showcase": buildCategoryShowcase(categoryCounts),
     "trust.default": HOMEPAGE_TRUST_SIGNALS,
     "comparisons.popular": HOMEPAGE_POPULAR_COMPARISONS,
     "guides.latest": guides,
+    "tools.featured": featuredTools,
     "products.trending": [],
     "products.featured": [],
     "products.newArrivals": [],

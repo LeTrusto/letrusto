@@ -6,6 +6,7 @@ export type HomeSectionComponent =
   | "trustSignals"
   | "comparisons"
   | "guides"
+  | "featuredTools"
   | "productRail"
   | "featuredBrands"
   | "trendingSearches"
@@ -17,6 +18,7 @@ export type HomeDataSourceKey =
   | "trust.default"
   | "comparisons.popular"
   | "guides.latest"
+  | "tools.featured"
   | "products.trending"
   | "products.featured"
   | "products.newArrivals"
@@ -182,9 +184,18 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
     subtitle: "Explore tool categories with trusted research, comparisons, and practical buying context.",
   },
   {
-    id: "trust-letrusto",
+    id: "featured-tools",
     enabled: true,
     order: 3,
+    component: "featuredTools",
+    dataSource: "tools.featured",
+    title: "Featured AI Tools",
+    subtitle: "Explore tools we've researched and selected for specific workflows.",
+  },
+  {
+    id: "trust-letrusto",
+    enabled: true,
+    order: 4,
     component: "trustSignals",
     dataSource: "trust.default",
     title: "Why Trust LeTrusto",
@@ -193,7 +204,7 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
   {
     id: "ai-comparisons",
     enabled: true,
-    order: 4,
+    order: 5,
     component: "comparisons",
     dataSource: "comparisons.popular",
     title: "AI Comparison Starting Points",
@@ -204,7 +215,7 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
   {
     id: "ai-guides",
     enabled: true,
-    order: 5,
+    order: 6,
     component: "guides",
     dataSource: "guides.latest",
     title: "AI Buying Guides",
@@ -215,7 +226,7 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
   {
     id: "trending-searches",
     enabled: true,
-    order: 6,
+    order: 7,
     component: "trendingSearches",
     dataSource: "searches.trending",
     title: "Popular AI Tool Searches",
@@ -224,7 +235,7 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
   {
     id: "newsletter",
     enabled: true,
-    order: 7,
+    order: 8,
     component: "newsletter",
     dataSource: "none",
     title: "Get AI Tool Buying Updates",

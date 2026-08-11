@@ -1,5 +1,6 @@
 import Hero from "@/components/Hero";
 import HomeCategoryShowcase from "@/components/homepage/HomeCategoryShowcase";
+import HomeFeaturedToolsSection from "@/components/homepage/HomeFeaturedToolsSection";
 import HomeTrustSignalsSection from "@/components/homepage/HomeTrustSignalsSection";
 import HomeLatestGuidesSection from "@/components/homepage/HomeLatestGuidesSection";
 import HomePopularComparisonsSection from "@/components/homepage/HomePopularComparisonsSection";
@@ -54,6 +55,17 @@ export default function HomepageSectionRenderer({
           title={section.title ?? "Why Trust LeTrusto"}
           subtitle={section.subtitle}
           items={items}
+        />
+      );
+    }
+
+    case "featuredTools": {
+      const tools = dataSources["tools.featured"];
+      return (
+        <HomeFeaturedToolsSection
+          title={section.title ?? "Featured AI Tools"}
+          subtitle={section.subtitle}
+          tools={tools}
         />
       );
     }
