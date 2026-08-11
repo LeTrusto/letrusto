@@ -109,7 +109,7 @@ export default function Hero() {
                   <Search className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="flex-1">
-                  <label htmlFor="hero-search" className="sr-only">Search products, brands or ask a buying question</label>
+                  <label htmlFor="hero-search" className="sr-only">Ask LeTrusto about AI tools</label>
                   <textarea
                     id="hero-search"
                     ref={textareaRef}

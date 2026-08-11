@@ -1,4 +1,5 @@
 import Hero from "@/components/Hero";
+import HomeAskLetrustoSection from "@/components/homepage/HomeAskLetrustoSection";
 import HomeCategoryShowcase from "@/components/homepage/HomeCategoryShowcase";
 import HomeFeaturedToolsSection from "@/components/homepage/HomeFeaturedToolsSection";
 import HomeTrustSignalsSection from "@/components/homepage/HomeTrustSignalsSection";
@@ -140,6 +141,9 @@ export default function HomepageSectionRenderer({
         />
       );
     }
+
+    case "askLeTrusto":
+      return <HomeAskLetrustoSection />;
 
     case "newsletter":
       return (

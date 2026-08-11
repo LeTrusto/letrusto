@@ -7,6 +7,7 @@ export type HomeSectionComponent =
   | "comparisons"
   | "guides"
   | "featuredTools"
+  | "askLeTrusto"
   | "productRail"
   | "featuredBrands"
   | "trendingSearches"
@@ -233,9 +234,16 @@ export const HOMEPAGE_SECTIONS: HomepageSectionConfig[] = [
     subtitle: "Jump into common starting points teams use when narrowing AI software options.",
   },
   {
-    id: "newsletter",
+    id: "ask-letrusto",
     enabled: true,
     order: 8,
+    component: "askLeTrusto",
+    dataSource: "none",
+  },
+  {
+    id: "newsletter",
+    enabled: true,
+    order: 9,
     component: "newsletter",
     dataSource: "none",
     title: "Get AI Tool Buying Updates",
