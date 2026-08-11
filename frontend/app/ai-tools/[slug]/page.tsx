@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
 
+import AffiliateCTA from "@/components/AffiliateCTA";
 import { getAiToolBySlug } from "@/services/ai-tools.service";
 
 type Props = {
@@ -70,14 +71,11 @@ export default async function AIToolDetailPage({ params }: Props) {
 
   if (!tool) {
     return (
-      <main className="min-h-screen bg-slate-50 px-6 py-16">
-        <div className="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <h1 className="text-3xl font-black text-slate-900">AI Tool Not Found</h1>
-          <p className="mt-3 text-slate-600">This tool is unavailable or not currently published.</p>
-          <Link
-            href="/ai-tools"
-            className="mt-6 inline-flex rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-          >
+      <main className="min-h-screen bg-[var(--surface-soft)] px-6 py-16">
+        <div className="lt-card mx-auto max-w-4xl rounded-[var(--radius-2xl)] p-10 text-center">
+          <h1 className="lt-heading-1">AI Tool Not Found</h1>
+          <p className="lt-body mt-3">This tool is unavailable or not currently published.</p>
+          <Link href="/ai-tools" className="lt-btn lt-btn-md lt-btn-primary mt-6">
             Back to AI Tools
           </Link>
         </div>
@@ -113,30 +111,30 @@ export default async function AIToolDetailPage({ params }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(186,230,253,0.2),_transparent_25%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-6 py-12">
+    <main className="min-h-screen bg-[var(--surface-soft)] px-6 py-12">
       <Script id="ai-tool-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
       <div className="mx-auto max-w-6xl space-y-8">
         {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="text-xs text-slate-500">
+        <nav aria-label="Breadcrumb" className="text-xs text-[var(--text-muted)]">
           <ol className="flex flex-wrap items-center gap-1">
-            <li><Link href="/" className="hover:text-slate-700">Home</Link></li>
-            <li aria-hidden="true" className="text-slate-300">/</li>
-            <li><Link href="/ai-tools" className="hover:text-slate-700">AI Tools</Link></li>
-            <li aria-hidden="true" className="text-slate-300">/</li>
-            <li><Link href={`/category/${tool.category.slug}`} className="hover:text-slate-700">{tool.category.name}</Link></li>
-            <li aria-hidden="true" className="text-slate-300">/</li>
-            <li className="font-medium text-slate-700" aria-current="page">{tool.name}</li>
+            <li><Link href="/" className="lt-link">Home</Link></li>
+            <li aria-hidden="true" className="text-[var(--border)]">/</li>
+            <li><Link href="/ai-tools" className="lt-link">AI Tools</Link></li>
+            <li aria-hidden="true" className="text-[var(--border)]">/</li>
+            <li><Link href={`/category/${tool.category.slug}`} className="lt-link">{tool.category.name}</Link></li>
+            <li aria-hidden="true" className="text-[var(--border)]">/</li>
+            <li className="font-medium text-[var(--text-primary)]" aria-current="page">{tool.name}</li>
           </ol>
         </nav>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="lt-card rounded-[var(--radius-2xl)] p-8">
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{tool.category.name}</p>
-              <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-950">{tool.name}</h1>
-              <p className="mt-2 text-lg text-slate-600">Provider: {tool.provider}</p>
-              <p className="mt-4 max-w-3xl text-slate-700">{tool.description}</p>
+              <p className="lt-label text-[var(--lt-purple)]">{tool.category.name}</p>
+              <h1 className="lt-heading-1 mt-2">{tool.name}</h1>
+              <p className="mt-2 text-lg text-[var(--text-secondary)]">Provider: {tool.provider}</p>
+              <p className="lt-body mt-4 max-w-3xl">{tool.description}</p>
             </div>
             {tool.logoUrl ? (
               <Image
@@ -152,7 +150,7 @@ export default async function AIToolDetailPage({ params }: Props) {
 
           <div className="mt-6 flex flex-wrap gap-2">
             {tool.tags.map((tag) => (
-              <span key={tag} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <span key={tag} className="lt-badge">
                 {tag}
               </span>
             ))}
@@ -245,50 +243,13 @@ export default async function AIToolDetailPage({ params }: Props) {
           </section>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-center gap-3">
-            {tool.affiliateAvailable && tool.affiliateUrl ? (
-              <a
-                href={tool.affiliateUrl}
-                target="_blank"
-                rel="noreferrer sponsored"
-                className="rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold text-white hover:bg-purple-700"
-              >
-                Visit {tool.name} →
-              </a>
-            ) : (
-              <a
-                href={tool.websiteUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                Visit Official Website
-              </a>
-            )}
-
-            {tool.affiliateAvailable && tool.affiliateUrl ? (
-              <a
-                href={tool.websiteUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-500"
-              >
-                Official website (non-affiliate)
-              </a>
-            ) : null}
-
-            <Link href="/ai-tools" className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-500">
-              ← Back to AI Tools
-            </Link>
-          </div>
-          {tool.affiliateAvailable && tool.affiliateUrl ? (
-            <p className="mt-4 text-xs text-slate-400">
-              Affiliate link — LeTrusto may earn a commission when you purchase through this link at no extra cost to you.{" "}
-              <Link href="/affiliate-disclosure" className="underline hover:text-slate-600">Learn more</Link>
-            </p>
-          ) : null}
-        </div>
+        <AffiliateCTA
+          toolSlug={tool.slug}
+          toolName={tool.name}
+          websiteUrl={tool.websiteUrl}
+          backendAffiliateAvailable={tool.affiliateAvailable}
+          backendAffiliateUrl={tool.affiliateUrl}
+        />
       </div>
     </main>
   );

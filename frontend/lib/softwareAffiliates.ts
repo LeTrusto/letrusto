@@ -34,13 +34,48 @@ export const SOFTWARE_AFFILIATES: SoftwareAffiliate[] = [
     toolSlug: "elevenlabs",
     providerName: "ElevenLabs",
     status: "active",
-    // Confirmed PartnerStack affiliate tracking URL — set in DB via migration 20260810_01.
     affiliateUrl: "https://try.elevenlabs.io/l893urztlad5",
     officialUrl: "https://elevenlabs.io",
     network: "PartnerStack",
     verifiedDate: "2026-08-10",
     disclosureNote:
       "LeTrusto is an approved affiliate partner of ElevenLabs. We may earn a commission when you sign up through our link.",
+  },
+  {
+    toolSlug: "highlevel",
+    providerName: "HighLevel",
+    status: "active",
+    // TODO: Replace with real HighLevel affiliate tracking URL from dashboard.
+    affiliateUrl: null,
+    officialUrl: "https://www.gohighlevel.com",
+    network: null,
+    verifiedDate: "2026-08-11",
+    disclosureNote:
+      "LeTrusto is an approved affiliate partner of HighLevel. We may earn a commission when you sign up through our link.",
+  },
+  {
+    toolSlug: "moosend",
+    providerName: "Moosend",
+    status: "active",
+    // TODO: Replace with real Moosend affiliate tracking URL from dashboard.
+    affiliateUrl: null,
+    officialUrl: "https://moosend.com",
+    network: null,
+    verifiedDate: "2026-08-11",
+    disclosureNote:
+      "LeTrusto is an approved affiliate partner of Moosend. We may earn a commission when you sign up through our link.",
+  },
+  {
+    toolSlug: "beehiiv",
+    providerName: "beehiiv",
+    status: "active",
+    // TODO: Replace with real beehiiv affiliate tracking URL from dashboard.
+    affiliateUrl: null,
+    officialUrl: "https://www.beehiiv.com",
+    network: null,
+    verifiedDate: "2026-08-11",
+    disclosureNote:
+      "LeTrusto is an approved affiliate partner of beehiiv. We may earn a commission when you sign up through our link.",
   },
 ];
 
