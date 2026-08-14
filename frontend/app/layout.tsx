@@ -1,17 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import AffiliateDisclosure from "@/components/AffiliateDisclosure";
+import CommerceNavbar from "@/components/layout/CommerceNavbar";
+import CommerceFooter from "@/components/layout/CommerceFooter";
+import MobileNav from "@/components/layout/MobileNav";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import SchemaOrg from "@/components/SchemaOrg";
 import { AuthProvider } from "@/lib/authContext";
+import { CartProvider } from "@/lib/cartContext";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -31,31 +33,32 @@ export const metadata: Metadata = {
     template: "%s | LeTrusto",
   },
   description:
-    "LeTrusto is an AI-powered buying advisor for AI tools and software recommendations.",
+    "Discover trending beauty, jewellery and style finds at everyday prices. LeTrusto — curated discovery commerce for India.",
   keywords: [
-    "AI tools",
-    "software buying advisor",
-    "AI software comparison",
-    "AI recommendations",
-    "buying guides",
-    "research before buying",
-    "know before you buy",
+    "beauty accessories",
+    "fashion jewellery",
+    "hair accessories",
+    "style finds",
+    "affordable fashion",
+    "trending finds",
+    "LeTrusto",
+    "online shopping India",
   ],
   openGraph: {
     type: "website",
-    locale: "en_US",
+    locale: "en_IN",
     url: "https://letrusto.com",
     siteName: "LeTrusto",
-    title: "LeTrusto",
-    description: "AI-powered buying advisor for AI tools and software.",
+    title: "LeTrusto — Trending Finds. Everyday Prices.",
+    description: "Discover trending beauty, jewellery and style finds at everyday prices.",
     images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     site: "@letrusto",
     creator: "@letrusto",
-    title: "LeTrusto",
-    description: "AI-powered buying advisor for AI tools and software.",
+    title: "LeTrusto — Trending Finds. Everyday Prices.",
+    description: "Discover trending beauty, jewellery and style finds at everyday prices.",
     images: ["/images/og-default.svg"],
   },
   authors: [{ name: "LeTrusto", url: "https://letrusto.com" }],
@@ -94,7 +97,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
         <body className="min-h-full flex flex-col bg-[var(--surface-soft)] text-[var(--text-primary)]">
         <SchemaOrg
@@ -103,7 +106,7 @@ export default function RootLayout({
             "@id": "https://letrusto.com/#website",
             name: "LeTrusto",
             url: "https://letrusto.com",
-            description: "AI-powered buying advisor for AI tools and software recommendations.",
+            description: "Curated discovery commerce for beauty, jewellery and style finds in India.",
             potentialAction: {
               "@type": "SearchAction",
               target: "https://letrusto.com/search?q={search_term_string}",
@@ -123,15 +126,17 @@ export default function RootLayout({
               width: 512,
               height: 512,
             },
-            description: "Research-backed buying guidance for AI tools and software comparisons.",
+            description: "Curated discovery commerce for beauty, jewellery and style finds in India.",
             sameAs: ["https://x.com/letrusto", "https://instagram.com/letrusto"],
           }}
         />
         <AuthProvider>
-          <Navbar />
-          <AffiliateDisclosure />
-          {children}
-          <Footer />
+          <CartProvider>
+            <CommerceNavbar />
+            <main className="flex-1 pb-16 md:pb-0">{children}</main>
+            <CommerceFooter />
+            <MobileNav />
+          </CartProvider>
         </AuthProvider>
         <GoogleAnalytics />
       </body>
