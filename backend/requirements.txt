@@ -10,4 +10,5 @@ bcrypt>=4.0.0
 email-validator>=2.0.0
 faker>=37.5.3
 resend>=2.14.0
+httpx>=0.28.0
 pytest>=8.4.1

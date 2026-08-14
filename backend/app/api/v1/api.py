@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     products,
     recommendations,
     search,
+    supplier_validation,
     support,
     users,
 )
@@ -40,3 +41,4 @@ api_router.include_router(analytics.router)
 api_router.include_router(admin.router)
 api_router.include_router(affiliate.router)
 api_router.include_router(articles.router)
+api_router.include_router(supplier_validation.router)
