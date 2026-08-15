@@ -75,12 +75,120 @@ def test_import_is_draft_and_preserves_supplier_data(monkeypatch):
         assert result.cj_inventory == 50
         assert result.factory_inventory == 1000
         assert result.total_inventory == 1050
+        assert result.supplier_cost == Decimal("167.00")
+        assert result.shipping_cost == Decimal("167.00")
         assert len(result.images) == 2
         assert result.variants[0].supplier_variant_id == "VID-TEST-001"
+        assert result.variants[0].supplier_cost == Decimal("167.00")
+        assert result.variants[0].supplier_cost_usd == Decimal("2.0000")
         assert result.variants[0].cj_inventory == 50
         assert result.variants[0].factory_inventory == 1000
     finally:
         db.query(Product).filter(Product.supplier_product_id == product_id).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+class VariantOnlyCostAdapter(FakeAdapter):
+    async def get_product(self, product_id: str) -> RawSupplierProduct:
+        product = await super().get_product(product_id)
+        product.price_usd = None
+        product.variants[0].price_usd = 1.09
+        product.weight_grams = None
+        return product
+
+
+def test_import_preserves_variant_cost_without_inventing_product_cost(monkeypatch):
+    import app.services.admin_product_service as module
+    from app.schemas.admin_products import ProductImportRequest
+
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: VariantOnlyCostAdapter())
+    db = SessionLocal()
+    service = AdminProductService(db)
+    product_id = "phase31-variant-only-cost"
+    try:
+        result = asyncio.run(
+            service.import_product(
+                ProductImportRequest(supplier="cj", supplier_product_id=product_id)
+            )
+        )
+
+        assert result.supplier_cost is None
+        assert result.variants[0].supplier_cost == Decimal("91.02")
+        assert result.variants[0].supplier_cost_usd == Decimal("1.0900")
+        assert result.shipping_cost == Decimal("167.00")
+        assert result.cj_inventory == 50
+        assert result.factory_inventory == 1000
+        assert result.supplier_validation_details["missing_fields"] == ["price", "weight", "category"]
+        assert result.supplier_validation_details["variants"][0]["cost_usd"] == 1.09
+        assert result.supplier_validation_details["variants"][0]["weight_grams"] == 20.0
+    finally:
+        db.query(Product).filter(Product.supplier_product_id == product_id).delete(
+            synchronize_session=False
+        )
+        db.commit()
+        db.close()
+
+
+class HairClipEvidenceAdapter(FakeAdapter):
+    async def get_product(self, product_id: str) -> RawSupplierProduct:
+        product = await super().get_product(product_id)
+        product.weight_grams = None
+        return product
+
+
+def test_import_reuses_phase2_scoring_once_and_persists_exact_hair_clip_evidence(monkeypatch):
+    import app.services.admin_product_service as module
+    from app.schemas.admin_products import ProductImportRequest
+
+    calls = []
+    existing_score_product = module.score_product
+
+    def scoring_spy(normalized, economics=None, shipping=None):
+        calls.append((normalized, economics, shipping))
+        return existing_score_product(normalized, economics=economics, shipping=shipping)
+
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: HairClipEvidenceAdapter())
+    monkeypatch.setattr(module, "score_product", scoring_spy)
+    db = SessionLocal()
+    service = AdminProductService(db)
+    product_id = "phase342-hair-clip-evidence"
+    try:
+        result = asyncio.run(
+            service.import_product(
+                ProductImportRequest(supplier="cj", supplier_product_id=product_id)
+            )
+        )
+
+        assert len(calls) == 1
+        assert result.status == "DRAFT"
+        assert result.supplier_validation_status == "REVIEW"
+        assert result.supplier_validation_score == 61
+        assert result.supplier_validation_notes == [
+            "Margin unknown — missing cost inputs",
+            "Missing: weight, category",
+        ]
+        assert result.supplier_validated_at is not None
+        assert result.supplier_validation_details["breakdown"] == {
+            "supplier_reliability": 12,
+            "shipping_feasibility": 25,
+            "margin_score": 5,
+            "inventory_score": 5,
+            "data_completeness": 6,
+            "return_risk": 8,
+        }
+        assert result.supplier_validation_details["calculation_origin"] == "IMPORT"
+        assert result.supplier_validation_details["historical_evidence_available"] is True
+        assert result.supplier_validation_details["unknown_costs"] == ["rto_reserve"]
+        stored = db.query(Product).filter(Product.supplier_product_id == product_id).one()
+        assert stored.supplier_validation_status == "REVIEW"
+        assert stored.supplier_validation_score == 61
+        assert stored.supplier_validation_notes == result.supplier_validation_notes
+        assert stored.supplier_validated_at is not None
+    finally:
+        db.query(Product).filter(Product.supplier_product_id == product_id).delete(
+            synchronize_session=False
+        )
         db.commit()
         db.close()
 

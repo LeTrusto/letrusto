@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
@@ -48,6 +49,13 @@ class Settings(BaseSettings):
     # Supplier integration (Phase 2 validation)
     SUPPLIER_PROVIDER: str = "cj"
     CJ_API_KEY: str = ""
+
+    # Approved Phase 3.3.3 prepaid launch pricing policy
+    PRICING_FX_RATE: Decimal = Decimal("98.00")
+    PAYMENT_GATEWAY_PCT: Decimal = Decimal("2.36")
+    RTO_RESERVE_PCT: Decimal = Decimal("4.00")
+    TARGET_CONTRIBUTION_MARGIN_PCT: Decimal = Decimal("20.00")
+    TARGET_CAC_INR: Decimal = Decimal("150.00")
 
     # Rate limiting (requests per minute per IP)
     RATE_LIMIT_AUTH: int = 10

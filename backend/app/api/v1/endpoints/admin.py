@@ -5,7 +5,16 @@ from fastapi import APIRouter, Depends, Query
 from app.api.deps import get_admin_product_service, get_admin_service, get_current_admin
 from app.models.entities import User
 from app.schemas.admin import AdminDashboardStats, AdminUserListResponse
-from app.schemas.admin_products import AdminProductDTO, AdminProductListResponse, ProductImportRequest, ProductStatusUpdate
+from app.schemas.admin_products import (
+    AdminProductDTO,
+    AdminProductListResponse,
+    CommercialReviewResponse,
+    PriceCalculationRequest,
+    PriceCalculationResponse,
+    ProductImportRequest,
+    ProductStatusUpdate,
+    VariantPriceCalculationResponse,
+)
 from app.services.admin_service import AdminService
 from app.services.admin_product_service import AdminProductService
 
@@ -68,6 +77,40 @@ def update_catalog_product(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> AdminProductDTO:
     return service.update_status(product_id, payload)
+
+
+@router.post("/products/{product_id}/calculate-price", response_model=PriceCalculationResponse)
+def calculate_catalog_product_price(
+    product_id: UUID,
+    payload: PriceCalculationRequest,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> PriceCalculationResponse:
+    return service.calculate_price(product_id, payload)
+
+
+@router.post(
+    "/products/{product_id}/calculate-variant-prices",
+    response_model=VariantPriceCalculationResponse,
+)
+def calculate_catalog_product_variant_prices(
+    product_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> VariantPriceCalculationResponse:
+    return service.calculate_variant_prices(product_id)
+
+
+@router.post(
+    "/products/{product_id}/commercial-review",
+    response_model=CommercialReviewResponse,
+)
+def review_catalog_product_commercially(
+    product_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> CommercialReviewResponse:
+    return service.commercial_review(product_id)
 
 
 @router.post("/products/{product_id}/sync-inventory", response_model=AdminProductDTO)
