@@ -130,9 +130,21 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     availability: Mapped[str] = mapped_column(String(30), nullable=False, default="In Stock")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="ACTIVE", index=True)
+    supplier: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    supplier_product_id: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
+    supplier_source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    supplier_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    shipping_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    selling_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    total_inventory: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cj_inventory: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    factory_inventory: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    verified_warehouse: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    last_supplier_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="RESTRICT"), nullable=False)
-    brand_id: Mapped[int] = mapped_column(ForeignKey("brands.id", ondelete="RESTRICT"), nullable=False)
+    category_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id", ondelete="RESTRICT"), nullable=True)
+    brand_id: Mapped[int | None] = mapped_column(ForeignKey("brands.id", ondelete="RESTRICT"), nullable=True)
 
     # Phase 6.1 catalog enrichment fields (all nullable for backward compatibility)
     series: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
@@ -145,13 +157,13 @@ class Product(Base):
     amazon_affiliate_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     flipkart_affiliate_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    price_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    price_value: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     currency: Mapped[str] = mapped_column(String(8), nullable=False, default="INR")
-    rating: Mapped[Decimal] = mapped_column(Numeric(3, 1), nullable=False)
-    ai_score: Mapped[int] = mapped_column(Integer, nullable=False)
+    rating: Mapped[Decimal | None] = mapped_column(Numeric(3, 1), nullable=True)
+    ai_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    ai_summary: Mapped[str] = mapped_column(Text, nullable=False)
-    review_summary: Mapped[str] = mapped_column(Text, nullable=False)
+    ai_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    review_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -162,6 +174,7 @@ class Product(Base):
     brand: Mapped[Brand] = relationship(back_populates="products")
 
     images: Mapped[list["ProductImage"]] = relationship(back_populates="product", cascade="all, delete-orphan")
+    variants: Mapped[list["ProductVariant"]] = relationship(back_populates="product", cascade="all, delete-orphan")
     specifications: Mapped[list["ProductSpecification"]] = relationship(
         back_populates="product", cascade="all, delete-orphan"
     )
@@ -180,6 +193,31 @@ class Product(Base):
         foreign_keys="ProductSimilarity.product_id",
         cascade="all, delete-orphan",
     )
+
+
+class ProductVariant(Base):
+    __tablename__ = "product_variants"
+    __table_args__ = (
+        UniqueConstraint("product_id", "supplier_variant_id", name="uq_product_variants_product_supplier_id"),
+        Index("ix_product_variants_supplier_variant_id", "supplier_variant_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    supplier_variant_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    supplier_variant_sku: Mapped[str] = mapped_column(String(160), nullable=False, default="")
+    name: Mapped[str] = mapped_column(String(240), nullable=False, default="")
+    attributes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    supplier_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    total_inventory: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cj_inventory: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    factory_inventory: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    verified_warehouse: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    weight_grams: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    product: Mapped[Product] = relationship(back_populates="variants")
 
 
 class ProductImage(Base):

@@ -19,6 +19,7 @@ class ProductRepository:
             selectinload(Product.brand),
             selectinload(Product.category).selectinload(Category.parent),
             selectinload(Product.images),
+            selectinload(Product.variants),
             selectinload(Product.specifications),
             selectinload(Product.features),
             selectinload(Product.pros),
@@ -33,7 +34,7 @@ class ProductRepository:
         )
 
     def list_products(self, ids: list[str] | None = None) -> list[Product]:
-        stmt = select(Product).options(*self._product_load_options())
+        stmt = select(Product).where(Product.status == "ACTIVE").options(*self._product_load_options())
         if ids is not None:
             if len(ids) == 0:
                 return []
@@ -45,12 +46,18 @@ class ProductRepository:
         stmt = (
             select(Product)
             .options(*self._product_load_options())
-            .where(Product.slug == slug)
+            .where(Product.slug == slug, Product.status == "ACTIVE")
         )
         return self.db.scalars(stmt).unique().first()
 
     def search_candidates(self, query: ProductSearchQuery) -> list[Product]:
-        stmt: Select = select(Product).join(Product.brand).join(Product.category).options(*self._product_load_options())
+        stmt: Select = (
+            select(Product)
+            .join(Product.brand)
+            .join(Product.category)
+            .where(Product.status == "ACTIVE")
+            .options(*self._product_load_options())
+        )
 
         if query.category != "all":
             # Keep legacy smartphone category slugs compatible across older and newer datasets.
@@ -125,5 +132,5 @@ class ProductRepository:
         return list(self.db.scalars(select(Brand.name).order_by(Brand.name.asc())).all())
 
     def get_by_id(self, product_id) -> Product | None:
-        stmt = select(Product).options(*self._product_load_options()).where(Product.id == product_id)
+        stmt = select(Product).where(Product.id == product_id, Product.status == "ACTIVE").options(*self._product_load_options())
         return self.db.scalars(stmt).unique().first()
