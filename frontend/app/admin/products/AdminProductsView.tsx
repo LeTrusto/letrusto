@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { Calculator, ClipboardCheck } from "lucide-react";
+import { Calculator, Check, CirclePause, ClipboardCheck, ExternalLink, Play, Trash2, X } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -39,6 +39,9 @@ type Product = {
   supplier_validation_score: number | null;
   supplier_validation_notes: string[];
   supplier_validated_at: string | null;
+  approval_decided_at: string | null;
+  approval_decided_by_user_id: string | null;
+  approval_rejection_reason: string | null;
   market_price_status: "NOT_EVALUATED";
   supplier: string | null;
   supplier_product_id: string | null;
@@ -54,6 +57,33 @@ type Product = {
 };
 
 type ProductResponse = { products: Product[]; total: number };
+
+type MarketEvidence = {
+  id: string;
+  competitor_name: string;
+  product_name: string;
+  source_url: string;
+  observed_price_inr: number;
+  currency: "INR";
+  variant_description: string | null;
+  notes: string | null;
+  checked_at: string;
+};
+
+type MarketEvidenceResponse = {
+  evidence: MarketEvidence[];
+  analysis: {
+    observation_count: number;
+    minimum_price_inr: number | null;
+    maximum_price_inr: number | null;
+    average_price_inr: number | null;
+    median_price_inr: number | null;
+    status: "INSUFFICIENT_MARKET_DATA" | "MARKET_COMPETITIVE" | "MARKET_ABOVE_OBSERVED";
+    evaluated_variant_count: number;
+    letrusto_variant_min_price_inr: number | null;
+    letrusto_variant_max_price_inr: number | null;
+  };
+};
 
 type PricingInputs = {
   supplier_cost_usd: string;
@@ -136,6 +166,9 @@ export default function AdminProductsView() {
   const [working, setWorking] = useState(false);
   const [syncingProductId, setSyncingProductId] = useState<string | null>(null);
   const [reviewingProductId, setReviewingProductId] = useState<string | null>(null);
+  const [decidingProductId, setDecidingProductId] = useState<string | null>(null);
+  const [rejectingProductId, setRejectingProductId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const [calculatingProductId, setCalculatingProductId] = useState<string | null>(null);
   const [pricingInputs, setPricingInputs] = useState<Record<string, PricingInputs>>({});
   const [priceCalculations, setPriceCalculations] = useState<Record<string, PriceCalculation | VariantPriceCalculation>>({});
@@ -196,18 +229,25 @@ export default function AdminProductsView() {
     }
   }
 
-  async function updateStatus(product: Product, status: Product["status"]) {
+  async function runFinalAction(product: Product, action: "approve" | "reject" | "activate" | "pause") {
+    setDecidingProductId(product.id);
     setError("");
+    setMessage("");
     try {
-      const response = await fetch(`${API_BASE}/api/v1/admin/products/${product.id}`, {
-        method: "PATCH",
+      const response = await fetch(`${API_BASE}/api/v1/admin/products/${product.id}/${action}`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", ...apiHeaders() },
-        body: JSON.stringify({ status }),
+        body: action === "reject" ? JSON.stringify({ reason: rejectionReason.trim() || null }) : undefined,
       });
-      if (!response.ok) throw new Error(`API error ${response.status}`);
+      if (!response.ok) throw new Error(await apiError(response));
+      setMessage(`${product.name} ${action === "approve" ? "approved" : action === "reject" ? "rejected" : action === "activate" ? "activated" : "paused"}.`);
+      setRejectingProductId(null);
+      setRejectionReason("");
       await loadProducts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update status");
+      setError(err instanceof Error ? err.message : `Unable to ${action} product`);
+    } finally {
+      setDecidingProductId(null);
     }
   }
 
@@ -325,21 +365,51 @@ export default function AdminProductsView() {
                     <p className="text-xs text-[var(--text-muted)]">Variants: {product.variants.length} · Images: {product.images.length}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button type="button" disabled={reviewingProductId !== null} onClick={() => void runCommercialReview(product)} className="lt-btn lt-btn-secondary text-sm inline-flex items-center gap-2">
-                    <ClipboardCheck size={16} aria-hidden="true" />
-                    {reviewingProductId === product.id ? "Reviewing..." : "Run Commercial Review"}
-                  </button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {product.commercial_status !== "APPROVED" && product.commercial_status !== "REJECTED" && (
+                    <button type="button" disabled={reviewingProductId !== null || decidingProductId !== null} onClick={() => void runCommercialReview(product)} className="lt-btn lt-btn-secondary text-sm inline-flex items-center gap-2">
+                      <ClipboardCheck size={16} aria-hidden="true" />
+                      {reviewingProductId === product.id ? "Reviewing..." : "Run Commercial Review"}
+                    </button>
+                  )}
+                  {product.commercial_status === "REVIEW" && product.status !== "ACTIVE" && (
+                    <button type="button" disabled={decidingProductId !== null} onClick={() => void runFinalAction(product, "approve")} className="lt-btn lt-btn-primary text-sm inline-flex items-center gap-2">
+                      <Check size={16} aria-hidden="true" />
+                      {decidingProductId === product.id ? "Working..." : "Approve"}
+                    </button>
+                  )}
+                  {(product.commercial_status === "REVIEW" || product.commercial_status === "APPROVED") && product.status !== "ACTIVE" && (
+                    <button type="button" disabled={decidingProductId !== null} onClick={() => { setRejectingProductId(product.id); setRejectionReason(""); }} className="lt-btn lt-btn-secondary text-sm inline-flex items-center gap-2">
+                      <X size={16} aria-hidden="true" /> Reject
+                    </button>
+                  )}
+                  {product.commercial_status === "APPROVED" && (product.status === "DRAFT" || product.status === "PAUSED") && (
+                    <button type="button" disabled={decidingProductId !== null} onClick={() => void runFinalAction(product, "activate")} className="lt-btn lt-btn-primary text-sm inline-flex items-center gap-2">
+                      <Play size={16} aria-hidden="true" />
+                      {decidingProductId === product.id ? "Working..." : "Activate"}
+                    </button>
+                  )}
+                  {product.status === "ACTIVE" && (
+                    <button type="button" disabled={decidingProductId !== null} onClick={() => void runFinalAction(product, "pause")} className="lt-btn lt-btn-secondary text-sm inline-flex items-center gap-2">
+                      <CirclePause size={16} aria-hidden="true" />
+                      {decidingProductId === product.id ? "Working..." : "Pause"}
+                    </button>
+                  )}
                   <button type="button" disabled={syncingProductId !== null} onClick={() => void syncInventory(product)} className="lt-btn lt-btn-secondary text-sm">
                     {syncingProductId === product.id ? "Syncing..." : "Sync Inventory"}
                   </button>
-                  <select value={product.status} onChange={(event) => void updateStatus(product, event.target.value as Product["status"])} className="lt-select text-sm" aria-label={`Status for ${product.name}`}>
-                    <option value="DRAFT">DRAFT</option>
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="PAUSED">PAUSED</option>
-                  </select>
                 </div>
               </div>
+              {rejectingProductId === product.id && (
+                <form onSubmit={(event) => { event.preventDefault(); void runFinalAction(product, "reject"); }} className="mt-4 border-t border-[var(--border)] pt-4 flex flex-col sm:flex-row items-end gap-3">
+                  <label className="text-xs text-[var(--text-muted)] flex-1 w-full">
+                    <span>Rejection reason (optional)</span>
+                    <input value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} maxLength={500} className="lt-input w-full mt-1 text-sm" />
+                  </label>
+                  <button type="submit" disabled={decidingProductId !== null} className="lt-btn lt-btn-primary text-sm">Confirm Reject</button>
+                  <button type="button" disabled={decidingProductId !== null} onClick={() => { setRejectingProductId(null); setRejectionReason(""); }} className="lt-btn lt-btn-secondary text-sm">Cancel</button>
+                </form>
+              )}
               <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4 text-sm">
                 <Metric label="Status" value={product.status} />
                 <Metric label="CJ inventory" value={product.cj_inventory ?? 0} />
@@ -365,6 +435,9 @@ export default function AdminProductsView() {
               )}
               {product.commercial_reasons.length > 0 && (
                 <p className="mt-3 text-xs text-[var(--text-muted)]">Reasons: {product.commercial_reasons.join(", ")}</p>
+              )}
+              {product.approval_rejection_reason && (
+                <p className="mt-3 text-xs text-[var(--text-muted)]">Rejection reason: {product.approval_rejection_reason}</p>
               )}
               <details className="mt-4 border-t border-[var(--border)] pt-4">
                 <summary className="cursor-pointer text-sm font-semibold">Calculate Price</summary>
@@ -421,6 +494,7 @@ export default function AdminProductsView() {
                   </div>
                 )}
               </details>
+              <MarketEvidenceSection product={product} onError={setError} onMessage={setMessage} />
               {product.variants.length > 0 && (
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full text-xs">
@@ -443,4 +517,149 @@ function Metric({ label, value }: { label: string; value: string | number }) {
 
 function PriceInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return <label className="text-xs text-[var(--text-muted)]"><span>{label}</span><input type="number" min="0" step="any" required value={value} onChange={(event) => onChange(event.target.value)} className="lt-input w-full mt-1 text-sm" /></label>;
+}
+
+function MarketEvidenceSection({
+  product,
+  onError,
+  onMessage,
+}: {
+  product: Product;
+  onError: (message: string) => void;
+  onMessage: (message: string) => void;
+}) {
+  const [data, setData] = useState<MarketEvidenceResponse | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [working, setWorking] = useState(false);
+
+  async function loadEvidence() {
+    const response = await fetch(`${API_BASE}/api/v1/admin/products/${product.id}/market-evidence`, {
+      headers: apiHeaders(),
+    });
+    if (!response.ok) throw new Error(await apiError(response));
+    setData((await response.json()) as MarketEvidenceResponse);
+    setLoaded(true);
+  }
+
+  async function handleToggle(event: React.SyntheticEvent<HTMLDetailsElement>) {
+    if (event.currentTarget.open && !loaded) {
+      try {
+        await loadEvidence();
+      } catch (err) {
+        onError(err instanceof Error ? err.message : "Unable to load market evidence");
+      }
+    }
+  }
+
+  async function addEvidence(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    setWorking(true);
+    onError("");
+    const form = new FormData(formElement);
+    const checkedAt = String(form.get("checked_at") ?? "");
+    const payload = {
+      competitor_name: form.get("competitor_name"),
+      product_name: form.get("product_name"),
+      source_url: form.get("source_url"),
+      observed_price_inr: form.get("observed_price_inr"),
+      currency: "INR",
+      variant_description: form.get("variant_description") || null,
+      notes: form.get("notes") || null,
+      checked_at: checkedAt ? new Date(checkedAt).toISOString() : null,
+    };
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/products/${product.id}/market-evidence`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...apiHeaders() },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error(await apiError(response));
+      formElement.reset();
+      await loadEvidence();
+      onMessage(`Market evidence added for ${product.name}.`);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Unable to add market evidence");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function deleteEvidence(evidenceId: string) {
+    setWorking(true);
+    onError("");
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/v1/admin/products/${product.id}/market-evidence/${evidenceId}`,
+        { method: "DELETE", headers: apiHeaders() },
+      );
+      if (!response.ok) throw new Error(await apiError(response));
+      await loadEvidence();
+      onMessage(`Market evidence deleted for ${product.name}.`);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Unable to delete market evidence");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  const analysis = data?.analysis;
+  const variantRange = analysis?.letrusto_variant_min_price_inr == null
+    ? "NOT CALCULATED"
+    : analysis.letrusto_variant_min_price_inr === analysis.letrusto_variant_max_price_inr
+      ? formatInr(analysis.letrusto_variant_min_price_inr)
+      : `${formatInr(analysis.letrusto_variant_min_price_inr)} - ${formatInr(analysis.letrusto_variant_max_price_inr!)}`;
+
+  return (
+    <details className="mt-4 border-t border-[var(--border)] pt-4" onToggle={(event) => void handleToggle(event)}>
+      <summary className="cursor-pointer text-sm font-semibold">Market Evidence</summary>
+      {analysis && (
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mt-4 text-sm">
+          <Metric label="Observations" value={analysis.observation_count} />
+          <Metric label="Minimum" value={analysis.minimum_price_inr == null ? "-" : formatInr(analysis.minimum_price_inr)} />
+          <Metric label="Maximum" value={analysis.maximum_price_inr == null ? "-" : formatInr(analysis.maximum_price_inr)} />
+          <Metric label="Average" value={analysis.average_price_inr == null ? "-" : formatInr(analysis.average_price_inr)} />
+          <Metric label="Median" value={analysis.median_price_inr == null ? "-" : formatInr(analysis.median_price_inr)} />
+          <Metric label="Market status" value={analysis.status} />
+          <Metric label={`LeTrusto variants (${analysis.evaluated_variant_count})`} value={variantRange} />
+        </div>
+      )}
+      <form onSubmit={(event) => void addEvidence(event)} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
+        <EvidenceInput name="competitor_name" label="Competitor name" required />
+        <EvidenceInput name="product_name" label="Product name" required />
+        <EvidenceInput name="source_url" label="Source URL" type="url" required />
+        <EvidenceInput name="observed_price_inr" label="Observed price (INR)" type="number" min="0.01" step="0.01" required />
+        <EvidenceInput name="variant_description" label="Variant description" />
+        <EvidenceInput name="checked_at" label="Checked at" type="datetime-local" />
+        <label className="text-xs text-[var(--text-muted)] md:col-span-2"><span>Notes</span><textarea name="notes" className="lt-input w-full mt-1 text-sm min-h-10" /></label>
+        <div className="flex items-end gap-3">
+          <span className="text-sm font-semibold pb-2">Currency: INR</span>
+          <button type="submit" disabled={working} className="lt-btn lt-btn-primary text-sm">{working ? "Saving..." : "Add Evidence"}</button>
+        </div>
+      </form>
+      {data && data.evidence.length === 0 && <p className="mt-4 text-sm text-[var(--text-muted)]">No market observations recorded.</p>}
+      {data && data.evidence.length > 0 && (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2">Competitor</th><th>Product</th><th>Variant</th><th>Price</th><th>Checked</th><th>Notes</th><th><span className="sr-only">Actions</span></th></tr></thead>
+            <tbody>{data.evidence.map((evidence) => (
+              <tr key={evidence.id} className="border-t border-[var(--border)]">
+                <td className="py-2 pr-3">{evidence.competitor_name}</td>
+                <td className="pr-3"><a href={evidence.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">{evidence.product_name}<ExternalLink size={12} aria-hidden="true" /></a></td>
+                <td className="pr-3">{evidence.variant_description ?? "-"}</td>
+                <td className="pr-3 font-semibold">{formatInr(evidence.observed_price_inr)}</td>
+                <td className="pr-3">{new Date(evidence.checked_at).toLocaleString("en-IN")}</td>
+                <td className="pr-3">{evidence.notes ?? "-"}</td>
+                <td><button type="button" disabled={working} onClick={() => void deleteEvidence(evidence.id)} className="lt-btn lt-btn-secondary p-2" title="Delete market evidence" aria-label={`Delete evidence from ${evidence.competitor_name}`}><Trash2 size={14} aria-hidden="true" /></button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </details>
+  );
+}
+
+function EvidenceInput({ name, label, type = "text", required = false, min, step }: { name: string; label: string; type?: string; required?: boolean; min?: string; step?: string }) {
+  return <label className="text-xs text-[var(--text-muted)]"><span>{label}</span><input name={name} type={type} required={required} min={min} step={step} className="lt-input w-full mt-1 text-sm" /></label>;
 }

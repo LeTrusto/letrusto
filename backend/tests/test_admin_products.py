@@ -2,9 +2,11 @@ import asyncio
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_admin_product_service, get_current_admin
+from app.core.exceptions import BadRequestError
 from app.main import app
 from app.db.session import SessionLocal
 from app.models.entities import Brand, Category, Product
@@ -218,7 +220,7 @@ def test_import_route_reaches_service_and_persists_supplier_product(monkeypatch)
         db.close()
 
 
-def test_import_is_idempotent_and_status_updates(monkeypatch):
+def test_import_is_idempotent_and_supplier_status_patch_is_gated(monkeypatch):
     import app.services.admin_product_service as module
     from app.schemas.admin_products import ProductImportRequest, ProductStatusUpdate
 
@@ -233,10 +235,11 @@ def test_import_is_idempotent_and_status_updates(monkeypatch):
         assert first.id == second.id
         assert db.query(Product).filter(Product.supplier == "cj", Product.supplier_product_id == product_id).count() == 1
 
-        updated = service.update_status(first.id, ProductStatusUpdate(status="ACTIVE"))
-        assert updated.status == "ACTIVE"
-        updated = service.update_status(first.id, ProductStatusUpdate(status="PAUSED"))
-        assert updated.status == "PAUSED"
+        assert service.update_status(first.id, ProductStatusUpdate(status="DRAFT")).status == "DRAFT"
+        with pytest.raises(BadRequestError, match="activate or pause"):
+            service.update_status(first.id, ProductStatusUpdate(status="ACTIVE"))
+        with pytest.raises(BadRequestError, match="activate or pause"):
+            service.update_status(first.id, ProductStatusUpdate(status="PAUSED"))
     finally:
         db.query(Product).filter(Product.supplier_product_id == product_id).delete(synchronize_session=False)
         db.commit()

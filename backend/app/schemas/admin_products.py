@@ -2,12 +2,69 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from datetime import datetime
+
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 CatalogStatus = Literal["DRAFT", "ACTIVE", "PAUSED"]
 CommercialStatus = Literal["DRAFT", "REVIEW", "APPROVED", "REJECTED"]
 SupplierValidationStatus = Literal["PASS", "REVIEW", "REJECT"]
+MarketEvidenceStatus = Literal[
+    "INSUFFICIENT_MARKET_DATA", "MARKET_COMPETITIVE", "MARKET_ABOVE_OBSERVED"
+]
+
+
+class MarketEvidenceCreate(BaseModel):
+    competitor_name: str = Field(min_length=1, max_length=160)
+    product_name: str = Field(min_length=1, max_length=240)
+    source_url: HttpUrl
+    observed_price_inr: Decimal = Field(gt=0, allow_inf_nan=False, max_digits=12, decimal_places=2)
+    currency: Literal["INR"] = "INR"
+    variant_description: str | None = Field(default=None, max_length=240)
+    notes: str | None = None
+    checked_at: datetime | None = None
+
+    @field_validator("competitor_name", "product_name")
+    @classmethod
+    def required_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("must not be blank")
+        return value.strip()
+
+
+class MarketEvidenceDTO(BaseModel):
+    id: UUID
+    product_id: UUID
+    competitor_name: str
+    product_name: str
+    source_url: str
+    observed_price_inr: Decimal
+    currency: Literal["INR"]
+    variant_description: str | None
+    notes: str | None
+    checked_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class MarketEvidenceAnalysis(BaseModel):
+    observation_count: int
+    minimum_price_inr: Decimal | None
+    maximum_price_inr: Decimal | None
+    average_price_inr: Decimal | None
+    median_price_inr: Decimal | None
+    status: MarketEvidenceStatus
+    evaluated_variant_count: int
+    letrusto_variant_min_price_inr: Decimal | None
+    letrusto_variant_max_price_inr: Decimal | None
+    stored_product_selling_price_inr: Decimal | None
+
+
+class MarketEvidenceResponse(BaseModel):
+    product_id: UUID
+    evidence: list[MarketEvidenceDTO]
+    analysis: MarketEvidenceAnalysis
 
 
 class ProductImportRequest(BaseModel):
@@ -18,6 +75,18 @@ class ProductImportRequest(BaseModel):
 
 class ProductStatusUpdate(BaseModel):
     status: CatalogStatus
+
+
+class ProductRejectionRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
 
 
 class PriceCalculationRequest(BaseModel):
@@ -155,6 +224,10 @@ class AdminProductDTO(BaseModel):
     supplier_validation_notes: list[str]
     supplier_validation_details: dict | None
     supplier_validated_at: str | None
+    approval_decided_at: str | None
+    approval_decided_by_user_id: UUID | None
+    approval_rejection_reason: str | None
+    approval_evidence: dict | None
     market_price_status: Literal["NOT_EVALUATED"] = "NOT_EVALUATED"
     images: list[str]
     variants: list[AdminProductVariantDTO]

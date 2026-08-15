@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -150,6 +150,12 @@ class Product(Base):
     supplier_validation_notes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     supplier_validation_details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     supplier_validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approval_decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approval_decided_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    approval_rejection_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    approval_evidence: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     category_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id", ondelete="RESTRICT"), nullable=True)
     brand_id: Mapped[int | None] = mapped_column(ForeignKey("brands.id", ondelete="RESTRICT"), nullable=True)
@@ -183,6 +189,9 @@ class Product(Base):
 
     images: Mapped[list["ProductImage"]] = relationship(back_populates="product", cascade="all, delete-orphan")
     variants: Mapped[list["ProductVariant"]] = relationship(back_populates="product", cascade="all, delete-orphan")
+    market_evidence: Mapped[list["ProductMarketEvidence"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan"
+    )
     specifications: Mapped[list["ProductSpecification"]] = relationship(
         back_populates="product", cascade="all, delete-orphan"
     )
@@ -228,6 +237,33 @@ class ProductVariant(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     product: Mapped[Product] = relationship(back_populates="variants")
+
+
+class ProductMarketEvidence(Base):
+    __tablename__ = "product_market_evidence"
+    __table_args__ = (
+        CheckConstraint("observed_price_inr > 0", name="ck_product_market_evidence_positive_price"),
+        CheckConstraint("currency = 'INR'", name="ck_product_market_evidence_currency_inr"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    competitor_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    product_name: Mapped[str] = mapped_column(String(240), nullable=False)
+    source_url: Mapped[str] = mapped_column(Text, nullable=False)
+    observed_price_inr: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="INR", server_default="INR")
+    variant_description: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    product: Mapped[Product] = relationship(back_populates="market_evidence")
 
 
 class ProductImage(Base):

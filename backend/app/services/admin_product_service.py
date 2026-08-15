@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID, uuid4
 
 import httpx
@@ -10,15 +10,20 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.models.entities import Product, ProductImage, ProductVariant
+from app.models.entities import Product, ProductImage, ProductMarketEvidence, ProductVariant, User
 from app.schemas.admin_products import (
     AdminProductDTO,
     AdminProductListResponse,
     AdminProductVariantDTO,
     CommercialReviewResponse,
+    MarketEvidenceAnalysis,
+    MarketEvidenceCreate,
+    MarketEvidenceDTO,
+    MarketEvidenceResponse,
     PriceCalculationRequest,
     PriceCalculationResponse,
     ProductImportRequest,
+    ProductRejectionRequest,
     ProductStatusUpdate,
     VariantPriceCalculation,
     VariantPriceCalculationResponse,
@@ -137,6 +142,12 @@ class AdminProductService:
 
     def update_status(self, product_id: UUID, payload: ProductStatusUpdate) -> AdminProductDTO:
         product = self._get(product_id)
+        if product.supplier:
+            if payload.status != "DRAFT" or product.status != "DRAFT":
+                raise BadRequestError(
+                    "Supplier-backed catalog status must use activate or pause actions"
+                )
+            return self._dto(product)
         product.status = payload.status
         self.db.commit()
         return self._dto(self._get(product.id))
@@ -210,6 +221,8 @@ class AdminProductService:
 
     def commercial_review(self, product_id: UUID) -> CommercialReviewResponse:
         product = self._get(product_id)
+        if product.commercial_status in {"APPROVED", "REJECTED"}:
+            raise BadRequestError("Final commercial decision already exists")
         result = evaluate_commercial_product(product, self.launch_pricing_policy)
         reviewed_at = datetime.now(timezone.utc)
         product.commercial_status = result.decision
@@ -221,6 +234,188 @@ class AdminProductService:
             reviewed_at=reviewed_at.isoformat(),
             **result.__dict__,
         )
+
+    def approve(self, product_id: UUID, admin: User) -> AdminProductDTO:
+        product = self._get(product_id)
+        if not product.supplier or not product.supplier_product_id:
+            raise BadRequestError("Final approval requires a supplier-backed catalog product")
+        if product.status == "ACTIVE":
+            raise BadRequestError("Active product is already past the approval gate")
+
+        evaluation = evaluate_commercial_product(product, self.launch_pricing_policy)
+        critical_blockers = [
+            reason for reason in evaluation.blocking_reasons
+            if reason != "SUPPLIER_VALIDATION_REVIEW"
+        ]
+        critical_blockers = list(dict.fromkeys(critical_blockers))
+        if critical_blockers:
+            raise BadRequestError(
+                f"Final approval blocked: {', '.join(critical_blockers)}"
+            )
+
+        if product.commercial_status == "APPROVED":
+            return self._dto(product)
+
+        market_analysis = self.get_market_evidence(product.id).analysis
+        decided_at = datetime.now(timezone.utc)
+        product.commercial_status = "APPROVED"
+        product.commercial_reasons = evaluation.reasons
+        product.commercial_reviewed_at = decided_at
+        product.approval_decided_at = decided_at
+        product.approval_decided_by_user_id = admin.id
+        product.approval_rejection_reason = None
+        product.approval_evidence = self._approval_evidence_snapshot(
+            product, evaluation, market_analysis, decided_at, admin, "APPROVED"
+        )
+        self.db.commit()
+        return self._dto(self._get(product.id))
+
+    def reject(
+        self, product_id: UUID, payload: ProductRejectionRequest, admin: User
+    ) -> AdminProductDTO:
+        product = self._get(product_id)
+        if not product.supplier or not product.supplier_product_id:
+            raise BadRequestError("Final rejection requires a supplier-backed catalog product")
+        if product.status == "ACTIVE":
+            raise BadRequestError("Pause active product before rejection")
+        if product.commercial_status == "DRAFT":
+            raise BadRequestError("Run commercial review before final rejection")
+        if (
+            product.commercial_status == "REJECTED"
+            and product.approval_rejection_reason == payload.reason
+        ):
+            return self._dto(product)
+
+        evaluation = evaluate_commercial_product(product, self.launch_pricing_policy)
+        market_analysis = self.get_market_evidence(product.id).analysis
+        decided_at = datetime.now(timezone.utc)
+        product.commercial_status = "REJECTED"
+        product.commercial_reasons = list(dict.fromkeys(evaluation.reasons + ["HUMAN_REJECTED"]))
+        product.commercial_reviewed_at = decided_at
+        product.approval_decided_at = decided_at
+        product.approval_decided_by_user_id = admin.id
+        product.approval_rejection_reason = payload.reason
+        product.approval_evidence = self._approval_evidence_snapshot(
+            product, evaluation, market_analysis, decided_at, admin, "REJECTED"
+        )
+        self.db.commit()
+        return self._dto(self._get(product.id))
+
+    def activate(self, product_id: UUID) -> AdminProductDTO:
+        product = self._get(product_id)
+        if not product.supplier:
+            raise BadRequestError("Activation gate applies to supplier-backed catalog products")
+        if product.status == "ACTIVE":
+            return self._dto(product)
+        if product.status not in {"DRAFT", "PAUSED"}:
+            raise BadRequestError(f"Cannot activate product from catalog status {product.status}")
+        if product.commercial_status != "APPROVED":
+            raise BadRequestError("Product must have commercial status APPROVED before activation")
+        product.status = "ACTIVE"
+        self.db.commit()
+        return self._dto(self._get(product.id))
+
+    def pause(self, product_id: UUID) -> AdminProductDTO:
+        product = self._get(product_id)
+        if not product.supplier:
+            raise BadRequestError("Pause action applies to supplier-backed catalog products")
+        if product.status == "PAUSED":
+            return self._dto(product)
+        if product.status != "ACTIVE":
+            raise BadRequestError("Only an ACTIVE product can be paused")
+        product.status = "PAUSED"
+        self.db.commit()
+        return self._dto(self._get(product.id))
+
+    def create_market_evidence(
+        self, product_id: UUID, payload: MarketEvidenceCreate
+    ) -> MarketEvidenceDTO:
+        product = self._get(product_id)
+        evidence = ProductMarketEvidence(
+            product_id=product.id,
+            competitor_name=payload.competitor_name,
+            product_name=payload.product_name,
+            source_url=str(payload.source_url),
+            observed_price_inr=payload.observed_price_inr,
+            currency=payload.currency,
+            variant_description=payload.variant_description,
+            notes=payload.notes,
+            checked_at=payload.checked_at or datetime.now(timezone.utc),
+        )
+        self.db.add(evidence)
+        self.db.commit()
+        self.db.refresh(evidence)
+        return self._market_evidence_dto(evidence)
+
+    def get_market_evidence(self, product_id: UUID) -> MarketEvidenceResponse:
+        product = self._get(product_id)
+        evidence = list(self.db.scalars(
+            select(ProductMarketEvidence)
+            .where(ProductMarketEvidence.product_id == product.id)
+            .order_by(ProductMarketEvidence.checked_at.desc(), ProductMarketEvidence.created_at.desc())
+        ).all())
+        prices = sorted(item.observed_price_inr for item in evidence)
+        active_variant_prices = sorted(
+            variant.selling_price
+            for variant in product.variants
+            if variant.active and variant.selling_price is not None
+        )
+        comparison_prices = (
+            active_variant_prices
+            if active_variant_prices
+            else [product.selling_price] if product.selling_price is not None else []
+        )
+
+        count = len(prices)
+        minimum = prices[0] if prices else None
+        maximum = prices[-1] if prices else None
+        average = (
+            (sum(prices, Decimal("0")) / Decimal(count)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if prices else None
+        )
+        if not prices:
+            median = None
+        elif count % 2:
+            median = prices[count // 2]
+        else:
+            median = ((prices[count // 2 - 1] + prices[count // 2]) / Decimal("2")).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+
+        if count < 2:
+            status = "INSUFFICIENT_MARKET_DATA"
+        elif comparison_prices and all(price > maximum for price in comparison_prices):
+            status = "MARKET_ABOVE_OBSERVED"
+        else:
+            status = "MARKET_COMPETITIVE"
+
+        return MarketEvidenceResponse(
+            product_id=product.id,
+            evidence=[self._market_evidence_dto(item) for item in evidence],
+            analysis=MarketEvidenceAnalysis(
+                observation_count=count,
+                minimum_price_inr=minimum,
+                maximum_price_inr=maximum,
+                average_price_inr=average,
+                median_price_inr=median,
+                status=status,
+                evaluated_variant_count=len(active_variant_prices),
+                letrusto_variant_min_price_inr=active_variant_prices[0] if active_variant_prices else None,
+                letrusto_variant_max_price_inr=active_variant_prices[-1] if active_variant_prices else None,
+                stored_product_selling_price_inr=product.selling_price,
+            ),
+        )
+
+    def delete_market_evidence(self, product_id: UUID, evidence_id: UUID) -> None:
+        self._get(product_id)
+        evidence = self.db.scalar(select(ProductMarketEvidence).where(
+            ProductMarketEvidence.id == evidence_id,
+            ProductMarketEvidence.product_id == product_id,
+        ))
+        if not evidence:
+            raise NotFoundError("Market evidence not found for catalog product")
+        self.db.delete(evidence)
+        self.db.commit()
 
     async def sync_inventory(self, product_id: UUID) -> AdminProductDTO:
         product = self._get(product_id)
@@ -284,6 +479,89 @@ class AdminProductService:
         base = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-") or "supplier-product"
         return f"{base}-{supplier_product_id.lower()}"[:150]
 
+    @staticmethod
+    def _market_evidence_dto(evidence: ProductMarketEvidence) -> MarketEvidenceDTO:
+        return MarketEvidenceDTO(
+            id=evidence.id,
+            product_id=evidence.product_id,
+            competitor_name=evidence.competitor_name,
+            product_name=evidence.product_name,
+            source_url=evidence.source_url,
+            observed_price_inr=evidence.observed_price_inr,
+            currency="INR",
+            variant_description=evidence.variant_description,
+            notes=evidence.notes,
+            checked_at=evidence.checked_at,
+            created_at=evidence.created_at,
+            updated_at=evidence.updated_at,
+        )
+
+    def _approval_evidence_snapshot(
+        self,
+        product: Product,
+        evaluation,
+        market_analysis: MarketEvidenceAnalysis,
+        decided_at: datetime,
+        admin: User,
+        decision: str,
+    ) -> dict:
+        active_prices = sorted(
+            variant.selling_price
+            for variant in product.variants
+            if variant.active and variant.selling_price is not None
+        )
+        return {
+            "decision": decision,
+            "decided_at": decided_at.isoformat(),
+            "decided_by_user_id": str(admin.id),
+            "supplier_validation": {
+                "status": product.supplier_validation_status,
+                "score": product.supplier_validation_score,
+                "validated_at": (
+                    product.supplier_validated_at.isoformat() if product.supplier_validated_at else None
+                ),
+            },
+            "pricing_policy": {
+                "identifier": "PHASE_3_3_LAUNCH_POLICY",
+                "fx_rate": str(self.launch_pricing_policy.pricing_fx_rate),
+                "payment_gateway_percent": str(self.launch_pricing_policy.payment_gateway_pct),
+                "rto_reserve_percent": str(self.launch_pricing_policy.rto_reserve_pct),
+                "target_margin_percent": str(
+                    self.launch_pricing_policy.target_contribution_margin_pct
+                ),
+                "target_cac_inr": str(self.launch_pricing_policy.target_cac_inr),
+            },
+            "variants": {
+                "active_count": evaluation.active_variant_count,
+                "priced_count": len(active_prices),
+                "minimum_price_inr": str(active_prices[0]) if active_prices else None,
+                "maximum_price_inr": str(active_prices[-1]) if active_prices else None,
+            },
+            "market_evidence": {
+                "count": market_analysis.observation_count,
+                "minimum_price_inr": (
+                    str(market_analysis.minimum_price_inr)
+                    if market_analysis.minimum_price_inr is not None else None
+                ),
+                "maximum_price_inr": (
+                    str(market_analysis.maximum_price_inr)
+                    if market_analysis.maximum_price_inr is not None else None
+                ),
+                "average_price_inr": (
+                    str(market_analysis.average_price_inr)
+                    if market_analysis.average_price_inr is not None else None
+                ),
+                "median_price_inr": (
+                    str(market_analysis.median_price_inr)
+                    if market_analysis.median_price_inr is not None else None
+                ),
+                "status": market_analysis.status,
+            },
+            "cac_status": evaluation.cac_target_status,
+            "commercial_reasons": evaluation.reasons,
+            "cj_inventory": product.cj_inventory,
+        }
+
     def _dto(self, product: Product) -> AdminProductDTO:
         return AdminProductDTO(
             id=product.id, slug=product.slug, name=product.name, description=product.description, status=product.status,
@@ -306,6 +584,10 @@ class AdminProductService:
             supplier_validation_notes=product.supplier_validation_notes or [],
             supplier_validation_details=product.supplier_validation_details,
             supplier_validated_at=product.supplier_validated_at.isoformat() if product.supplier_validated_at else None,
+            approval_decided_at=product.approval_decided_at.isoformat() if product.approval_decided_at else None,
+            approval_decided_by_user_id=product.approval_decided_by_user_id,
+            approval_rejection_reason=product.approval_rejection_reason,
+            approval_evidence=product.approval_evidence,
             images=[image.url for image in sorted(product.images, key=lambda item: item.position)],
             variants=[AdminProductVariantDTO(
                 id=variant.id, supplier_variant_id=variant.supplier_variant_id, supplier_variant_sku=variant.supplier_variant_sku,
