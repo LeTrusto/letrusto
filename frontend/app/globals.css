@@ -1,38 +1,37 @@
 @import "tailwindcss";
 
-/* ── LeTrusto Brand Tokens ──────────────────────────────── */
+/* ── LeTrusto Commerce Design Tokens ─────────────────────── */
 :root {
   /* Brand palette */
-  --lt-purple: #7c3aed;
-  --lt-purple-light: #a78bfa;
-  --lt-purple-dark: #5b21b6;
-  --lt-pink: #db2777;
-  --lt-gradient: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
-  --lt-gradient-soft: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(219, 39, 119, 0.06) 100%);
+  --lt-primary: #18181b;
+  --lt-accent: #d4a574;
+  --lt-accent-dark: #b8915e;
+  --lt-rose: #e11d48;
+  --lt-success: #16a34a;
 
   /* Surfaces */
   --background: #ffffff;
-  --foreground: #0f172a;
+  --foreground: #18181b;
   --surface: #ffffff;
-  --surface-soft: #f8fafc;
-  --surface-muted: #f1f5f9;
+  --surface-soft: #fafaf9;
+  --surface-muted: #f5f5f4;
 
   /* Text */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
 
   /* Borders */
-  --border: #e2e8f0;
-  --border-hover: #cbd5e1;
+  --border: #e4e4e7;
+  --border-hover: #d4d4d8;
 
   /* Focus */
-  --ring: #7c3aed;
+  --ring: #d4a574;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 4px 16px -4px rgba(15, 23, 42, 0.1);
-  --shadow-premium: 0 24px 80px -32px rgba(15, 23, 42, 0.22), 0 10px 32px -18px rgba(15, 23, 42, 0.12);
+  --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.05);
+  --shadow-md: 0 4px 16px -4px rgba(24, 24, 27, 0.1);
+  --shadow-lg: 0 12px 40px -12px rgba(24, 24, 27, 0.15);
 
   /* Spacing / sizing */
   --radius-sm: 0.5rem;
@@ -47,11 +46,12 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-soft: var(--surface-soft);
-  --color-lt-purple: var(--lt-purple);
-  --color-lt-purple-light: var(--lt-purple-light);
-  --color-lt-purple-dark: var(--lt-purple-dark);
-  --color-lt-pink: var(--lt-pink);
-  --font-sans: var(--font-geist-sans);
+  --color-lt-primary: var(--lt-primary);
+  --color-lt-accent: var(--lt-accent);
+  --color-lt-accent-dark: var(--lt-accent-dark);
+  --color-lt-rose: var(--lt-rose);
+  --color-lt-success: var(--lt-success);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -73,10 +73,6 @@ body {
 .glass-panel {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
-}
-
-.premium-shadow {
-  box-shadow: var(--shadow-premium);
 }
 
 /* ── LeTrusto Button System ──────────────────────────────── */
@@ -118,22 +114,22 @@ body {
 }
 
 .lt-btn-primary {
-  background: var(--text-primary);
+  background: var(--lt-primary);
   color: #ffffff;
-  border-color: var(--text-primary);
+  border-color: var(--lt-primary);
 }
 .lt-btn-primary:hover:not(:disabled) {
-  background: #1e293b;
+  background: #27272a;
 }
 
-.lt-btn-brand {
-  background: var(--lt-gradient);
-  color: #ffffff;
+.lt-btn-accent {
+  background: var(--lt-accent);
+  color: var(--lt-primary);
   border-color: transparent;
+  font-weight: 700;
 }
-.lt-btn-brand:hover:not(:disabled) {
-  opacity: 0.92;
-  box-shadow: 0 4px 20px -6px rgba(124, 58, 237, 0.4);
+.lt-btn-accent:hover:not(:disabled) {
+  background: var(--lt-accent-dark);
 }
 
 .lt-btn-secondary {
@@ -165,8 +161,8 @@ body {
 }
 
 .lt-card-hover:hover {
-  border-color: rgba(124, 58, 237, 0.25);
-  box-shadow: 0 8px 32px -12px rgba(15, 23, 42, 0.12);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
 }
 
 /* ── LeTrusto Badge System ───────────────────────────────── */
@@ -183,9 +179,19 @@ body {
   color: var(--text-secondary);
 }
 
-.lt-badge-brand {
-  background: rgba(124, 58, 237, 0.1);
-  color: var(--lt-purple);
+.lt-badge-accent {
+  background: rgba(212, 165, 116, 0.15);
+  color: #92671f;
+}
+
+.lt-badge-sale {
+  background: var(--lt-rose);
+  color: #ffffff;
+}
+
+.lt-badge-success {
+  background: var(--lt-success);
+  color: #ffffff;
 }
 
 /* ── Form Controls ───────────────────────────────────────── */
@@ -205,8 +211,8 @@ body {
 }
 .lt-input:focus {
   outline: none;
-  border-color: var(--lt-purple);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+  border-color: var(--lt-accent);
+  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.2);
 }
 
 .lt-select {
@@ -224,8 +230,8 @@ body {
 }
 .lt-select:focus {
   outline: none;
-  border-color: var(--lt-purple);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+  border-color: var(--lt-accent);
+  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.2);
 }
 
 /* ── Typography helpers ──────────────────────────────────── */
@@ -288,7 +294,7 @@ body {
   transition: color 150ms ease;
 }
 .lt-link:hover {
-  color: var(--lt-purple);
+  color: var(--lt-accent-dark);
 }
 
 /* ── Shimmer animation ───────────────────────────────────── */
@@ -299,7 +305,12 @@ body {
 }
 
 .shimmer {
-  background: linear-gradient(110deg, #f1f5f9 8%, #e2e8f0 18%, #f1f5f9 33%);
+  background: linear-gradient(110deg, #f5f5f4 8%, #e4e4e7 18%, #f5f5f4 33%);
   background-size: 200% 100%;
   animation: shimmer 1.2s linear infinite;
+}
+
+/* ── Safe area for mobile bottom nav ─────────────────────── */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }

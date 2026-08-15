@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
 
+    # Supplier integration (Phase 2 validation)
+    SUPPLIER_PROVIDER: str = "cj"
+    CJ_API_KEY: str = ""
+
     # Rate limiting (requests per minute per IP)
     RATE_LIMIT_AUTH: int = 10
     RATE_LIMIT_DEFAULT: int = 120
