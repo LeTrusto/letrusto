@@ -43,13 +43,12 @@ async def import_product(
 def list_catalog_products(
     status: str | None = Query(default=None),
     supplier: str | None = Query(default=None),
-    include_legacy: bool = Query(default=False),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     _: User = Depends(get_current_admin),
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> AdminProductListResponse:
-    return service.list_products(status=status, supplier=supplier, include_legacy=include_legacy, skip=skip, limit=limit)
+    return service.list_products(status=status, supplier=supplier, skip=skip, limit=limit)
 
 
 @router.get("/products/{product_id}", response_model=AdminProductDTO)

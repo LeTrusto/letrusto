@@ -20,15 +20,12 @@ class AdminProductService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list_products(self, status: str | None, supplier: str | None, include_legacy: bool, skip: int, limit: int) -> AdminProductListResponse:
+    def list_products(self, status: str | None, supplier: str | None, skip: int, limit: int) -> AdminProductListResponse:
         stmt = select(Product).options(selectinload(Product.images), selectinload(Product.variants)).order_by(Product.created_at.desc())
         count_stmt = select(func.count(Product.id))
         if supplier:
             stmt = stmt.where(Product.supplier == supplier)
             count_stmt = count_stmt.where(Product.supplier == supplier)
-        elif include_legacy:
-            stmt = stmt.where(Product.supplier.is_(None))
-            count_stmt = count_stmt.where(Product.supplier.is_(None))
         else:
             stmt = stmt.where(Product.supplier.is_not(None))
             count_stmt = count_stmt.where(Product.supplier.is_not(None))

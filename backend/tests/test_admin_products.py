@@ -119,18 +119,12 @@ def test_admin_catalog_separates_legacy_and_supplier_products():
     db.add_all([legacy, supplier])
     db.commit()
     try:
-        default = service.list_products(None, None, False, 0, 100)
+        default = service.list_products(None, None, 0, 100)
         assert all(product.supplier is not None for product in default.products)
         assert supplier.id in {product.id for product in default.products}
         assert legacy.id not in {product.id for product in default.products}
 
-        legacy_only = service.list_products(None, None, True, 0, 1000)
-        legacy_ids = {product.id for product in legacy_only.products}
-        assert legacy.id in legacy_ids
-        assert supplier.id not in legacy_ids
-        assert all(product.supplier is None for product in legacy_only.products)
-
-        filtered = service.list_products(None, "cj", False, 0, 100)
+        filtered = service.list_products(None, "cj", 0, 100)
         assert {product.id for product in filtered.products} == {supplier.id}
         assert db.get(Product, legacy.id).status == "ACTIVE"
     finally:

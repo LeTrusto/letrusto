@@ -48,7 +48,6 @@ function apiHeaders(): Record<string, string> {
 
 export default function AdminProductsView() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [includeLegacy, setIncludeLegacy] = useState(false);
   const [supplierProductId, setSupplierProductId] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -58,8 +57,7 @@ export default function AdminProductsView() {
   const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const query = includeLegacy ? "?include_legacy=true" : "";
-      const response = await fetch(`${API_BASE}/api/v1/admin/products${query}`, { headers: apiHeaders() });
+      const response = await fetch(`${API_BASE}/api/v1/admin/products`, { headers: apiHeaders() });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const data = (await response.json()) as ProductResponse;
       setProducts(data.products);
@@ -68,7 +66,7 @@ export default function AdminProductsView() {
     } finally {
       setLoading(false);
     }
-  }, [includeLegacy]);
+  }, []);
 
   useEffect(() => {
     void Promise.resolve().then(loadProducts);
@@ -121,11 +119,6 @@ export default function AdminProductsView() {
         </div>
         <span className="text-sm text-[var(--text-muted)]">{products.length} loaded</span>
       </div>
-
-      <label className="flex items-center gap-2 mb-5 text-sm text-[var(--text-secondary)]">
-        <input type="checkbox" checked={includeLegacy} onChange={(event) => setIncludeLegacy(event.target.checked)} />
-        Legacy products
-      </label>
 
       <form onSubmit={(event) => void importProduct(event)} className="lt-card p-4 mb-6 flex flex-col sm:flex-row gap-3">
         <input
