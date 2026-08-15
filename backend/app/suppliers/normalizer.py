@@ -35,6 +35,10 @@ class NormalizedVariant:
     width_mm: int | None = None
     height_mm: int | None = None
     inventory: int | None = None
+    total_inventory: int | None = None
+    cj_inventory: int | None = None
+    factory_inventory: int | None = None
+    inventory_verification: str | None = None
     warehouse_country: str = ""
     barcode: str = ""
 
@@ -60,6 +64,10 @@ class NormalizedProduct:
     packing_weight_grams: float | None = None
     variants: list[NormalizedVariant] = field(default_factory=list)
     total_inventory: int | None = None
+    source_total_inventory: int | None = None
+    cj_inventory: int | None = None
+    factory_inventory: int | None = None
+    inventory_verification: str | None = None
     warehouse_country: str = ""
     delivery_cycle_days: str = ""
     logistics_properties: list[str] = field(default_factory=list)
@@ -109,6 +117,10 @@ def normalize_product(
         packing_weight_grams=raw.packing_weight_grams,
         variants=variants,
         total_inventory=raw.inventory_total,
+        source_total_inventory=raw.total_inventory,
+        cj_inventory=raw.cj_inventory,
+        factory_inventory=raw.factory_inventory,
+        inventory_verification=raw.inventory_verification,
         warehouse_country=raw.warehouse_country,
         delivery_cycle_days=raw.delivery_cycle_days,
         logistics_properties=raw.logistics_properties,
@@ -133,6 +145,10 @@ def _normalize_variant(raw: RawVariant, *, usd_to_inr: float) -> NormalizedVaria
         width_mm=raw.width_mm,
         height_mm=raw.height_mm,
         inventory=raw.inventory,
+        total_inventory=raw.total_inventory,
+        cj_inventory=raw.cj_inventory,
+        factory_inventory=raw.factory_inventory,
+        inventory_verification=raw.inventory_verification,
         warehouse_country=raw.warehouse_country,
         barcode=raw.barcode,
     )

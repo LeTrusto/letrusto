@@ -1,6 +1,8 @@
 """Tests for supplier adapter, normalizer, economics, and scoring — Phase 2."""
 
+import asyncio
 import pytest
+from unittest.mock import AsyncMock
 
 from app.suppliers.base import (
     RawSupplierProduct,
@@ -376,3 +378,176 @@ class TestCJParsing:
         variant = adapter._parse_variant(v)
 
         assert variant.inventory == 0
+
+    def test_parse_variant_null_inventory(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="test")
+        v = {"vid": "VAR-003", "variantSku": "CJTEST-NULL", "inventories": None}
+        variant = adapter._parse_variant(v)
+
+        assert variant.supplier_variant_id == "VAR-003"
+        assert variant.supplier_variant_sku == "CJTEST-NULL"
+        assert variant.inventory == 0
+
+    def test_get_inventory_maps_cj_and_factory_inventory(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="test")
+        adapter._get = AsyncMock(
+            return_value={
+                "result": True,
+                "data": [
+                    {
+                        "totalInventoryNum": 1500,
+                        "cjInventoryNum": 500,
+                        "factoryInventoryNum": 1000,
+                        "verifiedWarehouse": 1,
+                    }
+                ],
+            }
+        )
+
+        snapshot = asyncio.run(adapter.get_inventory("VAR-004"))
+
+        assert snapshot is not None
+        assert snapshot.total_inventory == 1500
+        assert snapshot.cj_inventory == 500
+        assert snapshot.factory_inventory == 1000
+        assert snapshot.verification_status == "verified"
+
+    def test_normalize_preserves_source_total_and_scores_cj_inventory(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="test")
+        adapter._get = AsyncMock(
+            return_value={
+                "result": True,
+                "data": [
+                    {
+                        "totalInventoryNum": 1500,
+                        "cjInventoryNum": 500,
+                        "factoryInventoryNum": 1000,
+                    }
+                ],
+            }
+        )
+
+        snapshot = asyncio.run(adapter.get_inventory("VAR-007"))
+        raw = _make_raw(
+            inventory=snapshot.cj_inventory if snapshot else None,
+        )
+        raw.total_inventory = snapshot.total_inventory if snapshot else None
+        raw.cj_inventory = snapshot.cj_inventory if snapshot else None
+        raw.factory_inventory = snapshot.factory_inventory if snapshot else None
+        normalized = normalize_product(raw)
+
+        assert normalized.total_inventory == 500
+        assert normalized.source_total_inventory == 1500
+        assert normalized.factory_inventory == 1000
+
+    def test_get_inventory_factory_only_is_not_sellable(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="test")
+        adapter._get = AsyncMock(
+            return_value={
+                "result": True,
+                "data": [
+                    {
+                        "totalInventoryNum": 40000,
+                        "cjInventoryNum": 0,
+                        "factoryInventoryNum": 40000,
+                        "verifiedWarehouse": 2,
+                    }
+                ],
+            }
+        )
+
+        snapshot = asyncio.run(adapter.get_inventory("VAR-005"))
+
+        assert snapshot is not None
+        assert snapshot.total_inventory == 40000
+        assert snapshot.cj_inventory == 0
+        assert snapshot.factory_inventory == 40000
+        assert snapshot.verification_status == "unverified"
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            {"totalInventoryNum": 0, "cjInventoryNum": 0, "factoryInventoryNum": 0},
+            {"totalInventoryNum": None, "cjInventoryNum": None, "factoryInventoryNum": None},
+        ],
+    )
+    def test_get_inventory_zero_or_null_fields_are_safe(self, entry: dict) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="test")
+        adapter._get = AsyncMock(return_value={"result": True, "data": [entry]})
+
+        snapshot = asyncio.run(adapter.get_inventory("VAR-006"))
+
+        assert snapshot is not None
+        assert snapshot.cj_inventory == 0
+        assert snapshot.factory_inventory == 0
+
+
+class TestCJAuthentication:
+    @pytest.fixture(autouse=True)
+    def clear_token_cache(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import app.suppliers.adapters.cj_adapter as cj
+
+        monkeypatch.setattr(cj, "_cached_access_token", "")
+        monkeypatch.setattr(cj, "_cached_token_expires_at", 0.0)
+
+    def test_successful_authentication_caches_token(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="fake-key")
+        adapter._post = AsyncMock(
+            return_value={"result": True, "data": {"accessToken": "fake-token", "accessTokenExpiry": 3600}}
+        )
+
+        assert asyncio.run(adapter.authenticate()) is True
+        assert adapter._headers()["CJ-Access-Token"] == "fake-token"
+        assert adapter._post.await_count == 1
+        assert asyncio.run(adapter.authenticate()) is True
+        assert adapter._post.await_count == 1
+
+    def test_authentication_failure_is_false(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="fake-key")
+        adapter._post = AsyncMock(return_value={"result": False, "data": None, "message": "secret-safe"})
+
+        assert asyncio.run(adapter.authenticate()) is False
+        assert "CJ-Access-Token" not in adapter._headers()
+
+    def test_malformed_authentication_response_is_false(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="fake-key")
+        adapter._post = AsyncMock(return_value=[])
+
+        assert asyncio.run(adapter.authenticate()) is False
+
+    def test_missing_api_key_is_rejected(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        with pytest.raises(ValueError, match="not configured"):
+            CJAdapter(api_key=" ")
+
+    def test_expired_token_reauthenticates(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import app.suppliers.adapters.cj_adapter as cj
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        monkeypatch.setattr(cj, "_cached_access_token", "expired-token")
+        monkeypatch.setattr(cj, "_cached_token_expires_at", 1.0)
+        adapter = CJAdapter(api_key="fake-key")
+        adapter._post = AsyncMock(
+            return_value={"result": True, "data": {"accessToken": "fresh-token", "accessTokenExpiry": 3600}}
+        )
+
+        assert asyncio.run(adapter.authenticate()) is True
+        assert adapter._headers()["CJ-Access-Token"] == "fresh-token"
+        adapter._post.assert_awaited_once()

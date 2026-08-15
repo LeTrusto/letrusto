@@ -32,6 +32,10 @@ class ValidationProductDTO(BaseModel):
     images: int
     variants: int
     inventory: int | None
+    total_inventory: int | None = None
+    cj_inventory: int | None = None
+    factory_inventory: int | None = None
+    inventory_verification: str | None = None
     warehouse: str
     weight_grams: float | None
     missing_fields: list[str]
@@ -61,6 +65,33 @@ class ValidationSummaryDTO(BaseModel):
     missing_data_fields: dict[str, int]
     shipping_validation_status: str
     products: list[ValidationProductDTO]
+
+
+class SupplierHealthDTO(BaseModel):
+    supplier: str
+    authenticated: bool
+    error: str | None = None
+
+
+@router.get("/health", response_model=SupplierHealthDTO)
+async def supplier_health(_: User = Depends(get_current_admin)) -> SupplierHealthDTO:
+    """Admin-only connectivity check that never returns supplier credentials."""
+    try:
+        adapter = build_supplier_adapter()
+    except ValueError:
+        return SupplierHealthDTO(supplier="cj", authenticated=False, error="CJ is not configured")
+
+    try:
+        authenticated = await adapter.authenticate()
+    except Exception:
+        logger.warning("CJ health check failed")
+        return SupplierHealthDTO(supplier=adapter.supplier_name, authenticated=False, error="CJ authentication failed")
+
+    return SupplierHealthDTO(
+        supplier=adapter.supplier_name,
+        authenticated=authenticated,
+        error=None if authenticated else "CJ authentication failed",
+    )
 
 
 @router.get("/search", response_model=ValidationSummaryDTO)
@@ -147,6 +178,10 @@ async def validate_supplier_products(
             images=len(normalized.images),
             variants=len(normalized.variants),
             inventory=normalized.total_inventory,
+            total_inventory=normalized.source_total_inventory,
+            cj_inventory=normalized.cj_inventory,
+            factory_inventory=normalized.factory_inventory,
+            inventory_verification=normalized.inventory_verification,
             warehouse=normalized.warehouse_country,
             weight_grams=normalized.weight_grams,
             missing_fields=normalized.missing_fields,

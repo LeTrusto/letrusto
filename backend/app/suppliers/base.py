@@ -15,6 +15,14 @@ class ShippingValidation(str, Enum):
 
 
 @dataclass
+class InventorySnapshot:
+    total_inventory: int
+    cj_inventory: int
+    factory_inventory: int
+    verification_status: str | None = None
+
+
+@dataclass
 class RawSupplierProduct:
     """Unprocessed product data exactly as the supplier returns it."""
 
@@ -33,6 +41,10 @@ class RawSupplierProduct:
     packing_weight_grams: float | None = None
     variants: list[RawVariant] = field(default_factory=list)
     inventory_total: int | None = None
+    total_inventory: int | None = None
+    cj_inventory: int | None = None
+    factory_inventory: int | None = None
+    inventory_verification: str | None = None
     warehouse_country: str = ""
     delivery_cycle_days: str = ""
     logistics_properties: list[str] = field(default_factory=list)
@@ -52,6 +64,10 @@ class RawVariant:
     width_mm: int | None = None
     height_mm: int | None = None
     inventory: int | None = None
+    total_inventory: int | None = None
+    cj_inventory: int | None = None
+    factory_inventory: int | None = None
+    inventory_verification: str | None = None
     warehouse_country: str = ""
     barcode: str = ""
 
@@ -102,7 +118,7 @@ class SupplierAdapter(Protocol):
 
     async def get_variants(self, product_id: str) -> list[RawVariant]: ...
 
-    async def get_inventory(self, variant_id: str) -> int | None: ...
+    async def get_inventory(self, variant_id: str) -> InventorySnapshot | None: ...
 
     async def calculate_shipping(
         self,

@@ -14,6 +14,10 @@ type ValidationProduct = {
   images: number;
   variants: number;
   inventory: number | null;
+  total_inventory: number | null;
+  cj_inventory: number | null;
+  factory_inventory: number | null;
+  inventory_verification: string | null;
   warehouse: string;
   weight_grams: number | null;
   missing_fields: string[];
@@ -180,7 +184,8 @@ export default function SupplierValidationView() {
                   <th className="py-3 pr-4">Selling (INR)</th>
                   <th className="py-3 pr-4">Contribution</th>
                   <th className="py-3 pr-4">Margin</th>
-                  <th className="py-3 pr-4">Inventory</th>
+                  <th className="py-3 pr-4">CJ Inventory</th>
+                  <th className="py-3 pr-4">Factory Inventory</th>
                   <th className="py-3 pr-4">Issues</th>
                 </tr>
               </thead>
@@ -209,7 +214,8 @@ export default function SupplierValidationView() {
                       ) : "—"}
                     </td>
                     <td className="py-3 pr-4">{marginBadge(p.margin_status)}</td>
-                    <td className="py-3 pr-4 font-mono">{p.inventory ?? "—"}</td>
+                    <td className="py-3 pr-4 font-mono">{p.cj_inventory ?? p.inventory ?? "—"}</td>
+                    <td className="py-3 pr-4 font-mono">{p.factory_inventory ?? "—"}</td>
                     <td className="py-3 pr-4">
                       {p.score_notes.length > 0 && (
                         <details className="text-[10px] text-[var(--text-muted)]">
