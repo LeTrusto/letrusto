@@ -346,6 +346,15 @@ class TestCJParsing:
         assert raw.price_usd == 4.5
         assert raw.inventory_total == 250
 
+    def test_parse_list_product_uses_pid_when_id_is_missing(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="test")
+        raw = adapter._parse_list_product({"pid": "PRODUCT-456", "sku": "CJJT2327063"})
+
+        assert raw.supplier_product_id == "PRODUCT-456"
+        assert raw.supplier_sku == "CJJT2327063"
+
     def test_get_product_resolves_supplier_sku_after_direct_404(self) -> None:
         from app.suppliers.adapters.cj_adapter import CJAdapter
 
@@ -398,6 +407,29 @@ class TestCJParsing:
         assert raw.cj_inventory == 40
         assert raw.factory_inventory == 77651
         assert raw.variants[0].supplier_variant_sku == "CJJT2327063-RED"
+
+    def test_get_product_resolves_supplier_sku_after_business_not_found(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="test")
+        adapter._get = AsyncMock(
+            side_effect=[
+                {"result": False, "data": None},
+                {
+                    "result": True,
+                    "data": {
+                        "content": [{"productList": [{"id": "PRODUCT-456", "sku": "CJJT2327063"}]}]
+                    },
+                },
+                {"result": True, "data": {"pid": "PRODUCT-456", "variants": []}},
+            ]
+        )
+
+        raw = asyncio.run(adapter.get_product("CJJT2327063"))
+
+        assert raw is not None
+        assert raw.supplier_product_id == "PRODUCT-456"
+        assert adapter._get.await_args_list[2].args[1] == {"pid": "PRODUCT-456"}
 
     def test_parse_variant(self) -> None:
         from app.suppliers.adapters.cj_adapter import CJAdapter

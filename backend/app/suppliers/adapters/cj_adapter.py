@@ -141,7 +141,7 @@ class CJAdapter:
     def _parse_list_product(self, item: dict) -> RawSupplierProduct:
         return RawSupplierProduct(
             supplier_id="cj",
-            supplier_product_id=item.get("id", ""),
+            supplier_product_id=item.get("id") or item.get("pid", ""),
             supplier_sku=item.get("sku") or item.get("spu", ""),
             title=item.get("nameEn", ""),
             description=item.get("description", ""),
@@ -170,6 +170,8 @@ class CJAdapter:
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code != 404:
                 raise
+            data = {"result": False, "data": None}
+        if not data.get("result") or not data.get("data"):
             matches = await self.search_products(product_id, page_size=50)
             match = next(
                 (

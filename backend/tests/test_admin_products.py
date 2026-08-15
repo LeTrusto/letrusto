@@ -2,6 +2,10 @@ import asyncio
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+from fastapi.testclient import TestClient
+
+from app.api.deps import get_admin_product_service, get_current_admin
+from app.main import app
 from app.db.session import SessionLocal
 from app.models.entities import Brand, Category, Product
 from app.services.admin_product_service import AdminProductService
@@ -81,6 +85,31 @@ def test_import_is_draft_and_preserves_supplier_data(monkeypatch):
         db.close()
 
 
+def test_import_route_reaches_service_and_persists_supplier_product(monkeypatch):
+    import app.services.admin_product_service as module
+
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: FakeAdapter())
+    db = SessionLocal()
+    service = AdminProductService(db)
+    product_id = "phase31-route-product"
+    app.dependency_overrides[get_current_admin] = lambda: object()
+    app.dependency_overrides[get_admin_product_service] = lambda: service
+    try:
+        response = TestClient(app).post(
+            "/api/v1/admin/products/import",
+            json={"supplier": "cj", "supplier_product_id": product_id, "destination": "IN"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "DRAFT"
+        assert db.query(Product).filter(Product.supplier_product_id == product_id).count() == 1
+    finally:
+        app.dependency_overrides.clear()
+        db.query(Product).filter(Product.supplier_product_id == product_id).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
 def test_import_is_idempotent_and_status_updates(monkeypatch):
     import app.services.admin_product_service as module
     from app.schemas.admin_products import ProductImportRequest, ProductStatusUpdate
@@ -125,7 +154,10 @@ def test_admin_catalog_separates_legacy_and_supplier_products():
         assert legacy.id not in {product.id for product in default.products}
 
         filtered = service.list_products(None, "cj", 0, 100)
-        assert {product.id for product in filtered.products} == {supplier.id}
+        filtered_ids = {product.id for product in filtered.products}
+        assert supplier.id in filtered_ids
+        assert legacy.id not in filtered_ids
+        assert all(product.supplier == "cj" for product in filtered.products)
         assert db.get(Product, legacy.id).status == "ACTIVE"
     finally:
         db.delete(supplier)
