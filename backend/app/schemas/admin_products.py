@@ -73,6 +73,85 @@ class ProductImportRequest(BaseModel):
     destination: str = "IN"
 
 
+CandidateApprovalStatus = Literal["REVIEW", "APPROVED", "REJECTED", "IMPORTED"]
+
+
+class SupplierCandidateCreate(BaseModel):
+    supplier: Literal["cj"]
+    supplier_product_id: str = Field(min_length=1, max_length=160)
+    destination: Literal["IN"] = "IN"
+
+    @field_validator("supplier_product_id")
+    @classmethod
+    def normalize_supplier_product_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("supplier product ID must not be blank")
+        return normalized
+
+
+class SupplierCandidateDTO(BaseModel):
+    id: UUID
+    supplier: Literal["cj"]
+    supplier_product_id: str
+    supplier_sku: str | None
+    name: str
+    approval_status: CandidateApprovalStatus
+    supplier_validation_status: SupplierValidationStatus | None
+    supplier_validation_score: int | None
+    commercial_status: Literal["REVIEW", "APPROVED", "REJECTED"]
+    market_status: Literal["NOT_EVALUATED"]
+    approved_at: datetime | None
+    approved_by_user_id: UUID | None
+    imported_product_id: UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class SupplierCandidateListResponse(BaseModel):
+    candidates: list[SupplierCandidateDTO]
+    total: int
+
+
+BulkImportItemStatus = Literal[
+    "IMPORTED", "ALREADY_EXISTS", "ALREADY_IMPORTED", "REJECTED_NOT_APPROVED", "FAILED"
+]
+
+
+class BulkApprovedProductImportRequest(BaseModel):
+    supplier: Literal["cj"]
+    product_ids: list[str] = Field(min_length=1, max_length=100)
+
+    @field_validator("product_ids")
+    @classmethod
+    def normalize_product_ids(cls, values: list[str]) -> list[str]:
+        normalized = [value.strip() for value in values]
+        if any(not value for value in normalized):
+            raise ValueError("product IDs must not be blank")
+        if any(len(value) > 160 for value in normalized):
+            raise ValueError("product IDs must be at most 160 characters")
+        return normalized
+
+
+class BulkApprovedProductImportItem(BaseModel):
+    requested_id: str
+    status: BulkImportItemStatus
+    canonical_supplier_product_id: str | None
+    product_id: UUID | None
+    message: str
+
+
+class BulkApprovedProductImportResponse(BaseModel):
+    supplier: Literal["cj"]
+    requested_count: int
+    imported_count: int
+    already_exists_count: int
+    already_imported_count: int
+    rejected_not_approved_count: int
+    failed_count: int
+    results: list[BulkApprovedProductImportItem]
+
+
 class ProductStatusUpdate(BaseModel):
     status: CatalogStatus
 

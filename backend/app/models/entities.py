@@ -118,6 +118,39 @@ class AIToolFactProvenance(Base):
     ai_tool: Mapped[AITool] = relationship(back_populates="fact_provenance")
 
 
+class SupplierCandidate(Base):
+    __tablename__ = "supplier_candidates"
+    __table_args__ = (
+        UniqueConstraint(
+            "supplier",
+            "supplier_product_id",
+            name="uq_supplier_candidates_supplier_product_id",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    supplier: Mapped[str] = mapped_column(String(40), nullable=False, index=True, default="cj")
+    supplier_product_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    supplier_sku: Mapped[str | None] = mapped_column(String(160), nullable=True, index=True)
+    name: Mapped[str] = mapped_column(String(240), nullable=False)
+    approval_status: Mapped[str] = mapped_column(String(20), nullable=False, default="REVIEW", index=True)
+    supplier_validation_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    supplier_validation_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    commercial_status: Mapped[str] = mapped_column(String(20), nullable=False, default="REVIEW")
+    market_status: Mapped[str] = mapped_column(String(30), nullable=False, default="NOT_EVALUATED")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    imported_product_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class Product(Base):
     __tablename__ = "products"
     __table_args__ = (

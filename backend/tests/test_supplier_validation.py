@@ -319,6 +319,48 @@ class TestAdapterProtocol:
         assert adapter.supplier_name == "cj"
 
 
+def test_cj_client_uses_one_connection_retry(monkeypatch) -> None:
+    from app.suppliers.adapters.cj_adapter import CJAdapter
+
+    captured: dict[str, object] = {}
+
+    class FakeTransport:
+        def __init__(self, *, retries: int) -> None:
+            captured["retries"] = retries
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"result": True, "data": []}
+
+    class FakeClient:
+        def __init__(self, *, timeout: int, transport: object) -> None:
+            captured["timeout"] = timeout
+            captured["transport"] = transport
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args) -> None:
+            return None
+
+        async def get(self, *args, **kwargs) -> FakeResponse:
+            return FakeResponse()
+
+    monkeypatch.setattr(httpx, "AsyncHTTPTransport", FakeTransport)
+    monkeypatch.setattr(httpx, "AsyncClient", FakeClient)
+
+    result = asyncio.run(CJAdapter(api_key="test")._get("/product/getCategory"))
+
+    assert result["result"] is True
+    assert captured["retries"] == 1
+    assert captured["timeout"] == 30
+
+
 # ── CJ Response Parsing Tests ───────────────────────
 
 

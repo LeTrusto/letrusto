@@ -58,6 +58,42 @@ type Product = {
 
 type ProductResponse = { products: Product[]; total: number };
 
+type SupplierCandidate = {
+  id: string;
+  supplier: "cj";
+  supplier_product_id: string;
+  supplier_sku: string | null;
+  name: string;
+  approval_status: "REVIEW" | "APPROVED" | "REJECTED" | "IMPORTED";
+  supplier_validation_status: "PASS" | "REVIEW" | "REJECT" | null;
+  supplier_validation_score: number | null;
+  commercial_status: "REVIEW";
+  market_status: "NOT_EVALUATED";
+  approved_at: string | null;
+  imported_product_id: string | null;
+};
+
+type SupplierCandidateResponse = { candidates: SupplierCandidate[]; total: number };
+
+type BulkImportResult = {
+  requested_id: string;
+  status: "IMPORTED" | "ALREADY_EXISTS" | "ALREADY_IMPORTED" | "REJECTED_NOT_APPROVED" | "FAILED";
+  canonical_supplier_product_id: string | null;
+  product_id: string | null;
+  message: string;
+};
+
+type BulkImportResponse = {
+  supplier: "cj";
+  requested_count: number;
+  imported_count: number;
+  already_exists_count: number;
+  already_imported_count: number;
+  rejected_not_approved_count: number;
+  failed_count: number;
+  results: BulkImportResult[];
+};
+
 type MarketEvidence = {
   id: string;
   competitor_name: string;
@@ -161,9 +197,15 @@ function apiHeaders(): Record<string, string> {
 
 export default function AdminProductsView() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [candidates, setCandidates] = useState<SupplierCandidate[]>([]);
   const [supplierProductId, setSupplierProductId] = useState("");
+  const [candidateIdentifier, setCandidateIdentifier] = useState("");
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+  const [bulkImportResult, setBulkImportResult] = useState<BulkImportResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+  const [candidateWorking, setCandidateWorking] = useState(false);
+  const [bulkWorking, setBulkWorking] = useState(false);
   const [syncingProductId, setSyncingProductId] = useState<string | null>(null);
   const [reviewingProductId, setReviewingProductId] = useState<string | null>(null);
   const [decidingProductId, setDecidingProductId] = useState<string | null>(null);
@@ -202,9 +244,20 @@ export default function AdminProductsView() {
     }
   }, []);
 
+  const loadCandidates = useCallback(async () => {
+    const response = await fetch(`${API_BASE}/api/v1/admin/supplier-candidates`, { headers: apiHeaders() });
+    if (!response.ok) throw new Error(await apiError(response));
+    const data = (await response.json()) as SupplierCandidateResponse;
+    setCandidates(data.candidates);
+  }, []);
+
   useEffect(() => {
-    void Promise.resolve().then(loadProducts);
-  }, [loadProducts]);
+    void Promise.resolve()
+      .then(() => Promise.all([loadProducts(), loadCandidates()]))
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Unable to load supplier candidates");
+      });
+  }, [loadCandidates, loadProducts]);
 
   async function importProduct(event: React.FormEvent) {
     event.preventDefault();
@@ -226,6 +279,78 @@ export default function AdminProductsView() {
       setError(err instanceof Error ? err.message : "Unable to import product");
     } finally {
       setWorking(false);
+    }
+  }
+
+  async function registerCandidate(event: React.FormEvent) {
+    event.preventDefault();
+    if (!candidateIdentifier.trim()) return;
+    setCandidateWorking(true);
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/supplier-candidates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...apiHeaders() },
+        body: JSON.stringify({ supplier: "cj", supplier_product_id: candidateIdentifier.trim(), destination: "IN" }),
+      });
+      if (!response.ok) throw new Error(await apiError(response));
+      setCandidateIdentifier("");
+      setMessage("Supplier candidate verified and staged for review.");
+      await loadCandidates();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to register supplier candidate");
+    } finally {
+      setCandidateWorking(false);
+    }
+  }
+
+  async function decideCandidate(candidate: SupplierCandidate, action: "approve" | "reject") {
+    setCandidateWorking(true);
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/supplier-candidates/${candidate.id}/${action}`, {
+        method: "POST",
+        headers: apiHeaders(),
+      });
+      if (!response.ok) throw new Error(await apiError(response));
+      setSelectedCandidateIds((current) => current.filter((id) => id !== candidate.supplier_product_id));
+      await loadCandidates();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Unable to ${action} supplier candidate`);
+    } finally {
+      setCandidateWorking(false);
+    }
+  }
+
+  function toggleBulkSelection(supplierProductId: string) {
+    setSelectedCandidateIds((current) =>
+      current.includes(supplierProductId)
+        ? current.filter((productId) => productId !== supplierProductId)
+        : [...current, supplierProductId],
+    );
+  }
+
+  async function bulkImportApprovedProducts() {
+    if (selectedCandidateIds.length === 0) return;
+    setBulkWorking(true);
+    setError("");
+    setMessage("");
+    setBulkImportResult(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/products/bulk-import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...apiHeaders() },
+        body: JSON.stringify({ supplier: "cj", product_ids: selectedCandidateIds }),
+      });
+      if (!response.ok) throw new Error(await apiError(response));
+      const result = (await response.json()) as BulkImportResponse;
+      setBulkImportResult(result);
+      setSelectedCandidateIds([]);
+      await Promise.all([loadCandidates(), loadProducts()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to process approved products");
+    } finally {
+      setBulkWorking(false);
     }
   }
 
@@ -344,6 +469,69 @@ export default function AdminProductsView() {
           {working ? "Importing..." : "Import as Draft"}
         </button>
       </form>
+
+      <section className="mb-6 border-y border-[var(--border)] py-5">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Supplier Candidates</h2>
+            <p className="text-sm text-[var(--text-muted)] mt-1">Verified CJ products awaiting an explicit import decision.</p>
+          </div>
+          <form onSubmit={(event) => void registerCandidate(event)} className="flex flex-col sm:flex-row gap-2 lg:w-[32rem]">
+            <input value={candidateIdentifier} onChange={(event) => setCandidateIdentifier(event.target.value)} placeholder="CJ product ID or SKU" aria-label="CJ product ID or SKU" className="lt-input flex-1" />
+            <button type="submit" disabled={candidateWorking} className="lt-btn lt-btn-primary">{candidateWorking ? "Verifying..." : "Register"}</button>
+          </form>
+        </div>
+        {candidates.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--text-muted)]">No supplier candidates staged.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2 pr-3"><span className="sr-only">Select</span></th><th className="pr-3">Candidate</th><th className="pr-3">CJ ID / SKU</th><th className="pr-3">Validation</th><th className="pr-3">Commercial</th><th className="pr-3">Market</th><th className="pr-3">Approval</th><th><span className="sr-only">Actions</span></th></tr></thead>
+              <tbody>{candidates.map((candidate) => (
+                <tr key={candidate.id} className="border-t border-[var(--border)]">
+                  <td className="py-3 pr-3"><input type="checkbox" disabled={candidate.approval_status !== "APPROVED"} checked={selectedCandidateIds.includes(candidate.supplier_product_id)} onChange={() => toggleBulkSelection(candidate.supplier_product_id)} aria-label={`Select ${candidate.name} for import`} className="h-4 w-4" /></td>
+                  <td className="pr-3 font-semibold max-w-72 truncate" title={candidate.name}>{candidate.name}</td>
+                  <td className="pr-3"><span className="block">{candidate.supplier_product_id}</span><span className="text-xs text-[var(--text-muted)]">{candidate.supplier_sku ?? "No SKU"}</span></td>
+                  <td className="pr-3">{candidate.supplier_validation_status ?? "-"} {candidate.supplier_validation_score ?? "-"}</td>
+                  <td className="pr-3">{candidate.commercial_status}</td>
+                  <td className="pr-3">{candidate.market_status}</td>
+                  <td className="pr-3">{candidate.approval_status}</td>
+                  <td><div className="flex gap-2">
+                    {(candidate.approval_status === "REVIEW" || candidate.approval_status === "REJECTED") && <button type="button" disabled={candidateWorking} onClick={() => void decideCandidate(candidate, "approve")} className="lt-btn lt-btn-primary p-2" title="Approve candidate" aria-label={`Approve ${candidate.name}`}><Check size={16} aria-hidden="true" /></button>}
+                    {candidate.approval_status !== "IMPORTED" && candidate.approval_status !== "REJECTED" && <button type="button" disabled={candidateWorking} onClick={() => void decideCandidate(candidate, "reject")} className="lt-btn lt-btn-secondary p-2" title="Reject candidate" aria-label={`Reject ${candidate.name}`}><X size={16} aria-hidden="true" /></button>}
+                  </div></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {selectedCandidateIds.length > 0 && (
+        <div className="mb-4 flex items-center justify-between gap-3 border border-[var(--border)] p-3">
+          <span className="text-sm">{selectedCandidateIds.length} approved candidate{selectedCandidateIds.length === 1 ? "" : "s"} selected</span>
+          <button type="button" disabled={bulkWorking} onClick={() => void bulkImportApprovedProducts()} className="lt-btn lt-btn-primary text-sm">
+            {bulkWorking ? "Processing..." : "Bulk Import Selected"}
+          </button>
+        </div>
+      )}
+
+      {bulkImportResult && (
+        <section className="mb-4 border border-[var(--border)] p-4" aria-live="polite">
+          <h2 className="font-semibold text-sm">Bulk approved import result</h2>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            Requested {bulkImportResult.requested_count} · Imported {bulkImportResult.imported_count} · Already exists {bulkImportResult.already_exists_count} · Already imported {bulkImportResult.already_imported_count} · Not approved {bulkImportResult.rejected_not_approved_count} · Failed {bulkImportResult.failed_count}
+          </p>
+          <ul className="mt-3 space-y-2 text-xs">
+            {bulkImportResult.results.map((result, index) => (
+              <li key={`${result.requested_id}-${index}`} className="border-t border-[var(--border)] pt-2">
+                <span className="font-semibold">{result.canonical_supplier_product_id ?? result.requested_id}: {result.status.replaceAll("_", " ")}</span>
+                <span className="block text-[var(--text-muted)]">{result.message}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {message && <p className="mb-4 text-sm text-green-700">{message}</p>}
       {error && <p className="mb-4 text-sm text-red-700">{error}</p>}

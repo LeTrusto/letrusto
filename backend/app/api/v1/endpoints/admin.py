@@ -8,6 +8,8 @@ from app.schemas.admin import AdminDashboardStats, AdminUserListResponse
 from app.schemas.admin_products import (
     AdminProductDTO,
     AdminProductListResponse,
+    BulkApprovedProductImportRequest,
+    BulkApprovedProductImportResponse,
     CommercialReviewResponse,
     MarketEvidenceCreate,
     MarketEvidenceDTO,
@@ -17,6 +19,9 @@ from app.schemas.admin_products import (
     ProductImportRequest,
     ProductRejectionRequest,
     ProductStatusUpdate,
+    SupplierCandidateCreate,
+    SupplierCandidateDTO,
+    SupplierCandidateListResponse,
     VariantPriceCalculationResponse,
 )
 from app.services.admin_service import AdminService
@@ -50,6 +55,50 @@ async def import_product(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> AdminProductDTO:
     return await service.import_product(payload)
+
+
+@router.post("/products/bulk-import", response_model=BulkApprovedProductImportResponse)
+async def bulk_import_approved_products(
+    payload: BulkApprovedProductImportRequest,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> BulkApprovedProductImportResponse:
+    return await service.bulk_import_approved(payload)
+
+
+@router.post("/supplier-candidates", response_model=SupplierCandidateDTO)
+async def create_supplier_candidate(
+    payload: SupplierCandidateCreate,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> SupplierCandidateDTO:
+    return await service.create_supplier_candidate(payload)
+
+
+@router.get("/supplier-candidates", response_model=SupplierCandidateListResponse)
+def list_supplier_candidates(
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> SupplierCandidateListResponse:
+    return service.list_supplier_candidates()
+
+
+@router.post("/supplier-candidates/{candidate_id}/approve", response_model=SupplierCandidateDTO)
+def approve_supplier_candidate(
+    candidate_id: UUID,
+    current_admin: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> SupplierCandidateDTO:
+    return service.approve_supplier_candidate(candidate_id, current_admin)
+
+
+@router.post("/supplier-candidates/{candidate_id}/reject", response_model=SupplierCandidateDTO)
+def reject_supplier_candidate(
+    candidate_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> SupplierCandidateDTO:
+    return service.reject_supplier_candidate(candidate_id)
 
 
 @router.get("/products", response_model=AdminProductListResponse)

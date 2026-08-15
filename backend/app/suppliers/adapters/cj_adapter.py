@@ -45,7 +45,8 @@ class CJAdapter:
         return h
 
     async def _get(self, path: str, params: dict[str, Any] | None = None) -> dict:
-        async with httpx.AsyncClient(timeout=30) as client:
+        transport = httpx.AsyncHTTPTransport(retries=1)
+        async with httpx.AsyncClient(timeout=30, transport=transport) as client:
             resp = await client.get(f"{_BASE_URL}{path}", headers=self._headers(), params=params)
             if resp.status_code == 401 and path != "/authentication/getAccessToken":
                 await self.authenticate(force=True)
@@ -54,7 +55,8 @@ class CJAdapter:
             return resp.json()
 
     async def _post(self, path: str, json_body: dict | None = None) -> dict:
-        async with httpx.AsyncClient(timeout=30) as client:
+        transport = httpx.AsyncHTTPTransport(retries=1)
+        async with httpx.AsyncClient(timeout=30, transport=transport) as client:
             resp = await client.post(f"{_BASE_URL}{path}", headers=self._headers(), json=json_body or {})
             if resp.status_code == 401 and path != "/authentication/getAccessToken":
                 await self.authenticate(force=True)

@@ -7,14 +7,18 @@ from uuid import UUID, uuid4
 
 import httpx
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.models.entities import Product, ProductImage, ProductMarketEvidence, ProductVariant, User
+from app.models.entities import Product, ProductImage, ProductMarketEvidence, ProductVariant, SupplierCandidate, User
 from app.schemas.admin_products import (
     AdminProductDTO,
     AdminProductListResponse,
     AdminProductVariantDTO,
+    BulkApprovedProductImportItem,
+    BulkApprovedProductImportRequest,
+    BulkApprovedProductImportResponse,
     CommercialReviewResponse,
     MarketEvidenceAnalysis,
     MarketEvidenceCreate,
@@ -25,6 +29,9 @@ from app.schemas.admin_products import (
     ProductImportRequest,
     ProductRejectionRequest,
     ProductStatusUpdate,
+    SupplierCandidateCreate,
+    SupplierCandidateDTO,
+    SupplierCandidateListResponse,
     VariantPriceCalculation,
     VariantPriceCalculationResponse,
 )
@@ -60,7 +67,7 @@ class AdminProductService:
     def get_product(self, product_id: UUID) -> AdminProductDTO:
         return self._dto(self._get(product_id))
 
-    async def import_product(self, payload: ProductImportRequest) -> AdminProductDTO:
+    async def import_product(self, payload: ProductImportRequest, *, commit: bool = True) -> AdminProductDTO:
         existing = self.db.scalar(select(Product).where(Product.supplier == payload.supplier, Product.supplier_product_id == payload.supplier_product_id))
         if existing:
             return self._dto(self._get(existing.id))
@@ -137,8 +144,270 @@ class AdminProductService:
                 factory_inventory=variant.factory_inventory, verified_warehouse=variant.inventory_verification,
                 weight_grams=Decimal(str(variant.weight_grams)) if variant.weight_grams is not None else None, position=position,
             ))
-        self.db.commit()
+        if commit:
+            self.db.commit()
+        else:
+            self.db.flush()
         return self._dto(self._get(product.id))
+
+    async def create_supplier_candidate(
+        self, payload: SupplierCandidateCreate
+    ) -> SupplierCandidateDTO:
+        adapter = build_supplier_adapter(payload.supplier)
+        if not await adapter.authenticate():
+            raise BadRequestError("Supplier authentication failed")
+        raw = await adapter.get_product(payload.supplier_product_id)
+        if not raw:
+            raise NotFoundError("Supplier product not found")
+
+        config = EconomicsConfig()
+        normalized = normalize_product(raw, usd_to_inr=config.usd_to_inr)
+        shipping = None
+        shipping_identifier = (
+            normalized.variants[0].supplier_variant_id
+            if normalized.variants
+            else raw.supplier_product_id
+        )
+        if shipping_identifier:
+            shipping = await adapter.calculate_shipping(
+                shipping_identifier,
+                payload.destination,
+                origin_country=normalized.warehouse_country or "CN",
+            )
+        shipping_usd = shipping.options[0].cost_usd if shipping and shipping.options else None
+        economics = calculate_economics(normalized, shipping_cost_usd=shipping_usd, config=config)
+        product_score = score_product(normalized, economics=economics, shipping=shipping)
+
+        existing = self.db.scalar(
+            select(SupplierCandidate).where(
+                SupplierCandidate.supplier == raw.supplier_id,
+                SupplierCandidate.supplier_product_id == raw.supplier_product_id,
+            )
+        )
+        if existing:
+            return self._candidate_dto(existing)
+
+        candidate = SupplierCandidate(
+            supplier=raw.supplier_id,
+            supplier_product_id=raw.supplier_product_id,
+            supplier_sku=raw.supplier_sku or None,
+            name=raw.title,
+            approval_status="REVIEW",
+            supplier_validation_status=product_score.verdict.value,
+            supplier_validation_score=product_score.score,
+            commercial_status="REVIEW",
+            market_status="NOT_EVALUATED",
+        )
+        self.db.add(candidate)
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            existing = self.db.scalar(
+                select(SupplierCandidate).where(
+                    SupplierCandidate.supplier == raw.supplier_id,
+                    SupplierCandidate.supplier_product_id == raw.supplier_product_id,
+                )
+            )
+            if existing:
+                return self._candidate_dto(existing)
+            raise
+        self.db.refresh(candidate)
+        return self._candidate_dto(candidate)
+
+    def list_supplier_candidates(self) -> SupplierCandidateListResponse:
+        candidates = list(
+            self.db.scalars(
+                select(SupplierCandidate).order_by(
+                    SupplierCandidate.created_at.desc(), SupplierCandidate.id.desc()
+                )
+            )
+        )
+        return SupplierCandidateListResponse(
+            candidates=[self._candidate_dto(candidate) for candidate in candidates],
+            total=len(candidates),
+        )
+
+    def approve_supplier_candidate(
+        self, candidate_id: UUID, current_admin: User
+    ) -> SupplierCandidateDTO:
+        candidate = self._get_candidate(candidate_id)
+        if candidate.approval_status == "IMPORTED":
+            raise BadRequestError("Imported supplier candidate cannot be approved again")
+        if candidate.supplier_validation_status == "REJECT":
+            raise BadRequestError("Supplier candidate rejected by supplier validation cannot be approved")
+        if candidate.approval_status != "APPROVED":
+            candidate.approval_status = "APPROVED"
+            candidate.commercial_status = "APPROVED"
+            candidate.approved_at = datetime.now(timezone.utc)
+            candidate.approved_by_user_id = current_admin.id
+            self.db.commit()
+            self.db.refresh(candidate)
+        return self._candidate_dto(candidate)
+
+    def reject_supplier_candidate(self, candidate_id: UUID) -> SupplierCandidateDTO:
+        candidate = self._get_candidate(candidate_id)
+        if candidate.approval_status == "IMPORTED":
+            raise BadRequestError("Imported supplier candidate cannot be rejected")
+        candidate.approval_status = "REJECTED"
+        candidate.commercial_status = "REJECTED"
+        candidate.approved_at = None
+        candidate.approved_by_user_id = None
+        self.db.commit()
+        self.db.refresh(candidate)
+        return self._candidate_dto(candidate)
+
+    async def bulk_import_approved(
+        self, payload: BulkApprovedProductImportRequest
+    ) -> BulkApprovedProductImportResponse:
+        results: list[BulkApprovedProductImportItem] = []
+        for requested_id in payload.product_ids:
+            item_session = sessionmaker(bind=self.db.get_bind(), expire_on_commit=False)()
+            try:
+                results.append(await self._import_candidate_item(item_session, payload.supplier, requested_id))
+            except Exception as exc:
+                item_session.rollback()
+                results.append(
+                    BulkApprovedProductImportItem(
+                        requested_id=requested_id,
+                        status="FAILED",
+                        canonical_supplier_product_id=None,
+                        product_id=None,
+                        message=str(exc) or "Supplier candidate import failed",
+                    )
+                )
+            finally:
+                item_session.close()
+
+        return BulkApprovedProductImportResponse(
+            supplier=payload.supplier,
+            requested_count=len(results),
+            imported_count=sum(result.status == "IMPORTED" for result in results),
+            already_exists_count=sum(result.status == "ALREADY_EXISTS" for result in results),
+            already_imported_count=sum(result.status == "ALREADY_IMPORTED" for result in results),
+            rejected_not_approved_count=sum(
+                result.status == "REJECTED_NOT_APPROVED" for result in results
+            ),
+            failed_count=sum(result.status == "FAILED" for result in results),
+            results=results,
+        )
+
+    async def _import_candidate_item(
+        self, db: Session, supplier: str, requested_id: str
+    ) -> BulkApprovedProductImportItem:
+        candidate = db.scalar(
+            select(SupplierCandidate).where(
+                SupplierCandidate.supplier == supplier,
+                SupplierCandidate.supplier_product_id == requested_id,
+            )
+        )
+        if candidate is None:
+            sku_matches = list(
+                db.scalars(
+                    select(SupplierCandidate)
+                    .where(
+                        SupplierCandidate.supplier == supplier,
+                        SupplierCandidate.supplier_sku == requested_id,
+                    )
+                    .limit(2)
+                )
+            )
+            if len(sku_matches) > 1:
+                raise BadRequestError("Supplier SKU matches multiple candidates")
+            candidate = sku_matches[0] if sku_matches else None
+
+        if candidate is None or candidate.approval_status in {"REVIEW", "REJECTED"}:
+            return BulkApprovedProductImportItem(
+                requested_id=requested_id,
+                status="REJECTED_NOT_APPROVED",
+                canonical_supplier_product_id=candidate.supplier_product_id if candidate else None,
+                product_id=candidate.imported_product_id if candidate else None,
+                message="No approved supplier candidate exists for this identifier",
+            )
+        if candidate.approval_status == "IMPORTED" or candidate.imported_product_id:
+            return BulkApprovedProductImportItem(
+                requested_id=requested_id,
+                status="ALREADY_IMPORTED",
+                canonical_supplier_product_id=candidate.supplier_product_id,
+                product_id=candidate.imported_product_id,
+                message="Supplier candidate was already imported",
+            )
+
+        product = db.scalar(
+            select(Product).where(
+                Product.supplier == supplier,
+                Product.supplier_product_id == candidate.supplier_product_id,
+            )
+        )
+        if product:
+            candidate.imported_product_id = product.id
+            candidate.approval_status = "IMPORTED"
+            db.commit()
+            return BulkApprovedProductImportItem(
+                requested_id=requested_id,
+                status="ALREADY_EXISTS",
+                canonical_supplier_product_id=candidate.supplier_product_id,
+                product_id=product.id,
+                message="Catalog product already exists; candidate was linked",
+            )
+
+        import_service = AdminProductService(db, self.launch_pricing_policy)
+        try:
+            imported = await import_service.import_product(
+                ProductImportRequest(
+                    supplier="cj",
+                    supplier_product_id=candidate.supplier_product_id,
+                    destination="IN",
+                ),
+                commit=False,
+            )
+            product = db.get(Product, imported.id)
+            if product is None:
+                raise RuntimeError("Imported product could not be loaded")
+            product.status = "DRAFT"
+            product.commercial_status = "APPROVED"
+            product.approval_decided_at = candidate.approved_at
+            product.approval_decided_by_user_id = candidate.approved_by_user_id
+            product.approval_rejection_reason = None
+            product.approval_evidence = {
+                "source": "SUPPLIER_CANDIDATE_APPROVAL",
+                "supplier_candidate_id": str(candidate.id),
+                "supplier_validation_status": candidate.supplier_validation_status,
+                "supplier_validation_score": candidate.supplier_validation_score,
+                "market_status": candidate.market_status,
+            }
+            candidate.imported_product_id = product.id
+            candidate.approval_status = "IMPORTED"
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            product = db.scalar(
+                select(Product).where(
+                    Product.supplier == supplier,
+                    Product.supplier_product_id == candidate.supplier_product_id,
+                )
+            )
+            if product is None:
+                raise
+            candidate = db.get(SupplierCandidate, candidate.id)
+            candidate.imported_product_id = product.id
+            candidate.approval_status = "IMPORTED"
+            db.commit()
+            return BulkApprovedProductImportItem(
+                requested_id=requested_id,
+                status="ALREADY_EXISTS",
+                canonical_supplier_product_id=candidate.supplier_product_id,
+                product_id=product.id,
+                message="Catalog product already exists; candidate was linked",
+            )
+
+        return BulkApprovedProductImportItem(
+            requested_id=requested_id,
+            status="IMPORTED",
+            canonical_supplier_product_id=candidate.supplier_product_id,
+            product_id=product.id,
+            message="Approved supplier candidate imported as DRAFT",
+        )
 
     def update_status(self, product_id: UUID, payload: ProductStatusUpdate) -> AdminProductDTO:
         product = self._get(product_id)
@@ -474,6 +743,32 @@ class AdminProductService:
         if not product:
             raise NotFoundError("Catalog product not found")
         return product
+
+    def _get_candidate(self, candidate_id: UUID) -> SupplierCandidate:
+        candidate = self.db.get(SupplierCandidate, candidate_id)
+        if not candidate:
+            raise NotFoundError("Supplier candidate not found")
+        return candidate
+
+    @staticmethod
+    def _candidate_dto(candidate: SupplierCandidate) -> SupplierCandidateDTO:
+        return SupplierCandidateDTO(
+            id=candidate.id,
+            supplier=candidate.supplier,
+            supplier_product_id=candidate.supplier_product_id,
+            supplier_sku=candidate.supplier_sku,
+            name=candidate.name,
+            approval_status=candidate.approval_status,
+            supplier_validation_status=candidate.supplier_validation_status,
+            supplier_validation_score=candidate.supplier_validation_score,
+            commercial_status=candidate.commercial_status,
+            market_status=candidate.market_status,
+            approved_at=candidate.approved_at,
+            approved_by_user_id=candidate.approved_by_user_id,
+            imported_product_id=candidate.imported_product_id,
+            created_at=candidate.created_at,
+            updated_at=candidate.updated_at,
+        )
 
     def _unique_slug(self, title: str, supplier_product_id: str) -> str:
         base = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-") or "supplier-product"
