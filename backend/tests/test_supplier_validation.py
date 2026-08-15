@@ -408,6 +408,22 @@ class TestCJParsing:
         assert raw.factory_inventory == 77651
         assert raw.variants[0].supplier_variant_sku == "CJJT2327063-RED"
 
+    def test_get_product_strict_does_not_resolve_supplier_sku_after_direct_404(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="test")
+        not_found = httpx.HTTPStatusError(
+            "not found",
+            request=httpx.Request("GET", "https://example.com/product/query"),
+            response=httpx.Response(404),
+        )
+        adapter._get = AsyncMock(side_effect=[not_found])
+
+        raw = asyncio.run(adapter.get_product("CJJT2327063", strict=True))
+
+        assert raw is None
+        assert adapter._get.await_count == 1
+
     def test_get_product_resolves_supplier_sku_after_business_not_found(self) -> None:
         from app.suppliers.adapters.cj_adapter import CJAdapter
 

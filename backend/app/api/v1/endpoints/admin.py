@@ -68,3 +68,12 @@ def update_catalog_product(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> AdminProductDTO:
     return service.update_status(product_id, payload)
+
+
+@router.post("/products/{product_id}/sync-inventory", response_model=AdminProductDTO)
+async def sync_catalog_product_inventory(
+    product_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> AdminProductDTO:
+    return await service.sync_inventory(product_id)

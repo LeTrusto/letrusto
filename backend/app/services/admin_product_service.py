@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+import httpx
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -88,6 +89,57 @@ class AdminProductService:
     def update_status(self, product_id: UUID, payload: ProductStatusUpdate) -> AdminProductDTO:
         product = self._get(product_id)
         product.status = payload.status
+        self.db.commit()
+        return self._dto(self._get(product.id))
+
+    async def sync_inventory(self, product_id: UUID) -> AdminProductDTO:
+        product = self._get(product_id)
+        if not product.supplier:
+            raise BadRequestError("Catalog product has no supplier")
+        if not product.supplier_product_id:
+            raise BadRequestError("Catalog product has no supplier product ID")
+        if not product.variants:
+            raise BadRequestError("Catalog product has no stored supplier variants")
+
+        try:
+            adapter = build_supplier_adapter(product.supplier)
+        except ValueError as exc:
+            raise BadRequestError(str(exc)) from exc
+
+        try:
+            if not await adapter.authenticate():
+                raise BadRequestError("Supplier authentication failed")
+            if not await adapter.get_product(product.supplier_product_id, strict=True):
+                raise NotFoundError("Supplier product not found")
+
+            snapshots = []
+            for variant in product.variants:
+                snapshot = await adapter.get_inventory(variant.supplier_variant_id, strict=True)
+                if snapshot is None:
+                    raise BadRequestError(f"Inventory unavailable for supplier variant {variant.supplier_variant_id}")
+                if any(
+                    type(value) is not int or value < 0
+                    for value in (snapshot.total_inventory, snapshot.cj_inventory, snapshot.factory_inventory)
+                ):
+                    raise BadRequestError(f"Malformed inventory for supplier variant {variant.supplier_variant_id}")
+                snapshots.append((variant, snapshot))
+        except (httpx.HTTPError, ValueError, TypeError) as exc:
+            raise BadRequestError("Supplier inventory synchronization failed") from exc
+
+        for variant, snapshot in snapshots:
+            variant.total_inventory = snapshot.total_inventory
+            variant.cj_inventory = snapshot.cj_inventory
+            variant.factory_inventory = snapshot.factory_inventory
+            variant.verified_warehouse = snapshot.verification_status
+
+        product.total_inventory = sum(snapshot.total_inventory for _, snapshot in snapshots)
+        product.cj_inventory = sum(snapshot.cj_inventory for _, snapshot in snapshots)
+        product.factory_inventory = sum(snapshot.factory_inventory for _, snapshot in snapshots)
+        product.verified_warehouse = (
+            "verified" if any(snapshot.verification_status == "verified" for _, snapshot in snapshots)
+            else next((snapshot.verification_status for _, snapshot in snapshots if snapshot.verification_status), None)
+        )
+        product.last_supplier_sync_at = datetime.now(timezone.utc)
         self.db.commit()
         return self._dto(self._get(product.id))
 

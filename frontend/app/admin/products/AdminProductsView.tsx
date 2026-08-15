@@ -51,6 +51,7 @@ export default function AdminProductsView() {
   const [supplierProductId, setSupplierProductId] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+  const [syncingProductId, setSyncingProductId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -110,6 +111,25 @@ export default function AdminProductsView() {
     }
   }
 
+  async function syncInventory(product: Product) {
+    setSyncingProductId(product.id);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/products/${product.id}/sync-inventory`, {
+        method: "POST",
+        headers: apiHeaders(),
+      });
+      if (!response.ok) throw new Error(`API error ${response.status}`);
+      setMessage(`Inventory synced for ${product.name}.`);
+      await loadProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to sync inventory");
+    } finally {
+      setSyncingProductId(null);
+    }
+  }
+
   return (
     <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
       <div className="flex items-end justify-between gap-4 mb-6">
@@ -153,11 +173,16 @@ export default function AdminProductsView() {
                     <p className="text-xs text-[var(--text-muted)]">Variants: {product.variants.length} · Images: {product.images.length}</p>
                   </div>
                 </div>
-                <select value={product.status} onChange={(event) => void updateStatus(product, event.target.value as Product["status"])} className="lt-select text-sm" aria-label={`Status for ${product.name}`}>
-                  <option value="DRAFT">DRAFT</option>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="PAUSED">PAUSED</option>
-                </select>
+                <div className="flex items-center gap-2">
+                  <button type="button" disabled={syncingProductId !== null} onClick={() => void syncInventory(product)} className="lt-btn lt-btn-secondary text-sm">
+                    {syncingProductId === product.id ? "Syncing..." : "Sync Inventory"}
+                  </button>
+                  <select value={product.status} onChange={(event) => void updateStatus(product, event.target.value as Product["status"])} className="lt-select text-sm" aria-label={`Status for ${product.name}`}>
+                    <option value="DRAFT">DRAFT</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="PAUSED">PAUSED</option>
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4 text-sm">
                 <Metric label="Status" value={product.status} />

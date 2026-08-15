@@ -164,7 +164,7 @@ class CJAdapter:
 
     # ── product detail ───────────────────────────────────
 
-    async def get_product(self, product_id: str) -> RawSupplierProduct | None:
+    async def get_product(self, product_id: str, *, strict: bool = False) -> RawSupplierProduct | None:
         try:
             data = await self._get("/product/query", {"pid": product_id})
         except httpx.HTTPStatusError as exc:
@@ -172,6 +172,8 @@ class CJAdapter:
                 raise
             data = {"result": False, "data": None}
         if not data.get("result") or not data.get("data"):
+            if strict:
+                return None
             matches = await self.search_products(product_id, page_size=50)
             match = next(
                 (
@@ -278,15 +280,23 @@ class CJAdapter:
 
     # ── inventory ────────────────────────────────────────
 
-    async def get_inventory(self, variant_id: str) -> InventorySnapshot | None:
+    async def get_inventory(self, variant_id: str, *, strict: bool = False) -> InventorySnapshot | None:
         data = await self._get("/product/stock/queryByVid", {"vid": variant_id})
         if not data.get("result"):
+            return None
+        entries = data.get("data")
+        if strict and (not isinstance(entries, list) or not entries):
             return None
         total = 0
         cj_inventory = 0
         factory_inventory = 0
         verification_status: str | None = None
-        for entry in data.get("data", []):
+        for entry in entries or []:
+            if strict and any(
+                type(entry.get(field)) is not int
+                for field in ("totalInventoryNum", "cjInventoryNum", "factoryInventoryNum")
+            ):
+                return None
             total += _safe_int(entry.get("totalInventoryNum")) or 0
             cj_inventory += _safe_int(entry.get("cjInventoryNum")) or 0
             factory_inventory += _safe_int(entry.get("factoryInventoryNum")) or 0
