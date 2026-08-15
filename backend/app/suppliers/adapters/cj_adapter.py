@@ -165,7 +165,23 @@ class CJAdapter:
     # ── product detail ───────────────────────────────────
 
     async def get_product(self, product_id: str) -> RawSupplierProduct | None:
-        data = await self._get("/product/query", {"pid": product_id})
+        try:
+            data = await self._get("/product/query", {"pid": product_id})
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 404:
+                raise
+            matches = await self.search_products(product_id, page_size=50)
+            match = next(
+                (
+                    product
+                    for product in matches
+                    if product.supplier_product_id == product_id or product.supplier_sku == product_id
+                ),
+                None,
+            )
+            if match is None or match.supplier_product_id == product_id:
+                return None
+            data = await self._get("/product/query", {"pid": match.supplier_product_id})
         if not data.get("result") or not data.get("data"):
             return None
 

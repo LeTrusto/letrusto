@@ -1,6 +1,7 @@
 """Tests for supplier adapter, normalizer, economics, and scoring — Phase 2."""
 
 import asyncio
+import httpx
 import pytest
 from unittest.mock import AsyncMock
 
@@ -344,6 +345,59 @@ class TestCJParsing:
         assert raw.title == "Test Earrings"
         assert raw.price_usd == 4.5
         assert raw.inventory_total == 250
+
+    def test_get_product_resolves_supplier_sku_after_direct_404(self) -> None:
+        from app.suppliers.adapters.cj_adapter import CJAdapter
+
+        adapter = CJAdapter(api_key="test")
+        not_found = httpx.HTTPStatusError(
+            "not found",
+            request=httpx.Request("GET", "https://example.com/product/query"),
+            response=httpx.Response(404),
+        )
+        adapter._get = AsyncMock(
+            side_effect=[
+                not_found,
+                {
+                    "result": True,
+                    "data": {
+                        "content": [{
+                            "productList": [{
+                                "id": "PRODUCT-123",
+                                "sku": "CJJT2327063",
+                                "nameEn": "Test Hair Clip",
+                            }]
+                        }]
+                    },
+                },
+                {
+                    "result": True,
+                    "data": {
+                        "pid": "PRODUCT-123",
+                        "productNameEn": "Test Hair Clip",
+                        "productImageSet": ["https://example.com/clip.jpg"],
+                        "variants": [{
+                            "vid": "VAR-123",
+                            "variantSku": "CJJT2327063-RED",
+                            "inventories": [{
+                                "totalInventory": 40,
+                                "cjInventory": 40,
+                                "factoryInventory": 77651,
+                                "verifiedWarehouse": 1,
+                            }],
+                        }],
+                    },
+                },
+            ]
+        )
+
+        raw = asyncio.run(adapter.get_product("CJJT2327063"))
+
+        assert raw is not None
+        assert raw.supplier_product_id == "PRODUCT-123"
+        assert raw.cj_inventory == 40
+        assert raw.factory_inventory == 77651
+        assert raw.variants[0].supplier_variant_sku == "CJJT2327063-RED"
 
     def test_parse_variant(self) -> None:
         from app.suppliers.adapters.cj_adapter import CJAdapter

@@ -1,40 +1,97 @@
-# LeTrusto — Copilot Instructions
+# LeTrusto Repository Instructions
 
-## Source of Truth
+## Source Of Truth
 
-The repository code is the only source of truth. Never trust outdated chat memory or previous session summaries.
+The repository is authoritative. Inspect current code, migrations, tests, and configuration before relying on chat history or stale documentation.
 
-## Core Rules
+## Current Product Direction
 
-1. **Never assume a feature exists.** Inspect the repository before referencing any file, route, component, or configuration.
-2. **Inspect before modifying.** Read the target file and its dependencies before making changes.
-3. **Preserve the current direction.** LeTrusto is an AI tools / software discovery, comparison, recommendation, guides, and affiliate monetization platform. Do not silently revert to an older product-marketplace direction.
-4. **Avoid unnecessary rewrites.** Make the smallest safe change that satisfies the requirement.
-5. **Reuse existing architecture.** Check `components/`, `lib/`, `services/`, `config/`, `types/`, and `hooks/` for existing implementations before creating new ones.
-6. **Do not introduce duplicate systems.** One affiliate registry (`lib/softwareAffiliates.ts`), one homepage config (`config/homepage.ts`), one analytics tracker (`lib/analytics.ts`), one auth context (`lib/authContext.tsx`).
-7. **Do not remove working functionality** without explicit user approval.
-8. **Run validation after changes.** Frontend: `npm run lint` and `npm run build` from `frontend/`. Backend: `pytest -q` from `backend/`.
-9. **Keep documentation synchronized.** After significant changes, update `docs/LETRUSTO_PROJECT_STATE.md`.
-10. **When requirements are ambiguous**, inspect the repository first, then ask for clarification only if the code does not resolve the ambiguity.
-11. **If something cannot be verified**, explicitly say so rather than guessing.
+LeTrusto is an Indian ecommerce and CJ dropshipping platform.
 
-## Project References
+Business progression:
+
+Discover -> Curate -> Distribute -> Optimize -> Negotiate -> Exclusivity -> Private Label -> LeTrusto Brand
+
+Roadmap:
+
+- Phase 0: business validation, complete
+- Phase 1: brand, complete
+- Phase 2: supplier/product economics validation, complete
+- Phase 3: production commerce backend, current
+- Phase 4: admin/operations, later
+- Phase 5: launch, later
+
+The old mobile/affiliate catalog has been removed. Do not recreate or reseed it. The product database is expected to start at zero products until real CJ products are imported.
+
+## Phase 2 Invariants
+
+The existing Phase 2 supplier validation flow must remain intact. It supports real CJ search, product details, India shipping validation, economics, contribution, inventory distinction, scoring, and review classification.
+
+Use the existing `backend/app/suppliers/adapters/cj_adapter.py` and existing normalization logic. Do not create a second CJ client or authentication flow.
+
+Inventory semantics are fixed:
+
+- `cjInventoryNum` is sellable inventory and the normal scoring input.
+- `factoryInventoryNum` is factory supply, not normal sellable inventory.
+- Never merge factory inventory into sellable inventory.
+
+Do not change Phase 2 scoring thresholds, scoring weights, RTO/margin logic, supplier reliability rules, CJ authentication, or inventory mapping without explicit approval.
+
+## Phase 3.1 Catalog
+
+Current admin catalog APIs:
+
+- `POST /api/v1/admin/products/import`
+- `GET /api/v1/admin/products`
+- `GET /api/v1/admin/products/{id}`
+- `PATCH /api/v1/admin/products/{id}`
+
+All admin catalog operations use the existing `get_current_admin` dependency. Imported CJ products start as `DRAFT`; supported statuses are `DRAFT`, `ACTIVE`, and `PAUSED`.
+
+Preserve supplier traceability: supplier, supplier product ID, CJ variant IDs, supplier SKUs, source image URLs, supplier cost, shipping cost, total/CJ/factory inventory, verification status, and sync timestamps. Duplicate imports are identified by `supplier + supplier_product_id`.
+
+## Architecture
+
+Reuse existing implementations before creating new models, services, repositories, endpoints, utilities, adapters, API clients, hooks, or components. Follow the existing FastAPI, SQLAlchemy 2, Alembic, Next.js App Router, React, TypeScript, API-client, authentication, and test patterns.
+
+Keep customer-facing mock/catalog migration scoped to the task. Do not redesign unrelated frontend surfaces or create competing catalog architectures.
+
+## Database And Deployment Safety
+
+- Never modify an existing Alembic migration; create a new additive migration for schema changes.
+- Inspect foreign keys and cascade behavior before data deletion.
+- Never delete users, admins, authentication records, CJ credentials, or unrelated application data during catalog work.
+- Do not run destructive seed/reset scripts against the current database.
+- Do not re-enable `seed_products.py`, `seed_smartphones.py`, `seed_hosting_saas.py`, or `sync_verified_apple_iphones.py` during normal startup.
+- Do not modify Railway or Vercel configuration unless explicitly requested.
+- Do not commit, push, merge, or deploy unless explicitly requested.
+
+## Security
+
+CJ communication remains backend-only. Never expose or log CJ API keys, access tokens, refresh tokens, passwords, or authorization headers. Never bypass authentication. Do not create real CJ orders, payments, or customer records during development verification.
+
+## Workflow
+
+1. Inspect the relevant owning code and nearby tests.
+2. Search for reusable implementations before adding anything.
+3. Make the smallest safe change requested.
+4. Run focused validation immediately after editing.
+5. Run milestone validation when requested or when the slice is complete.
+6. Stop and ask before dangerous ambiguity involving deletion, authentication, payments, orders, or production deployment.
+
+Standard commands:
+
+- Backend: `pytest -q` from `backend/`
+- Frontend: `npm run lint` and `npm run build` from `frontend/`
+
+## Documentation References
 
 - Project state: `docs/LETRUSTO_PROJECT_STATE.md`
-- Affiliate tracker: `docs/LETRUSTO_AFFILIATE_TRACKER.md`
-- AI tools taxonomy: `frontend/config/aiTools.ts`
-- Homepage config: `frontend/config/homepage.ts`
-- Software affiliate registry: `frontend/lib/softwareAffiliates.ts`
-- Product affiliate helpers: `frontend/lib/affiliate.ts`
-- API service layer: `frontend/services/api.ts`
+- Backend models: `backend/app/models/entities.py`
 - Backend entry: `backend/app/main.py`
-- DB models: `backend/app/models/entities.py`
 - Migrations: `backend/alembic/versions/`
+- CJ adapter: `backend/app/suppliers/adapters/cj_adapter.py`
+- Frontend API client: `frontend/services/api.ts`
+- Frontend auth: `frontend/lib/authContext.tsx`
 
-## Coding Conventions
-
-- Frontend: TypeScript strict, Next.js 16 App Router, Tailwind 4, server components by default, `"use client"` only when needed.
-- Backend: Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic v2 settings, pg8000 driver.
-- Affiliate links must come from the `SOFTWARE_AFFILIATES` registry or backend `affiliate_url` field — never hardcoded in page content.
-- SEO metadata uses the `%s | LeTrusto` template from root layout; child pages set only the page-specific `title` string.
-- Hydration-safe state: use lazy `useState` initializers or effects for localStorage reads; do not set state synchronously in effects.
+When documentation conflicts with code, verify the repository and update documentation only when the task requires it.
