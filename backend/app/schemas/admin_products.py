@@ -11,7 +11,7 @@ CatalogStatus = Literal["DRAFT", "ACTIVE", "PAUSED"]
 CommercialStatus = Literal["DRAFT", "REVIEW", "APPROVED", "REJECTED"]
 SupplierValidationStatus = Literal["PASS", "REVIEW", "REJECT"]
 MarketEvidenceStatus = Literal[
-    "INSUFFICIENT_MARKET_DATA", "MARKET_COMPETITIVE", "MARKET_ABOVE_OBSERVED"
+    "INSUFFICIENT_MARKET_DATA", "MARKET_EVIDENCE_AVAILABLE", "MARKET_COMPETITIVE", "MARKET_ABOVE_OBSERVED"
 ]
 
 
@@ -35,7 +35,8 @@ class MarketEvidenceCreate(BaseModel):
 
 class MarketEvidenceDTO(BaseModel):
     id: UUID
-    product_id: UUID
+    product_id: UUID | None
+    supplier_candidate_id: UUID | None
     competitor_name: str
     product_name: str
     source_url: str
@@ -62,7 +63,8 @@ class MarketEvidenceAnalysis(BaseModel):
 
 
 class MarketEvidenceResponse(BaseModel):
-    product_id: UUID
+    product_id: UUID | None
+    supplier_candidate_id: UUID | None
     evidence: list[MarketEvidenceDTO]
     analysis: MarketEvidenceAnalysis
 
@@ -100,7 +102,13 @@ class SupplierCandidateDTO(BaseModel):
     supplier_validation_status: SupplierValidationStatus | None
     supplier_validation_score: int | None
     commercial_status: Literal["REVIEW", "APPROVED", "REJECTED"]
-    market_status: Literal["NOT_EVALUATED"]
+    market_status: Literal[
+        "NOT_EVALUATED", "INSUFFICIENT_MARKET_DATA", "MARKET_EVIDENCE_AVAILABLE",
+        "MARKET_COMPETITIVE", "MARKET_ABOVE_OBSERVED"
+    ]
+    discovery_min_selling_price_inr: Decimal | None
+    discovery_max_selling_price_inr: Decimal | None
+    market_evidence_count: int
     approved_at: datetime | None
     approved_by_user_id: UUID | None
     imported_product_id: UUID | None

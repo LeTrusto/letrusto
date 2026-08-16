@@ -138,6 +138,8 @@ class SupplierCandidate(Base):
     supplier_validation_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     commercial_status: Mapped[str] = mapped_column(String(20), nullable=False, default="REVIEW")
     market_status: Mapped[str] = mapped_column(String(30), nullable=False, default="NOT_EVALUATED")
+    discovery_min_selling_price_inr: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    discovery_max_selling_price_inr: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
@@ -148,6 +150,10 @@ class SupplierCandidate(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    market_evidence: Mapped[list["ProductMarketEvidence"]] = relationship(
+        back_populates="supplier_candidate", cascade="all, delete-orphan"
     )
 
 
@@ -277,11 +283,18 @@ class ProductMarketEvidence(Base):
     __table_args__ = (
         CheckConstraint("observed_price_inr > 0", name="ck_product_market_evidence_positive_price"),
         CheckConstraint("currency = 'INR'", name="ck_product_market_evidence_currency_inr"),
+        CheckConstraint(
+            "(product_id IS NOT NULL) <> (supplier_candidate_id IS NOT NULL)",
+            name="ck_product_market_evidence_exactly_one_owner",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    product_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("products.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    supplier_candidate_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("supplier_candidates.id", ondelete="CASCADE"), nullable=True, index=True
     )
     competitor_name: Mapped[str] = mapped_column(String(160), nullable=False)
     product_name: Mapped[str] = mapped_column(String(240), nullable=False)
@@ -296,7 +309,8 @@ class ProductMarketEvidence(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    product: Mapped[Product] = relationship(back_populates="market_evidence")
+    product: Mapped[Product | None] = relationship(back_populates="market_evidence")
+    supplier_candidate: Mapped[SupplierCandidate | None] = relationship(back_populates="market_evidence")
 
 
 class ProductImage(Base):

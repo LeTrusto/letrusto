@@ -199,7 +199,11 @@ def test_list_is_newest_first(candidate_context):
     db.get(SupplierCandidate, first.id).created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
     db.get(SupplierCandidate, second.id).created_at = datetime(2026, 1, 2, tzinfo=timezone.utc)
     db.commit()
-    assert [item.id for item in service.list_supplier_candidates().candidates[:2]] == [second.id, first.id]
+    candidate_rows = [
+        item for item in service.list_supplier_candidates().candidates
+        if item.supplier_product_id.startswith(canonical_id)
+    ]
+    assert [item.id for item in candidate_rows] == [second.id, first.id]
 
 
 def test_approve_records_explicit_admin_identity(candidate_context):

@@ -623,7 +623,6 @@ class AdminProductService:
             .where(ProductMarketEvidence.product_id == product.id)
             .order_by(ProductMarketEvidence.checked_at.desc(), ProductMarketEvidence.created_at.desc())
         ).all())
-        prices = sorted(item.observed_price_inr for item in evidence)
         active_variant_prices = sorted(
             variant.selling_price
             for variant in product.variants
@@ -635,39 +634,13 @@ class AdminProductService:
             else [product.selling_price] if product.selling_price is not None else []
         )
 
-        count = len(prices)
-        minimum = prices[0] if prices else None
-        maximum = prices[-1] if prices else None
-        average = (
-            (sum(prices, Decimal("0")) / Decimal(count)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            if prices else None
-        )
-        if not prices:
-            median = None
-        elif count % 2:
-            median = prices[count // 2]
-        else:
-            median = ((prices[count // 2 - 1] + prices[count // 2]) / Decimal("2")).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
-
-        if count < 2:
-            status = "INSUFFICIENT_MARKET_DATA"
-        elif comparison_prices and all(price > maximum for price in comparison_prices):
-            status = "MARKET_ABOVE_OBSERVED"
-        else:
-            status = "MARKET_COMPETITIVE"
-
         return MarketEvidenceResponse(
             product_id=product.id,
+            supplier_candidate_id=None,
             evidence=[self._market_evidence_dto(item) for item in evidence],
-            analysis=MarketEvidenceAnalysis(
-                observation_count=count,
-                minimum_price_inr=minimum,
-                maximum_price_inr=maximum,
-                average_price_inr=average,
-                median_price_inr=median,
-                status=status,
+            analysis=self._analyze_market_evidence(
+                evidence,
+                comparison_prices,
                 evaluated_variant_count=len(active_variant_prices),
                 letrusto_variant_min_price_inr=active_variant_prices[0] if active_variant_prices else None,
                 letrusto_variant_max_price_inr=active_variant_prices[-1] if active_variant_prices else None,
@@ -684,6 +657,51 @@ class AdminProductService:
         if not evidence:
             raise NotFoundError("Market evidence not found for catalog product")
         self.db.delete(evidence)
+        self.db.commit()
+
+    def create_candidate_market_evidence(
+        self, candidate_id: UUID, payload: MarketEvidenceCreate
+    ) -> MarketEvidenceDTO:
+        candidate = self._get_candidate(candidate_id)
+        evidence = ProductMarketEvidence(
+            supplier_candidate_id=candidate.id,
+            competitor_name=payload.competitor_name,
+            product_name=payload.product_name,
+            source_url=str(payload.source_url),
+            observed_price_inr=payload.observed_price_inr,
+            currency=payload.currency,
+            variant_description=payload.variant_description,
+            notes=payload.notes,
+            checked_at=payload.checked_at or datetime.now(timezone.utc),
+        )
+        self.db.add(evidence)
+        self.db.flush()
+        self._update_candidate_market_status(candidate)
+        self.db.commit()
+        self.db.refresh(evidence)
+        return self._market_evidence_dto(evidence)
+
+    def get_candidate_market_evidence(self, candidate_id: UUID) -> MarketEvidenceResponse:
+        candidate = self._get_candidate(candidate_id)
+        evidence = self._candidate_market_evidence(candidate.id)
+        return MarketEvidenceResponse(
+            product_id=None,
+            supplier_candidate_id=candidate.id,
+            evidence=[self._market_evidence_dto(item) for item in evidence],
+            analysis=self._candidate_market_analysis(candidate, evidence),
+        )
+
+    def delete_candidate_market_evidence(self, candidate_id: UUID, evidence_id: UUID) -> None:
+        candidate = self._get_candidate(candidate_id)
+        evidence = self.db.scalar(select(ProductMarketEvidence).where(
+            ProductMarketEvidence.id == evidence_id,
+            ProductMarketEvidence.supplier_candidate_id == candidate.id,
+        ))
+        if not evidence:
+            raise NotFoundError("Market evidence not found for supplier candidate")
+        self.db.delete(evidence)
+        self.db.flush()
+        self._update_candidate_market_status(candidate)
         self.db.commit()
 
     async def sync_inventory(self, product_id: UUID) -> AdminProductDTO:
@@ -763,6 +781,9 @@ class AdminProductService:
             supplier_validation_score=candidate.supplier_validation_score,
             commercial_status=candidate.commercial_status,
             market_status=candidate.market_status,
+            discovery_min_selling_price_inr=candidate.discovery_min_selling_price_inr,
+            discovery_max_selling_price_inr=candidate.discovery_max_selling_price_inr,
+            market_evidence_count=len(candidate.market_evidence),
             approved_at=candidate.approved_at,
             approved_by_user_id=candidate.approved_by_user_id,
             imported_product_id=candidate.imported_product_id,
@@ -779,6 +800,7 @@ class AdminProductService:
         return MarketEvidenceDTO(
             id=evidence.id,
             product_id=evidence.product_id,
+            supplier_candidate_id=evidence.supplier_candidate_id,
             competitor_name=evidence.competitor_name,
             product_name=evidence.product_name,
             source_url=evidence.source_url,
@@ -790,6 +812,87 @@ class AdminProductService:
             created_at=evidence.created_at,
             updated_at=evidence.updated_at,
         )
+
+    @staticmethod
+    def _analyze_market_evidence(
+        evidence: list[ProductMarketEvidence],
+        comparison_prices: list[Decimal],
+        *,
+        evaluated_variant_count: int,
+        letrusto_variant_min_price_inr: Decimal | None,
+        letrusto_variant_max_price_inr: Decimal | None,
+        stored_product_selling_price_inr: Decimal | None,
+        sufficient_without_comparison_status: str = "MARKET_COMPETITIVE",
+    ) -> MarketEvidenceAnalysis:
+        prices = sorted(item.observed_price_inr for item in evidence)
+        count = len(prices)
+        minimum = prices[0] if prices else None
+        maximum = prices[-1] if prices else None
+        average = (
+            (sum(prices, Decimal("0")) / Decimal(count)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if prices else None
+        )
+        if not prices:
+            median = None
+        elif count % 2:
+            median = prices[count // 2]
+        else:
+            median = ((prices[count // 2 - 1] + prices[count // 2]) / Decimal("2")).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+        if count < 2:
+            status = "INSUFFICIENT_MARKET_DATA"
+        elif comparison_prices and all(price > maximum for price in comparison_prices):
+            status = "MARKET_ABOVE_OBSERVED"
+        elif not comparison_prices:
+            status = sufficient_without_comparison_status
+        else:
+            status = "MARKET_COMPETITIVE"
+        return MarketEvidenceAnalysis(
+            observation_count=count,
+            minimum_price_inr=minimum,
+            maximum_price_inr=maximum,
+            average_price_inr=average,
+            median_price_inr=median,
+            status=status,
+            evaluated_variant_count=evaluated_variant_count,
+            letrusto_variant_min_price_inr=letrusto_variant_min_price_inr,
+            letrusto_variant_max_price_inr=letrusto_variant_max_price_inr,
+            stored_product_selling_price_inr=stored_product_selling_price_inr,
+        )
+
+    def _candidate_market_evidence(self, candidate_id: UUID) -> list[ProductMarketEvidence]:
+        return list(self.db.scalars(
+            select(ProductMarketEvidence)
+            .where(ProductMarketEvidence.supplier_candidate_id == candidate_id)
+            .order_by(ProductMarketEvidence.checked_at.desc(), ProductMarketEvidence.created_at.desc())
+        ).all())
+
+    def _candidate_market_analysis(
+        self, candidate: SupplierCandidate, evidence: list[ProductMarketEvidence]
+    ) -> MarketEvidenceAnalysis:
+        has_price_range = (
+            candidate.discovery_min_selling_price_inr is not None
+            and candidate.discovery_max_selling_price_inr is not None
+        )
+        comparison_prices = (
+            [candidate.discovery_min_selling_price_inr, candidate.discovery_max_selling_price_inr]
+            if has_price_range else []
+        )
+        return self._analyze_market_evidence(
+            evidence,
+            comparison_prices,
+            evaluated_variant_count=0,
+            letrusto_variant_min_price_inr=candidate.discovery_min_selling_price_inr,
+            letrusto_variant_max_price_inr=candidate.discovery_max_selling_price_inr,
+            stored_product_selling_price_inr=None,
+            sufficient_without_comparison_status="MARKET_EVIDENCE_AVAILABLE",
+        )
+
+    def _update_candidate_market_status(self, candidate: SupplierCandidate) -> None:
+        candidate.market_status = self._candidate_market_analysis(
+            candidate, self._candidate_market_evidence(candidate.id)
+        ).status
 
     def _approval_evidence_snapshot(
         self,

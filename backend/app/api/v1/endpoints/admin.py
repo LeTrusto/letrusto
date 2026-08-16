@@ -83,6 +83,39 @@ def list_supplier_candidates(
     return service.list_supplier_candidates()
 
 
+@router.post("/supplier-candidates/{candidate_id}/market-evidence", response_model=MarketEvidenceDTO)
+def create_supplier_candidate_market_evidence(
+    candidate_id: UUID,
+    payload: MarketEvidenceCreate,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> MarketEvidenceDTO:
+    return service.create_candidate_market_evidence(candidate_id, payload)
+
+
+@router.get("/supplier-candidates/{candidate_id}/market-evidence", response_model=MarketEvidenceResponse)
+def get_supplier_candidate_market_evidence(
+    candidate_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> MarketEvidenceResponse:
+    return service.get_candidate_market_evidence(candidate_id)
+
+
+@router.delete(
+    "/supplier-candidates/{candidate_id}/market-evidence/{evidence_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_supplier_candidate_market_evidence(
+    candidate_id: UUID,
+    evidence_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> Response:
+    service.delete_candidate_market_evidence(candidate_id, evidence_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post("/supplier-candidates/{candidate_id}/approve", response_model=SupplierCandidateDTO)
 def approve_supplier_candidate(
     candidate_id: UUID,

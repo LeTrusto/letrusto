@@ -69,6 +69,7 @@ type SupplierCandidate = {
   supplier_validation_score: number | null;
   commercial_status: "REVIEW";
   market_status: "NOT_EVALUATED";
+  market_evidence_count: number;
   approved_at: string | null;
   imported_product_id: string | null;
 };
@@ -114,7 +115,7 @@ type MarketEvidenceResponse = {
     maximum_price_inr: number | null;
     average_price_inr: number | null;
     median_price_inr: number | null;
-    status: "INSUFFICIENT_MARKET_DATA" | "MARKET_COMPETITIVE" | "MARKET_ABOVE_OBSERVED";
+    status: "INSUFFICIENT_MARKET_DATA" | "MARKET_EVIDENCE_AVAILABLE" | "MARKET_COMPETITIVE" | "MARKET_ABOVE_OBSERVED";
     evaluated_variant_count: number;
     letrusto_variant_min_price_inr: number | null;
     letrusto_variant_max_price_inr: number | null;
@@ -198,6 +199,7 @@ function apiHeaders(): Record<string, string> {
 export default function AdminProductsView() {
   const [products, setProducts] = useState<Product[]>([]);
   const [candidates, setCandidates] = useState<SupplierCandidate[]>([]);
+  const [candidateEvidence, setCandidateEvidence] = useState<Record<string, MarketEvidenceResponse>>({});
   const [supplierProductId, setSupplierProductId] = useState("");
   const [candidateIdentifier, setCandidateIdentifier] = useState("");
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
@@ -250,6 +252,18 @@ export default function AdminProductsView() {
     const data = (await response.json()) as SupplierCandidateResponse;
     setCandidates(data.candidates);
   }, []);
+
+  async function loadCandidateEvidence(candidateId: string) {
+    if (candidateEvidence[candidateId]) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/supplier-candidates/${candidateId}/market-evidence`, { headers: apiHeaders() });
+      if (!response.ok) throw new Error(await apiError(response));
+      const data = (await response.json()) as MarketEvidenceResponse;
+      setCandidateEvidence((current) => ({ ...current, [candidateId]: data }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load candidate market evidence");
+    }
+  }
 
   useEffect(() => {
     void Promise.resolve()
@@ -490,11 +504,19 @@ export default function AdminProductsView() {
               <tbody>{candidates.map((candidate) => (
                 <tr key={candidate.id} className="border-t border-[var(--border)]">
                   <td className="py-3 pr-3"><input type="checkbox" disabled={candidate.approval_status !== "APPROVED"} checked={selectedCandidateIds.includes(candidate.supplier_product_id)} onChange={() => toggleBulkSelection(candidate.supplier_product_id)} aria-label={`Select ${candidate.name} for import`} className="h-4 w-4" /></td>
-                  <td className="pr-3 font-semibold max-w-72 truncate" title={candidate.name}>{candidate.name}</td>
+                  <td className="pr-3 font-semibold max-w-72" title={candidate.name}>
+                    <span className="block truncate">{candidate.name}</span>
+                    <details className="mt-1 text-xs font-normal text-[var(--text-muted)]" onToggle={(event) => { if (event.currentTarget.open) void loadCandidateEvidence(candidate.id); }}>
+                      <summary className="cursor-pointer">Evidence ({candidate.market_evidence_count})</summary>
+                      {candidateEvidence[candidate.id] && <div className="mt-2 max-w-80 space-y-2 whitespace-normal">
+                        {candidateEvidence[candidate.id].evidence.length === 0 ? <p>No observations.</p> : candidateEvidence[candidate.id].evidence.map((evidence) => <div key={evidence.id} className="border-t border-[var(--border)] pt-1"><a href={evidence.source_url} target="_blank" rel="noopener noreferrer" className="font-semibold underline">{evidence.competitor_name}</a> · {formatInr(evidence.observed_price_inr)}<p>{evidence.variant_description ?? "Comparable listing"}</p><p>{new Date(evidence.checked_at).toLocaleDateString("en-IN")}</p></div>)}
+                      </div>}
+                    </details>
+                  </td>
                   <td className="pr-3"><span className="block">{candidate.supplier_product_id}</span><span className="text-xs text-[var(--text-muted)]">{candidate.supplier_sku ?? "No SKU"}</span></td>
                   <td className="pr-3">{candidate.supplier_validation_status ?? "-"} {candidate.supplier_validation_score ?? "-"}</td>
                   <td className="pr-3">{candidate.commercial_status}</td>
-                  <td className="pr-3">{candidate.market_status}</td>
+                  <td className="pr-3">{candidate.market_status} ({candidate.market_evidence_count})</td>
                   <td className="pr-3">{candidate.approval_status}</td>
                   <td><div className="flex gap-2">
                     {(candidate.approval_status === "REVIEW" || candidate.approval_status === "REJECTED") && <button type="button" disabled={candidateWorking} onClick={() => void decideCandidate(candidate, "approve")} className="lt-btn lt-btn-primary p-2" title="Approve candidate" aria-label={`Approve ${candidate.name}`}><Check size={16} aria-hidden="true" /></button>}
