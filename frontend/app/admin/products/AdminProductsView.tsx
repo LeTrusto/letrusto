@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { Calculator, Check, CirclePause, ClipboardCheck, ExternalLink, Play, Trash2, X } from "lucide-react";
 
@@ -67,11 +67,40 @@ type SupplierCandidate = {
   approval_status: "REVIEW" | "APPROVED" | "REJECTED" | "IMPORTED";
   supplier_validation_status: "PASS" | "REVIEW" | "REJECT" | null;
   supplier_validation_score: number | null;
-  commercial_status: "REVIEW";
-  market_status: "NOT_EVALUATED";
+  commercial_status: "REVIEW" | "APPROVED" | "REJECTED";
+  market_status: "NOT_EVALUATED" | "INSUFFICIENT_MARKET_DATA" | "MARKET_EVIDENCE_AVAILABLE" | "MARKET_COMPETITIVE" | "MARKET_ABOVE_OBSERVED";
+  discovery_min_selling_price_inr: number | null;
+  discovery_max_selling_price_inr: number | null;
+  snapshot_status: "AVAILABLE" | "LEGACY_SNAPSHOT_UNAVAILABLE";
+  main_image: string | null;
+  validation_issues: string[];
+  target_margin_percent: number | null;
+  target_cac_inr: number | null;
+  cac_viable: boolean | null;
+  variants: Array<{
+    supplier_variant_id: string;
+    supplier_variant_sku: string;
+    name: string;
+    attributes: string;
+    supplier_cost_usd: number | null;
+    supplier_cost_inr: number | null;
+    weight_grams: number | null;
+    total_inventory: number | null;
+    cj_inventory: number | null;
+    factory_inventory: number | null;
+    selling_price_inr: number | null;
+    target_margin_status: string | null;
+    cac_target_status: string | null;
+  }>;
   market_evidence_count: number;
   approved_at: string | null;
   imported_product_id: string | null;
+  decision_at: string | null;
+  decision_by_user_id: string | null;
+  rejection_reason: string | null;
+  imported_at: string | null;
+  import_result: string | null;
+  import_failure_reason: string | null;
 };
 
 type SupplierCandidateResponse = { candidates: SupplierCandidate[]; total: number };
@@ -207,6 +236,8 @@ export default function AdminProductsView() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [candidateWorking, setCandidateWorking] = useState(false);
+  const [rejectingCandidateId, setRejectingCandidateId] = useState<string | null>(null);
+  const [candidateRejectionReason, setCandidateRejectionReason] = useState("");
   const [bulkWorking, setBulkWorking] = useState(false);
   const [syncingProductId, setSyncingProductId] = useState<string | null>(null);
   const [reviewingProductId, setReviewingProductId] = useState<string | null>(null);
@@ -318,16 +349,19 @@ export default function AdminProductsView() {
     }
   }
 
-  async function decideCandidate(candidate: SupplierCandidate, action: "approve" | "reject") {
+  async function decideCandidate(candidate: SupplierCandidate, action: "approve" | "reject", reason?: string) {
     setCandidateWorking(true);
     setError("");
     try {
       const response = await fetch(`${API_BASE}/api/v1/admin/supplier-candidates/${candidate.id}/${action}`, {
         method: "POST",
-        headers: apiHeaders(),
+        headers: action === "reject" ? { "Content-Type": "application/json", ...apiHeaders() } : apiHeaders(),
+        body: action === "reject" ? JSON.stringify({ reason }) : undefined,
       });
       if (!response.ok) throw new Error(await apiError(response));
       setSelectedCandidateIds((current) => current.filter((id) => id !== candidate.supplier_product_id));
+      setRejectingCandidateId(null);
+      setCandidateRejectionReason("");
       await loadCandidates();
     } catch (err) {
       setError(err instanceof Error ? err.message : `Unable to ${action} supplier candidate`);
@@ -502,10 +536,24 @@ export default function AdminProductsView() {
             <table className="w-full text-sm whitespace-nowrap">
               <thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2 pr-3"><span className="sr-only">Select</span></th><th className="pr-3">Candidate</th><th className="pr-3">CJ ID / SKU</th><th className="pr-3">Validation</th><th className="pr-3">Commercial</th><th className="pr-3">Market</th><th className="pr-3">Approval</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>{candidates.map((candidate) => (
-                <tr key={candidate.id} className="border-t border-[var(--border)]">
+                <Fragment key={candidate.id}>
+                <tr className="border-t border-[var(--border)]">
                   <td className="py-3 pr-3"><input type="checkbox" disabled={candidate.approval_status !== "APPROVED"} checked={selectedCandidateIds.includes(candidate.supplier_product_id)} onChange={() => toggleBulkSelection(candidate.supplier_product_id)} aria-label={`Select ${candidate.name} for import`} className="h-4 w-4" /></td>
                   <td className="pr-3 font-semibold max-w-72" title={candidate.name}>
                     <span className="block truncate">{candidate.name}</span>
+                    <details className="mt-1 text-xs font-normal text-[var(--text-muted)]">
+                      <summary className="cursor-pointer">Validation, pricing and variants</summary>
+                      <div className="mt-2 max-w-[42rem] space-y-2 whitespace-normal">
+                        <p className="font-semibold">{candidate.snapshot_status === "AVAILABLE" ? "Variant snapshot available" : "Variant snapshot unavailable because this candidate predates snapshot capture"}</p>
+                        {candidate.snapshot_status === "AVAILABLE" && candidate.main_image && <Image src={candidate.main_image} alt="" width={48} height={48} className="h-12 w-12 object-cover rounded" />}
+                        <p>Price range: {candidate.discovery_min_selling_price_inr == null ? "-" : formatInr(candidate.discovery_min_selling_price_inr)} to {candidate.discovery_max_selling_price_inr == null ? "-" : formatInr(candidate.discovery_max_selling_price_inr)} · Target margin {candidate.target_margin_percent ?? "-"}% · CAC {candidate.cac_viable == null ? "NOT REVIEWED" : candidate.cac_viable ? "VIABLE" : "NOT VIABLE"}</p>
+                        {candidate.snapshot_status === "AVAILABLE" && <p>Inventory: {candidate.variants.reduce((sum, variant) => sum + (variant.cj_inventory ?? 0), 0)} CJ · {candidate.variants.reduce((sum, variant) => sum + (variant.factory_inventory ?? 0), 0)} factory</p>}
+                        {candidate.validation_issues.length > 0 && <p>Validation issues: {candidate.validation_issues.join(", ")}</p>}
+                        {candidate.snapshot_status === "AVAILABLE" && <div className="overflow-x-auto">
+                          <table className="w-full text-xs"><thead><tr className="text-left"><th className="pr-2">Variant</th><th className="pr-2">Cost</th><th className="pr-2">Weight</th><th>CJ / factory</th></tr></thead><tbody>{candidate.variants.map((variant) => <tr key={variant.supplier_variant_id}><td className="pr-2">{variant.supplier_variant_id} · {variant.supplier_variant_sku}</td><td className="pr-2">{variant.supplier_cost_usd == null ? "-" : `$${variant.supplier_cost_usd}`} / {variant.supplier_cost_inr == null ? "-" : formatInr(variant.supplier_cost_inr)}</td><td className="pr-2">{variant.weight_grams == null ? "-" : `${variant.weight_grams}g`}</td><td>{variant.cj_inventory ?? 0} / {variant.factory_inventory ?? 0}</td></tr>)}</tbody></table>
+                        </div>}
+                      </div>
+                    </details>
                     <details className="mt-1 text-xs font-normal text-[var(--text-muted)]" onToggle={(event) => { if (event.currentTarget.open) void loadCandidateEvidence(candidate.id); }}>
                       <summary className="cursor-pointer">Evidence ({candidate.market_evidence_count})</summary>
                       {candidateEvidence[candidate.id] && <div className="mt-2 max-w-80 space-y-2 whitespace-normal">
@@ -520,10 +568,12 @@ export default function AdminProductsView() {
                   <td className="pr-3">{candidate.approval_status}</td>
                   <td><div className="flex gap-2">
                     {(candidate.approval_status === "REVIEW" || candidate.approval_status === "REJECTED") && <button type="button" disabled={candidateWorking} onClick={() => void decideCandidate(candidate, "approve")} className="lt-btn lt-btn-primary p-2" title="Approve candidate" aria-label={`Approve ${candidate.name}`}><Check size={16} aria-hidden="true" /></button>}
-                    {candidate.approval_status !== "IMPORTED" && candidate.approval_status !== "REJECTED" && <button type="button" disabled={candidateWorking} onClick={() => void decideCandidate(candidate, "reject")} className="lt-btn lt-btn-secondary p-2" title="Reject candidate" aria-label={`Reject ${candidate.name}`}><X size={16} aria-hidden="true" /></button>}
+                    {candidate.approval_status !== "IMPORTED" && candidate.approval_status !== "REJECTED" && <button type="button" disabled={candidateWorking} onClick={() => { setRejectingCandidateId(candidate.id); setCandidateRejectionReason(""); }} className="lt-btn lt-btn-secondary p-2" title="Reject candidate" aria-label={`Reject ${candidate.name}`}><X size={16} aria-hidden="true" /></button>}
                   </div></td>
                 </tr>
-              ))}</tbody>
+              {rejectingCandidateId === candidate.id && <tr><td colSpan={8} className="border-t border-[var(--border)] py-3"><form onSubmit={(event) => { event.preventDefault(); void decideCandidate(candidate, "reject", candidateRejectionReason.trim()); }} className="flex flex-col sm:flex-row gap-2"><input required minLength={1} maxLength={500} value={candidateRejectionReason} onChange={(event) => setCandidateRejectionReason(event.target.value)} placeholder="Rejection reason" aria-label={`Rejection reason for ${candidate.name}`} className="lt-input flex-1" /><button type="submit" disabled={candidateWorking || !candidateRejectionReason.trim()} className="lt-btn lt-btn-secondary">Confirm rejection</button><button type="button" onClick={() => setRejectingCandidateId(null)} className="lt-btn lt-btn-secondary">Cancel</button></form></td></tr>}
+                </Fragment>
+                ))}</tbody>
             </table>
           </div>
         )}

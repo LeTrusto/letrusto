@@ -157,6 +157,32 @@ def test_creation_persists_actual_validation_result(candidate_context):
     assert isinstance(result.supplier_validation_score, int)
 
 
+def test_creation_persists_candidate_review_snapshot(candidate_context):
+    _, service, _, _, _, _ = candidate_context
+    result = create_candidate(service)
+    assert result.variants[0].supplier_variant_sku.startswith("VSKU-")
+    assert result.variants[0].supplier_cost_usd == Decimal("2.0")
+    assert result.variants[0].weight_grams == Decimal("20.0")
+    assert result.variants[0].cj_inventory == 50
+    assert result.variants[0].factory_inventory == 1000
+    assert result.main_image == "https://example.com/candidate.jpg"
+    assert result.target_margin_percent is not None
+    assert result.snapshot_status == "AVAILABLE"
+
+
+def test_legacy_candidate_without_snapshot_is_explicitly_unavailable(candidate_context):
+    db, service, _, _, _, _ = candidate_context
+    candidate = create_candidate(service)
+    stored = db.get(SupplierCandidate, candidate.id)
+    stored.data_snapshot = None
+    stored.snapshot_status = "LEGACY_SNAPSHOT_UNAVAILABLE"
+    db.commit()
+    result = service.get_supplier_candidate(candidate.id)
+    assert result.snapshot_status == "LEGACY_SNAPSHOT_UNAVAILABLE"
+    assert result.variants == []
+    assert result.discovery_min_selling_price_inr == candidate.discovery_min_selling_price_inr
+
+
 def test_creation_does_not_create_product(candidate_context):
     db, service, _, _, _, canonical_id = candidate_context
     create_candidate(service)
@@ -240,6 +266,21 @@ def test_reject_clears_approval_metadata(candidate_context):
     assert result.commercial_status == "REJECTED"
     assert result.approved_at is None
     assert result.approved_by_user_id is None
+
+
+def test_rejection_api_requires_reason_and_persists_decision_audit(candidate_context):
+    db, service, client, _, _, _ = candidate_context
+    candidate = create_candidate(service)
+    assert client.post(f"/api/v1/admin/supplier-candidates/{candidate.id}/reject", json={}).status_code == 422
+    response = client.post(
+        f"/api/v1/admin/supplier-candidates/{candidate.id}/reject",
+        json={"reason": "Insufficient market evidence"},
+    )
+    assert response.status_code == 200
+    stored = db.get(SupplierCandidate, candidate.id)
+    assert stored.rejection_reason == "Insufficient market evidence"
+    assert stored.decision_at is not None
+    assert stored.decision_by_user_id is not None
 
 
 def test_supplier_validation_reject_cannot_be_approved(candidate_context):
@@ -331,6 +372,24 @@ def test_bulk_imports_approved_candidate_as_draft(candidate_context):
     assert result.results[0].status == "IMPORTED"
     assert product.status == "DRAFT"
     assert product.commercial_status == "APPROVED"
+    stored = db.get(SupplierCandidate, candidate.id)
+    assert stored.imported_at is not None
+    assert stored.import_result == "IMPORTED"
+
+
+@pytest.mark.parametrize("approval_status", ["REVIEW", "REJECTED", "APPROVED", "IMPORTED"])
+def test_legacy_candidate_decision_and_import_state_remain_unchanged(candidate_context, approval_status):
+    db, service, _, admin, _, _ = candidate_context
+    candidate = create_candidate(service)
+    stored = db.get(SupplierCandidate, candidate.id)
+    stored.data_snapshot = None
+    stored.snapshot_status = "LEGACY_SNAPSHOT_UNAVAILABLE"
+    stored.approval_status = approval_status
+    db.commit()
+    result = service.get_supplier_candidate(candidate.id)
+    assert result.snapshot_status == "LEGACY_SNAPSHOT_UNAVAILABLE"
+    assert result.variants == []
+    assert result.approval_status == approval_status
 
 
 def test_bulk_resolves_unique_candidate_sku(candidate_context):

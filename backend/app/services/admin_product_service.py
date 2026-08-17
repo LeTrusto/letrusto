@@ -177,6 +177,32 @@ class AdminProductService:
         shipping_usd = shipping.options[0].cost_usd if shipping and shipping.options else None
         economics = calculate_economics(normalized, shipping_cost_usd=shipping_usd, config=config)
         product_score = score_product(normalized, economics=economics, shipping=shipping)
+        shipping_cost_inr = Decimal(str(shipping_usd * config.usd_to_inr)) if shipping_usd is not None else Decimal("0")
+        variant_snapshot = []
+        for variant in normalized.variants:
+            price = None
+            if variant.cost_usd is not None:
+                price = calculate_launch_variant_price(
+                    supplier_cost_usd=Decimal(str(variant.cost_usd)),
+                    shipping_cost_inr=shipping_cost_inr,
+                    policy=self.launch_pricing_policy,
+                )
+            variant_snapshot.append({
+                "supplier_variant_id": variant.supplier_variant_id,
+                "supplier_variant_sku": variant.supplier_variant_sku,
+                "name": variant.name,
+                "attributes": variant.option_key,
+                "supplier_cost_usd": variant.cost_usd,
+                "supplier_cost_inr": variant.cost_inr,
+                "weight_grams": variant.weight_grams,
+                "total_inventory": variant.total_inventory,
+                "cj_inventory": variant.cj_inventory,
+                "factory_inventory": variant.factory_inventory,
+                "selling_price_inr": str(price.selling_price_inr) if price else None,
+                "target_margin_status": price.target_margin_status if price else None,
+                "cac_target_status": price.cac_target_status if price else None,
+            })
+        selling_prices = [Decimal(item["selling_price_inr"]) for item in variant_snapshot if item["selling_price_inr"]]
 
         existing = self.db.scalar(
             select(SupplierCandidate).where(
@@ -197,6 +223,18 @@ class AdminProductService:
             supplier_validation_score=product_score.score,
             commercial_status="REVIEW",
             market_status="NOT_EVALUATED",
+            discovery_min_selling_price_inr=min(selling_prices) if selling_prices else None,
+            discovery_max_selling_price_inr=max(selling_prices) if selling_prices else None,
+            snapshot_status="AVAILABLE",
+            data_snapshot={
+                "main_image": normalized.images[0] if normalized.images else None,
+                "images": normalized.images,
+                "validation_issues": product_score.notes,
+                "target_margin_percent": str(self.launch_pricing_policy.target_contribution_margin_pct),
+                "target_cac_inr": str(self.launch_pricing_policy.target_cac_inr),
+                "cac_viable": all(item["cac_target_status"] == "CAC_TARGET_SUPPORTED" for item in variant_snapshot if item["cac_target_status"]),
+                "variants": variant_snapshot,
+            },
         )
         self.db.add(candidate)
         try:
@@ -241,11 +279,16 @@ class AdminProductService:
             candidate.commercial_status = "APPROVED"
             candidate.approved_at = datetime.now(timezone.utc)
             candidate.approved_by_user_id = current_admin.id
+            candidate.decision_at = candidate.approved_at
+            candidate.decision_by_user_id = current_admin.id
+            candidate.rejection_reason = None
             self.db.commit()
             self.db.refresh(candidate)
         return self._candidate_dto(candidate)
 
-    def reject_supplier_candidate(self, candidate_id: UUID) -> SupplierCandidateDTO:
+    def reject_supplier_candidate(
+        self, candidate_id: UUID, reason: str | None = None, current_admin: User | None = None
+    ) -> SupplierCandidateDTO:
         candidate = self._get_candidate(candidate_id)
         if candidate.approval_status == "IMPORTED":
             raise BadRequestError("Imported supplier candidate cannot be rejected")
@@ -253,6 +296,9 @@ class AdminProductService:
         candidate.commercial_status = "REJECTED"
         candidate.approved_at = None
         candidate.approved_by_user_id = None
+        candidate.decision_at = datetime.now(timezone.utc)
+        candidate.decision_by_user_id = current_admin.id if current_admin else None
+        candidate.rejection_reason = reason or "Admin rejected candidate"
         self.db.commit()
         self.db.refresh(candidate)
         return self._candidate_dto(candidate)
@@ -342,6 +388,9 @@ class AdminProductService:
         if product:
             candidate.imported_product_id = product.id
             candidate.approval_status = "IMPORTED"
+            candidate.imported_at = datetime.now(timezone.utc)
+            candidate.import_result = "ALREADY_EXISTS"
+            candidate.import_failure_reason = None
             db.commit()
             return BulkApprovedProductImportItem(
                 requested_id=requested_id,
@@ -378,6 +427,9 @@ class AdminProductService:
             }
             candidate.imported_product_id = product.id
             candidate.approval_status = "IMPORTED"
+            candidate.imported_at = datetime.now(timezone.utc)
+            candidate.import_result = "IMPORTED"
+            candidate.import_failure_reason = None
             db.commit()
         except IntegrityError:
             db.rollback()
@@ -392,6 +444,9 @@ class AdminProductService:
             candidate = db.get(SupplierCandidate, candidate.id)
             candidate.imported_product_id = product.id
             candidate.approval_status = "IMPORTED"
+            candidate.imported_at = datetime.now(timezone.utc)
+            candidate.import_result = "ALREADY_EXISTS"
+            candidate.import_failure_reason = None
             db.commit()
             return BulkApprovedProductImportItem(
                 requested_id=requested_id,
@@ -400,6 +455,11 @@ class AdminProductService:
                 product_id=product.id,
                 message="Catalog product already exists; candidate was linked",
             )
+        except Exception as exc:
+            candidate.import_result = "FAILED"
+            candidate.import_failure_reason = str(exc) or "Supplier candidate import failed"
+            db.commit()
+            raise
 
         return BulkApprovedProductImportItem(
             requested_id=requested_id,
@@ -768,8 +828,12 @@ class AdminProductService:
             raise NotFoundError("Supplier candidate not found")
         return candidate
 
+    def get_supplier_candidate(self, candidate_id: UUID) -> SupplierCandidateDTO:
+        return self._candidate_dto(self._get_candidate(candidate_id))
+
     @staticmethod
     def _candidate_dto(candidate: SupplierCandidate) -> SupplierCandidateDTO:
+        snapshot = candidate.data_snapshot or {}
         return SupplierCandidateDTO(
             id=candidate.id,
             supplier=candidate.supplier,
@@ -783,10 +847,23 @@ class AdminProductService:
             market_status=candidate.market_status,
             discovery_min_selling_price_inr=candidate.discovery_min_selling_price_inr,
             discovery_max_selling_price_inr=candidate.discovery_max_selling_price_inr,
+            snapshot_status=candidate.snapshot_status,
+            main_image=snapshot.get("main_image"),
+            variants=snapshot.get("variants", []),
+            validation_issues=snapshot.get("validation_issues", []),
+            target_margin_percent=snapshot.get("target_margin_percent"),
+            target_cac_inr=snapshot.get("target_cac_inr"),
+            cac_viable=snapshot.get("cac_viable"),
             market_evidence_count=len(candidate.market_evidence),
             approved_at=candidate.approved_at,
             approved_by_user_id=candidate.approved_by_user_id,
+            decision_at=candidate.decision_at,
+            decision_by_user_id=candidate.decision_by_user_id,
+            rejection_reason=candidate.rejection_reason,
             imported_product_id=candidate.imported_product_id,
+            imported_at=candidate.imported_at,
+            import_result=candidate.import_result,
+            import_failure_reason=candidate.import_failure_reason,
             created_at=candidate.created_at,
             updated_at=candidate.updated_at,
         )

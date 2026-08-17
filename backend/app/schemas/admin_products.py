@@ -76,6 +76,23 @@ class ProductImportRequest(BaseModel):
 
 
 CandidateApprovalStatus = Literal["REVIEW", "APPROVED", "REJECTED", "IMPORTED"]
+CandidateSnapshotStatus = Literal["AVAILABLE", "LEGACY_SNAPSHOT_UNAVAILABLE"]
+
+
+class SupplierCandidateVariantDTO(BaseModel):
+    supplier_variant_id: str
+    supplier_variant_sku: str
+    name: str
+    attributes: str
+    supplier_cost_usd: Decimal | None
+    supplier_cost_inr: Decimal | None
+    weight_grams: Decimal | None
+    total_inventory: int | None
+    cj_inventory: int | None
+    factory_inventory: int | None
+    selling_price_inr: Decimal | None
+    target_margin_status: str | None
+    cac_target_status: str | None
 
 
 class SupplierCandidateCreate(BaseModel):
@@ -108,10 +125,23 @@ class SupplierCandidateDTO(BaseModel):
     ]
     discovery_min_selling_price_inr: Decimal | None
     discovery_max_selling_price_inr: Decimal | None
+    snapshot_status: CandidateSnapshotStatus
+    main_image: str | None
+    variants: list[SupplierCandidateVariantDTO]
+    validation_issues: list[str]
+    target_margin_percent: Decimal | None
+    target_cac_inr: Decimal | None
+    cac_viable: bool | None
     market_evidence_count: int
     approved_at: datetime | None
     approved_by_user_id: UUID | None
+    decision_at: datetime | None
+    decision_by_user_id: UUID | None
+    rejection_reason: str | None
     imported_product_id: UUID | None
+    imported_at: datetime | None
+    import_result: str | None
+    import_failure_reason: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -119,6 +149,18 @@ class SupplierCandidateDTO(BaseModel):
 class SupplierCandidateListResponse(BaseModel):
     candidates: list[SupplierCandidateDTO]
     total: int
+
+
+class SupplierCandidateRejectionRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("rejection reason must not be blank")
+        return normalized
 
 
 BulkImportItemStatus = Literal[

@@ -22,6 +22,7 @@ from app.schemas.admin_products import (
     SupplierCandidateCreate,
     SupplierCandidateDTO,
     SupplierCandidateListResponse,
+    SupplierCandidateRejectionRequest,
     VariantPriceCalculationResponse,
 )
 from app.services.admin_service import AdminService
@@ -83,6 +84,15 @@ def list_supplier_candidates(
     return service.list_supplier_candidates()
 
 
+@router.get("/supplier-candidates/{candidate_id}", response_model=SupplierCandidateDTO)
+def get_supplier_candidate(
+    candidate_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> SupplierCandidateDTO:
+    return service.get_supplier_candidate(candidate_id)
+
+
 @router.post("/supplier-candidates/{candidate_id}/market-evidence", response_model=MarketEvidenceDTO)
 def create_supplier_candidate_market_evidence(
     candidate_id: UUID,
@@ -128,10 +138,11 @@ def approve_supplier_candidate(
 @router.post("/supplier-candidates/{candidate_id}/reject", response_model=SupplierCandidateDTO)
 def reject_supplier_candidate(
     candidate_id: UUID,
-    _: User = Depends(get_current_admin),
+    payload: SupplierCandidateRejectionRequest,
+    current_admin: User = Depends(get_current_admin),
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> SupplierCandidateDTO:
-    return service.reject_supplier_candidate(candidate_id)
+    return service.reject_supplier_candidate(candidate_id, payload.reason, current_admin)
 
 
 @router.get("/products", response_model=AdminProductListResponse)

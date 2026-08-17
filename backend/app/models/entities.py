@@ -140,13 +140,25 @@ class SupplierCandidate(Base):
     market_status: Mapped[str] = mapped_column(String(30), nullable=False, default="NOT_EVALUATED")
     discovery_min_selling_price_inr: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     discovery_max_selling_price_inr: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    data_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    snapshot_status: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="LEGACY_SNAPSHOT_UNAVAILABLE", server_default="LEGACY_SNAPSHOT_UNAVAILABLE"
+    )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    decision_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decision_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    rejection_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     imported_product_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    imported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    import_result: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    import_failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
