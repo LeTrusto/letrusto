@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     admin,
+    account,
     affiliate,
     ai,
     ai_tools,
@@ -42,6 +43,7 @@ api_router.include_router(deals.router)
 api_router.include_router(support.router)
 api_router.include_router(analytics.router)
 api_router.include_router(admin.router)
+api_router.include_router(account.router)
 api_router.include_router(affiliate.router)
 api_router.include_router(articles.router)
 api_router.include_router(supplier_discovery.router)

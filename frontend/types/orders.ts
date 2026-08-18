@@ -22,6 +22,7 @@ export type CreateOrderPayload = {
 export type OrderItem = {
   id: string;
   product_name: string;
+  product_image_url?: string | null;
   variant_name: string;
   quantity: number;
   unit_price: number;
@@ -48,6 +49,31 @@ export type Order = {
   tracking_carrier?: string | null;
   shipped_at?: string | null;
   delivered_at?: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+  refund_status?: string | null;
+  refund_amount?: number | null;
+  refund_message?: string | null;
+};
+
+export type OrderList = {
+  items: Order[];
+  page: number;
+  page_size: number;
+  total: number;
+  has_next: boolean;
+};
+
+export type CancellationStatus = {
+  order_id: string;
+  order_status: string;
+  payment_status: string;
+  fulfillment_status: string;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
+  refund_status?: string | null;
+  refund_amount?: number | null;
+  refund_message?: string | null;
 };
 
 export type PaymentSession = {

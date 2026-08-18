@@ -111,7 +111,7 @@ export default function CommerceNavbar() {
               </span>
             )}
           </Link>
-          <Link href="/login" className="p-2 hover:bg-[var(--surface-muted)] rounded-lg transition-colors" aria-label="Account">
+          <Link href="/account" className="p-2 hover:bg-[var(--surface-muted)] rounded-lg transition-colors" aria-label="Account">
             <User size={20} strokeWidth={1.5} />
           </Link>
         </div>

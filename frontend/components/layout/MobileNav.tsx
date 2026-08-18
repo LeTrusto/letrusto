@@ -10,7 +10,7 @@ const TABS = [
   { label: "Discover", href: "/shop", icon: Compass },
   { label: "Categories", href: "/shop?view=categories", icon: LayoutGrid },
   { label: "Orders", href: "/dashboard", icon: Package },
-  { label: "Account", href: "/login", icon: UserCircle },
+  { label: "Account", href: "/account", icon: UserCircle },
 ] as const;
 
 export default function MobileNav() {

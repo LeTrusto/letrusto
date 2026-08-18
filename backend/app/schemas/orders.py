@@ -56,6 +56,7 @@ class CreateOrderRequest(BaseModel):
 class OrderItemDTO(BaseModel):
     id: UUID
     product_name: str
+    product_image_url: str | None = None
     variant_name: str
     quantity: int
     unit_price: Decimal
@@ -84,3 +85,16 @@ class OrderDTO(BaseModel):
     tracking_carrier: str | None = None
     shipped_at: str | None = None
     delivered_at: str | None = None
+    cancelled_at: str | None = None
+    cancellation_reason: str | None = None
+    refund_status: str | None = None
+    refund_amount: Decimal | None = None
+    refund_message: str | None = None
+
+
+class OrderListDTO(BaseModel):
+    items: list[OrderDTO]
+    page: int
+    page_size: int
+    total: int
+    has_next: bool

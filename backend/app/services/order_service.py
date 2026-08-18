@@ -2,12 +2,12 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.models.entities import Cart, CartItem, Order, OrderItem, Product, ProductVariant, User
-from app.schemas.orders import CartDTO, CartItemDTO, CartItemRequest, CreateOrderRequest, OrderDTO, OrderItemDTO
+from app.schemas.orders import CartDTO, CartItemDTO, CartItemRequest, CreateOrderRequest, OrderDTO, OrderItemDTO, OrderListDTO
 
 
 class OrderService:
@@ -110,6 +110,12 @@ class OrderService:
         return self._cart_dto(self._cart(user))
 
     def _order_dto(self, order: Order) -> OrderDTO:
+        refund = next((item for item in getattr(order, "refund_requests", []) if item.status != "FAILED"), None)
+        refund_message = {
+            "PENDING": "Refund is being initiated.",
+            "PROCESSING": "Refund is being processed.",
+            "SUCCESS": "Refund completed.",
+        }.get(refund.status) if refund else None
         return OrderDTO(
             id=order.id,
             order_number=order.order_number,
@@ -128,6 +134,7 @@ class OrderService:
                 OrderItemDTO(
                     id=item.id,
                     product_name=item.product_name,
+                    product_image_url=item.product_image_url,
                     variant_name=item.variant_name,
                     quantity=item.quantity,
                     unit_price=item.unit_price,
@@ -142,6 +149,11 @@ class OrderService:
             tracking_carrier=order.tracking_carrier,
             shipped_at=order.shipped_at.isoformat() if order.shipped_at else None,
             delivered_at=order.delivered_at.isoformat() if order.delivered_at else None,
+            cancelled_at=order.cancelled_at.isoformat() if order.cancelled_at else None,
+            cancellation_reason=order.cancellation_reason,
+            refund_status=refund.status if refund else None,
+            refund_amount=refund.amount if refund else None,
+            refund_message=refund_message,
         )
 
     def create_order(self, user: User, payload: CreateOrderRequest) -> OrderDTO:
@@ -171,7 +183,7 @@ class OrderService:
             idempotency_key=payload.idempotency_key,
         )
         order.items = [
-            OrderItem(product_id=product.id, variant_id=variant.id, product_name=product.name, variant_name=variant.name or variant.attributes, quantity=quantity, unit_price=variant.selling_price, line_total=variant.selling_price * quantity)
+            OrderItem(product_id=product.id, variant_id=variant.id, product_name=product.name, product_image_url=product.images[0].url if product.images else None, variant_name=variant.name or variant.attributes, quantity=quantity, unit_price=variant.selling_price, line_total=variant.selling_price * quantity)
             for product, variant, quantity in resolved
         ]
         self.db.add(order)
@@ -180,7 +192,26 @@ class OrderService:
         return self._order_dto(order)
 
     def get_order(self, user: User, order_id: UUID) -> OrderDTO:
-        order = self.db.scalar(select(Order).where(Order.id == order_id, Order.user_id == user.id).options(selectinload(Order.items)))
+        order = self.db.scalar(select(Order).where(Order.id == order_id, Order.user_id == user.id).options(selectinload(Order.items), selectinload(Order.refund_requests)))
         if order is None:
             raise NotFoundError("Order not found")
         return self._order_dto(order)
+
+    def list_orders(self, user: User, page: int = 1, page_size: int = 20) -> OrderListDTO:
+        page = max(page, 1)
+        page_size = min(max(page_size, 1), 20)
+        base = select(Order).where(Order.user_id == user.id)
+        total = self.db.scalar(select(func.count()).select_from(base.subquery())) or 0
+        orders = list(self.db.scalars(
+            base.options(selectinload(Order.items), selectinload(Order.refund_requests))
+            .order_by(Order.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        ).all())
+        return OrderListDTO(
+            items=[self._order_dto(order) for order in orders],
+            page=page,
+            page_size=page_size,
+            total=total,
+            has_next=page * page_size < total,
+        )

@@ -1,5 +1,5 @@
 import { buildApiUrl } from "@/services/api";
-import type { CreateOrderPayload, Order, PaymentSession } from "@/types/orders";
+import type { CancellationStatus, CreateOrderPayload, Order, OrderList, PaymentSession } from "@/types/orders";
 
 async function orderRequest<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(buildApiUrl(path), {
@@ -20,6 +20,17 @@ export function createOrder(token: string, payload: CreateOrderPayload) {
 
 export function getOrder(token: string, orderId: string) {
   return orderRequest<Order>(`/orders/${orderId}`, token);
+}
+
+export function getAccountOrders(token: string, page = 1, pageSize = 20) {
+  return orderRequest<OrderList>(`/account/orders?page=${page}&page_size=${pageSize}`, token);
+}
+
+export function cancelOrder(token: string, orderId: string, reason?: string) {
+  return orderRequest<CancellationStatus>(`/orders/${orderId}/cancel`, token, {
+    method: "POST",
+    body: JSON.stringify({ reason: reason ?? "Customer requested cancellation" }),
+  });
 }
 
 export function createCashfreeSession(token: string, orderId: string) {
