@@ -58,6 +58,21 @@ type Product = {
 
 type ProductResponse = { products: Product[]; total: number };
 
+type FulfillmentOrder = {
+  order_id: string;
+  order_number: string;
+  payment_status: string;
+  total: number;
+  fulfillment_status: string;
+  supplier_order_id: string | null;
+  failure_reason: string | null;
+  customer_email: string;
+  tracking_number: string | null;
+  tracking_carrier: string | null;
+  supplier_status: string | null;
+  last_supplier_sync_at: string | null;
+};
+
 type SupplierCandidate = {
   id: string;
   supplier: "cj";
@@ -249,6 +264,8 @@ export default function AdminProductsView() {
   const [priceCalculations, setPriceCalculations] = useState<Record<string, PriceCalculation | VariantPriceCalculation>>({});
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [fulfillmentOrders, setFulfillmentOrders] = useState<FulfillmentOrder[]>([]);
+  const [syncingOrderId, setSyncingOrderId] = useState<string | null>(null);
 
   const loadProducts = useCallback(async () => {
     setLoading(true);
@@ -284,6 +301,12 @@ export default function AdminProductsView() {
     setCandidates(data.candidates);
   }, []);
 
+  const loadFulfillmentOrders = useCallback(async () => {
+    const response = await fetch(`${API_BASE}/api/v1/admin/orders/fulfillment`, { headers: apiHeaders() });
+    if (!response.ok) throw new Error(await apiError(response));
+    setFulfillmentOrders((await response.json()) as FulfillmentOrder[]);
+  }, []);
+
   async function loadCandidateEvidence(candidateId: string) {
     if (candidateEvidence[candidateId]) return;
     try {
@@ -298,11 +321,25 @@ export default function AdminProductsView() {
 
   useEffect(() => {
     void Promise.resolve()
-      .then(() => Promise.all([loadProducts(), loadCandidates()]))
+      .then(() => Promise.all([loadProducts(), loadCandidates(), loadFulfillmentOrders()]))
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Unable to load supplier candidates");
       });
-  }, [loadCandidates, loadProducts]);
+  }, [loadCandidates, loadFulfillmentOrders, loadProducts]);
+
+  async function syncFulfillment(orderId: string) {
+    setSyncingOrderId(orderId);
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/orders/${orderId}/sync-fulfillment`, { method: "POST", headers: apiHeaders() });
+      if (!response.ok) throw new Error(await apiError(response));
+      await loadFulfillmentOrders();
+      setMessage("Fulfillment status synchronized.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to synchronize fulfillment");
+    } finally {
+      setSyncingOrderId(null);
+    }
+  }
 
   async function importProduct(event: React.FormEvent) {
     event.preventDefault();
@@ -607,6 +644,12 @@ export default function AdminProductsView() {
 
       {message && <p className="mb-4 text-sm text-green-700">{message}</p>}
       {error && <p className="mb-4 text-sm text-red-700">{error}</p>}
+
+      <section className="mb-6 border-y border-[var(--border)] py-5">
+        <h2 className="text-lg font-semibold">Paid order fulfillment</h2>
+        <p className="text-sm text-[var(--text-muted)] mt-1">Supplier status and tracking are synchronized server-side.</p>
+        {fulfillmentOrders.length === 0 ? <p className="mt-4 text-sm text-[var(--text-muted)]">No paid orders require fulfillment.</p> : <div className="mt-4 overflow-x-auto"><table className="w-full text-sm whitespace-nowrap"><thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2 pr-3">Order</th><th className="pr-3">Payment</th><th className="pr-3">Fulfillment</th><th className="pr-3">CJ order</th><th className="pr-3">Tracking</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{fulfillmentOrders.map((order) => <tr key={order.order_id} className="border-t border-[var(--border)]"><td className="py-3 pr-3">{order.order_number}<span className="block text-xs text-[var(--text-muted)]">{order.customer_email}</span></td><td className="pr-3">{order.payment_status}</td><td className="pr-3">{order.fulfillment_status}<span className="block text-xs text-[var(--text-muted)]">{order.supplier_status ?? "-"}</span></td><td className="pr-3">{order.supplier_order_id ?? "Not submitted"}</td><td className="pr-3">{order.tracking_number ? `${order.tracking_carrier ?? "Carrier"} · ${order.tracking_number}` : "-"}</td><td><button type="button" onClick={() => void syncFulfillment(order.order_id)} disabled={syncingOrderId !== null || order.fulfillment_status === "DELIVERED"} className="lt-btn lt-btn-secondary text-sm">{syncingOrderId === order.order_id ? "Syncing..." : "Sync status"}</button></td></tr>)}</tbody></table></div>}
+      </section>
 
       {loading ? (
         <p className="text-sm text-[var(--text-muted)]">Loading catalog...</p>

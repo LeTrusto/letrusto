@@ -19,3 +19,21 @@ class PaymentStatusDTO(BaseModel):
     order_status: str
     fulfillment_status: str
     provider_reference: str | None
+
+
+class FulfillmentDTO(BaseModel):
+    order_id: UUID
+    fulfillment_status: str
+    supplier_order_id: str | None
+    failure_reason: str | None = None
+
+
+class AdminFulfillmentOrderDTO(FulfillmentDTO):
+    order_number: str
+    payment_status: str
+    total: Decimal
+    customer_email: str
+    tracking_number: str | None = None
+    tracking_carrier: str | None = None
+    supplier_status: str | None = None
+    last_supplier_sync_at: str | None = None

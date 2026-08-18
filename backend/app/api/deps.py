@@ -25,6 +25,7 @@ from app.services.favorite_service import FavoriteService
 from app.services.notification_service import NotificationService
 from app.services.order_service import OrderService
 from app.services.cashfree_service import CashfreeService
+from app.services.fulfillment_service import FulfillmentService
 from app.services.product_service import ProductService
 from app.services.support_service import SupportService
 from app.services.user_service import UserService
@@ -46,6 +47,10 @@ def get_order_service(db: Session = Depends(get_db)) -> OrderService:
 
 def get_cashfree_service(db: Session = Depends(get_db)) -> CashfreeService:
     return CashfreeService(db)
+
+
+def get_fulfillment_service(db: Session = Depends(get_db)) -> FulfillmentService:
+    return FulfillmentService(db)
 
 
 def get_favorite_service(db: Session = Depends(get_db)) -> FavoriteService:

@@ -15,6 +15,8 @@ from app.suppliers.base import (
     RawVariant,
     ShippingOption,
     ShippingResult,
+    SupplierOrderResult,
+    SupplierTrackingResult,
     ShippingValidation,
     SupplierCategory,
 )
@@ -368,6 +370,24 @@ class CJAdapter:
             origin_country=origin_country,
             destination_country=destination_country,
         )
+
+    async def create_order(self, payload: dict) -> SupplierOrderResult:
+        """Submit a validated order through CJ's existing authenticated API client."""
+        try:
+            data = await self._post("/shopping/order/createOrder", payload)
+        except httpx.HTTPError as exc:
+            return SupplierOrderResult(accepted=False, error=f"CJ order request failed: {exc}")
+        if not data.get("result"):
+            return SupplierOrderResult(accepted=False, error=data.get("message", "CJ rejected order"))
+        body = data.get("data") or {}
+        supplier_order_id = body.get("orderId") or body.get("orderNum") or body.get("orderNumber")
+        if not supplier_order_id:
+            return SupplierOrderResult(accepted=False, error="CJ response did not include an order ID")
+        return SupplierOrderResult(accepted=True, supplier_order_id=str(supplier_order_id), status="SUBMITTED")
+
+    async def get_tracking(self, supplier_order_id: str) -> SupplierTrackingResult:
+        # The repository has no verified CJ tracking endpoint or response contract.
+        return SupplierTrackingResult(supported=False, error="CJ tracking endpoint is not verified in this integration")
 
 
 def _safe_float(val: Any) -> float | None:

@@ -601,6 +601,15 @@ class Order(Base):
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     payment_failure_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     provider_reference: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    supplier_order_id: Mapped[str | None] = mapped_column(String(160), nullable=True, unique=True, index=True)
+    fulfillment_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    fulfillment_failure_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    tracking_number: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    tracking_carrier: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    shipped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    supplier_status: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    last_supplier_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
@@ -626,6 +635,8 @@ class OrderItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     order: Mapped[Order] = relationship(back_populates="items")
+    product: Mapped[Product | None] = relationship()
+    variant: Mapped[ProductVariant | None] = relationship()
 
 
 class PaymentAttempt(Base):

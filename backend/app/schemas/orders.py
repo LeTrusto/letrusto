@@ -80,3 +80,7 @@ class OrderDTO(BaseModel):
     created_at: str
     payment_provider: str | None = None
     paid_at: str | None = None
+    tracking_number: str | None = None
+    tracking_carrier: str | None = None
+    shipped_at: str | None = None
+    delivered_at: str | None = None

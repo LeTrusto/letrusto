@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_admin_product_service, get_admin_service, get_current_admin
+from app.api.deps import get_admin_product_service, get_admin_service, get_current_admin, get_fulfillment_service
 from app.models.entities import User
 from app.schemas.admin import AdminDashboardStats, AdminUserListResponse
 from app.schemas.admin_products import (
@@ -27,8 +27,38 @@ from app.schemas.admin_products import (
 )
 from app.services.admin_service import AdminService
 from app.services.admin_product_service import AdminProductService
+from app.services.fulfillment_service import FulfillmentService
+from app.schemas.payments import AdminFulfillmentOrderDTO, FulfillmentDTO
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get("/orders/fulfillment", response_model=list[AdminFulfillmentOrderDTO])
+def list_fulfillment_orders(
+    _: User = Depends(get_current_admin),
+    service: FulfillmentService = Depends(get_fulfillment_service),
+):
+    return service.list_orders()
+
+
+@router.post("/orders/{order_id}/fulfillment", response_model=FulfillmentDTO)
+async def submit_order_fulfillment(
+    order_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: FulfillmentService = Depends(get_fulfillment_service),
+):
+    order = await service.submit(order_id)
+    return FulfillmentDTO(order_id=order.id, fulfillment_status=order.fulfillment_status, supplier_order_id=order.supplier_order_id, failure_reason=order.fulfillment_failure_reason)
+
+
+@router.post("/orders/{order_id}/sync-fulfillment", response_model=FulfillmentDTO)
+async def sync_order_fulfillment(
+    order_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: FulfillmentService = Depends(get_fulfillment_service),
+):
+    order = await service.sync_tracking(order_id)
+    return FulfillmentDTO(order_id=order.id, fulfillment_status=order.fulfillment_status, supplier_order_id=order.supplier_order_id, failure_reason=order.fulfillment_failure_reason)
 
 
 @router.get("/stats", response_model=AdminDashboardStats)

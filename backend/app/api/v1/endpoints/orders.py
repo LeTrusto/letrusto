@@ -53,12 +53,12 @@ def create_cashfree_session(order_id: UUID, current_user: User = Depends(get_cur
 
 
 @router.get("/orders/{order_id}/payment-status", response_model=PaymentStatusDTO)
-def verify_cashfree_payment(order_id: UUID, current_user: User = Depends(get_current_user), service: CashfreeService = Depends(get_cashfree_service)) -> PaymentStatusDTO:
-    return service.verify_payment(current_user, order_id)
+async def verify_cashfree_payment(order_id: UUID, current_user: User = Depends(get_current_user), service: CashfreeService = Depends(get_cashfree_service)) -> PaymentStatusDTO:
+    return await service.verify_payment(current_user, order_id)
 
 
 @router.post("/payments/cashfree/webhook", status_code=200)
 async def cashfree_webhook(request: Request, x_webhook_timestamp: str | None = Header(default=None), x_webhook_signature: str | None = Header(default=None), service: CashfreeService = Depends(get_cashfree_service)) -> dict[str, str]:
     await request.body()
-    service.process_webhook(await request.body(), x_webhook_timestamp, x_webhook_signature)
+    await service.process_webhook(await request.body(), x_webhook_timestamp, x_webhook_signature)
     return {"status": "ok"}

@@ -12,6 +12,7 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.models.entities import Order, PaymentAttempt, User
 from app.schemas.payments import PaymentSessionDTO, PaymentStatusDTO
+from app.services.fulfillment_service import FulfillmentService
 
 
 class CashfreeService:
@@ -94,7 +95,7 @@ class CashfreeService:
         expected = base64.b64encode(hmac.new(secret.encode(), timestamp.encode() + raw_body, hashlib.sha256).digest()).decode()
         return hmac.compare_digest(expected, signature)
 
-    def process_webhook(self, raw_body: bytes, timestamp: str | None, signature: str | None) -> None:
+    async def process_webhook(self, raw_body: bytes, timestamp: str | None, signature: str | None) -> None:
         secret = self.settings.CASHFREE_WEBHOOK_SECRET or self.settings.CASHFREE_SECRET_KEY
         if not self.verify_webhook_signature(raw_body, timestamp, signature, secret):
             raise BadRequestError("Invalid Cashfree webhook signature")
@@ -126,8 +127,10 @@ class CashfreeService:
             order.payment_status = "FAILED"
             order.payment_failure_reason = payment.get("payment_message") or status
         self.db.commit()
+        if status == "SUCCESS":
+            await FulfillmentService(self.db).submit(order.id)
 
-    def verify_payment(self, user: User, order_id: UUID) -> PaymentStatusDTO:
+    async def verify_payment(self, user: User, order_id: UUID) -> PaymentStatusDTO:
         order = self._order(user, order_id)
         if not self.configured or not order.provider_order_id:
             raise BadRequestError("Cashfree payment verification is not configured")
@@ -137,7 +140,7 @@ class CashfreeService:
         payments = response.json()
         successful = next((item for item in payments if item.get("payment_status") == "SUCCESS"), None)
         if successful:
-            self.process_webhook(
+            await self.process_webhook(
                 __import__("json").dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": successful}}).encode(),
                 "server-verification",
                 base64.b64encode(hmac.new((self.settings.CASHFREE_WEBHOOK_SECRET or self.settings.CASHFREE_SECRET_KEY).encode(), b"server-verification" + __import__("json").dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": successful}}).encode(), hashlib.sha256).digest()).decode(),

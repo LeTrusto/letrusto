@@ -1,4 +1,5 @@
 import base64
+import asyncio
 import hashlib
 import hmac
 import json
@@ -11,7 +12,7 @@ import pytest
 
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
-from app.models.entities import Order, Product, ProductVariant, User
+from app.models.entities import Cart, CartItem, Order, OrderItem, PaymentAttempt, Product, ProductVariant, User
 from app.services.cashfree_service import CashfreeService
 from app.services.order_service import OrderService
 from app.schemas.orders import CartItemRequest, CreateOrderRequest, CustomerDetails, ShippingAddress
@@ -35,7 +36,16 @@ def settings(**overrides):
 
 
 def cleanup(db, user, product):
-    db.query(Order).filter(Order.user_id == user.id).delete(synchronize_session=False); db.delete(user); db.delete(product); db.commit(); db.close()
+    order_ids = [row[0] for row in db.query(Order.id).filter(Order.user_id == user.id).all()]
+    if order_ids:
+        db.query(PaymentAttempt).filter(PaymentAttempt.order_id.in_(order_ids)).delete(synchronize_session=False)
+        db.query(OrderItem).filter(OrderItem.order_id.in_(order_ids)).delete(synchronize_session=False)
+        db.query(Order).filter(Order.id.in_(order_ids)).delete(synchronize_session=False)
+    cart = db.query(Cart).filter(Cart.user_id == user.id).one_or_none()
+    if cart:
+        db.query(CartItem).filter(CartItem.cart_id == cart.id).delete(synchronize_session=False)
+        db.delete(cart)
+    db.delete(product); db.delete(user); db.commit(); db.close()
 
 
 def test_missing_credentials_fail_closed():
@@ -87,9 +97,9 @@ def test_webhook_signature_and_duplicate_success_are_idempotent():
     timestamp = "1700000000000"
     signature = base64.b64encode(hmac.new(b"webhook", timestamp.encode() + body, hashlib.sha256).digest()).decode()
     try:
-        service.process_webhook(body, timestamp, signature); service.process_webhook(body, timestamp, signature)
+        asyncio.run(service.process_webhook(body, timestamp, signature)); asyncio.run(service.process_webhook(body, timestamp, signature))
         db.refresh(order)
-        assert order.payment_status == "PAID"; assert order.status == "PAID"; assert order.fulfillment_status == "PENDING"
+        assert order.payment_status == "PAID"; assert order.status == "PAID"; assert order.fulfillment_status == "FAILED"
         with pytest.raises(BadRequestError, match="signature"):
-            service.process_webhook(body, timestamp, "bad")
+            asyncio.run(service.process_webhook(body, timestamp, "bad"))
     finally: cleanup(db, user, product)

@@ -44,6 +44,10 @@ export type Order = {
   shipping_address: ShippingAddress;
   items: OrderItem[];
   created_at: string;
+  tracking_number?: string | null;
+  tracking_carrier?: string | null;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
 };
 
 export type PaymentSession = {

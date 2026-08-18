@@ -138,6 +138,10 @@ class OrderService:
             created_at=order.created_at.isoformat(),
             payment_provider=order.payment_provider,
             paid_at=order.paid_at.isoformat() if order.paid_at else None,
+            tracking_number=order.tracking_number,
+            tracking_carrier=order.tracking_carrier,
+            shipped_at=order.shipped_at.isoformat() if order.shipped_at else None,
+            delivered_at=order.delivered_at.isoformat() if order.delivered_at else None,
         )
 
     def create_order(self, user: User, payload: CreateOrderRequest) -> OrderDTO:

@@ -92,6 +92,25 @@ class ShippingResult:
 
 
 @dataclass
+class SupplierOrderResult:
+    accepted: bool
+    supplier_order_id: str | None = None
+    status: str = "FAILED"
+    error: str = ""
+
+
+@dataclass
+class SupplierTrackingResult:
+    supported: bool
+    supplier_status: str | None = None
+    tracking_number: str | None = None
+    carrier: str | None = None
+    shipped_at: str | None = None
+    delivered_at: str | None = None
+    error: str = ""
+
+
+@dataclass
 class SupplierCategory:
     category_id: str
     name: str
@@ -128,3 +147,7 @@ class SupplierAdapter(Protocol):
         origin_country: str = "CN",
         quantity: int = 1,
     ) -> ShippingResult: ...
+
+    async def create_order(self, payload: dict) -> SupplierOrderResult: ...
+
+    async def get_tracking(self, supplier_order_id: str) -> SupplierTrackingResult: ...
