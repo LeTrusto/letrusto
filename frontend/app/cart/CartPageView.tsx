@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cartContext";
-import { getMockProductById } from "@/lib/mockData";
+import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
 function formatPrice(value: number): string {
   return `₹${value.toLocaleString("en-IN")}`;
@@ -12,6 +13,16 @@ function formatPrice(value: number): string {
 
 export default function CartPageView() {
   const { items, updateQuantity, removeItem, clearCart, subtotal, savings, itemCount } = useCart();
+  const [products, setProducts] = useState<Record<string, ReturnType<typeof toCommerceProduct>>>({});
+
+  useEffect(() => {
+    void getPublicProducts().then((catalog) => {
+      setProducts(Object.fromEntries(catalog.map((product) => {
+        const commerceProduct = toCommerceProduct(product);
+        return [commerceProduct.id, commerceProduct];
+      })));
+    }).catch(() => {});
+  }, []);
 
   if (items.length === 0) {
     return (
@@ -39,8 +50,9 @@ export default function CartPageView() {
         {/* Items */}
         <div className="md:col-span-2 space-y-4">
           {items.map((item) => {
-            const product = getMockProductById(item.productId);
+            const product = products[item.productId];
             if (!product) return null;
+            const selectedVariant = product.catalogVariants?.find((variant) => variant.id === item.selectedVariantId);
 
             return (
               <div key={item.productId} className="lt-card p-4 flex gap-4">
@@ -61,7 +73,7 @@ export default function CartPageView() {
                   </Link>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">{product.categoryLabel}</p>
                   <div className="mt-2 flex items-center gap-1.5">
-                    <span className="text-sm font-bold">{formatPrice(product.price)}</span>
+                    <span className="text-sm font-bold">{formatPrice(selectedVariant?.price ?? product.price)}</span>
                     {product.compareAtPrice && (
                       <span className="text-xs text-[var(--text-muted)] line-through">{formatPrice(product.compareAtPrice)}</span>
                     )}

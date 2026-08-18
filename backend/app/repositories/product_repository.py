@@ -1,7 +1,7 @@
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, exists, func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.entities import Brand, Category, Product, ProductSimilarity
+from app.models.entities import Brand, Category, Product, ProductSimilarity, ProductVariant
 from app.schemas.product import ProductSearchQuery
 
 
@@ -33,8 +33,21 @@ class ProductRepository:
             selectinload(Product.similarities),
         )
 
+    @staticmethod
+    def _customer_ready_price_filter():
+        priced_variant = exists(
+            select(ProductVariant.id).where(
+                ProductVariant.product_id == Product.id,
+                ProductVariant.active.is_(True),
+                ProductVariant.selling_price.is_not(None),
+            )
+        )
+        return (Product.price_value.is_not(None) | priced_variant)
+
     def list_products(self, ids: list[str] | None = None) -> list[Product]:
-        stmt = select(Product).where(Product.status == "ACTIVE").options(*self._product_load_options())
+        stmt = select(Product).where(
+            Product.status == "ACTIVE", self._customer_ready_price_filter()
+        ).options(*self._product_load_options())
         if ids is not None:
             if len(ids) == 0:
                 return []
@@ -46,7 +59,7 @@ class ProductRepository:
         stmt = (
             select(Product)
             .options(*self._product_load_options())
-            .where(Product.slug == slug, Product.status == "ACTIVE")
+            .where(Product.slug == slug, Product.status == "ACTIVE", self._customer_ready_price_filter())
         )
         return self.db.scalars(stmt).unique().first()
 
@@ -55,7 +68,7 @@ class ProductRepository:
             select(Product)
             .join(Product.brand)
             .join(Product.category)
-            .where(Product.status == "ACTIVE")
+            .where(Product.status == "ACTIVE", self._customer_ready_price_filter())
             .options(*self._product_load_options())
         )
 
@@ -132,5 +145,7 @@ class ProductRepository:
         return list(self.db.scalars(select(Brand.name).order_by(Brand.name.asc())).all())
 
     def get_by_id(self, product_id) -> Product | None:
-        stmt = select(Product).where(Product.id == product_id, Product.status == "ACTIVE").options(*self._product_load_options())
+        stmt = select(Product).where(
+            Product.id == product_id, Product.status == "ACTIVE", self._customer_ready_price_filter()
+        ).options(*self._product_load_options())
         return self.db.scalars(stmt).unique().first()

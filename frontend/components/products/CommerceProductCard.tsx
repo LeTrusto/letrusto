@@ -67,7 +67,7 @@ export default function CommerceProductCard({ product }: Props) {
             )}
           </div>
           <button
-            onClick={() => addItem(product.id)}
+            onClick={() => addItem(product.id, 1, product.catalogVariants?.find((variant) => variant.available)?.id)}
             className="w-8 h-8 rounded-full bg-[var(--lt-primary)] text-white flex items-center justify-center hover:bg-zinc-700 transition-colors"
             aria-label={`Add ${product.name} to cart`}
           >

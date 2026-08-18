@@ -19,7 +19,12 @@ type Props = {
 
 export default function ProductDetailView({ product, related }: Props) {
   const { addItem } = useCart();
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [selectedVariantId, setSelectedVariantId] = useState(product.catalogVariants?.find((variant) => variant.available)?.id ?? null);
+  const selectedVariant = product.catalogVariants?.find((variant) => variant.id === selectedVariantId);
+  const displayPrice = selectedVariant?.price ?? product.price;
+  const isAvailable = selectedVariant?.available ?? product.availability !== "out-of-stock";
+  const maxQuantity = selectedVariant?.inventory ?? 1;
+  const [quantity, setQuantity] = useState(1);
 
   const discount = product.compareAtPrice
     ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
@@ -67,7 +72,7 @@ export default function ProductDetailView({ product, related }: Props) {
 
             {/* Price */}
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-[var(--text-primary)]">{formatPrice(product.price)}</span>
+              <span className="text-2xl font-bold text-[var(--text-primary)]">{formatPrice(displayPrice)}</span>
               {product.compareAtPrice && (
                 <>
                   <span className="text-base text-[var(--text-muted)] line-through">{formatPrice(product.compareAtPrice)}</span>
@@ -90,41 +95,56 @@ export default function ProductDetailView({ product, related }: Props) {
             </div>
 
             {/* Variants */}
-            {product.variants?.map((variant) => (
-              <div key={variant.id} className="mt-5">
-                <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">{variant.label}</p>
+            {product.catalogVariants && product.catalogVariants.length > 0 && (
+              <div className="mt-5">
+                <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Available options</p>
                 <div className="flex flex-wrap gap-2">
-                  {variant.options.map((opt) => (
+                  {product.catalogVariants.map((variant) => (
                     <button
-                      key={opt}
-                      onClick={() => setSelectedVariants((prev) => ({ ...prev, [variant.label]: opt }))}
+                      key={variant.id}
+                      disabled={!variant.available}
+                      onClick={() => { setSelectedVariantId(variant.id); setQuantity(1); }}
                       className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                        selectedVariants[variant.label] === opt
+                        selectedVariantId === variant.id
                           ? "border-[var(--lt-primary)] bg-[var(--lt-primary)] text-white"
-                          : "border-[var(--border)] hover:border-[var(--border-hover)]"
+                          : variant.available ? "border-[var(--border)] hover:border-[var(--border-hover)]" : "border-[var(--border)] text-[var(--text-muted)] line-through"
                       }`}
                     >
-                      {opt}
+                      {variant.label} · {formatPrice(variant.price)}{!variant.available && " (Unavailable)"}
                     </button>
                   ))}
                 </div>
               </div>
-            ))}
+            )}
 
             {/* Actions */}
+            {isAvailable && (
+              <label className="mt-5 flex items-center gap-3 text-sm font-semibold">
+                Quantity
+                <input
+                  type="number"
+                  min={1}
+                  max={maxQuantity}
+                  value={quantity}
+                  onChange={(event) => setQuantity(Math.min(maxQuantity, Math.max(1, Number(event.target.value) || 1)))}
+                  className="lt-input w-20"
+                />
+                <span className="text-xs font-normal text-[var(--text-muted)]">{maxQuantity} available</span>
+              </label>
+            )}
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => addItem(product.id)}
+                onClick={() => addItem(product.id, quantity, selectedVariantId ?? undefined)}
                 className="lt-btn lt-btn-lg lt-btn-primary flex-1"
-                disabled={product.availability === "out-of-stock"}
+                disabled={!isAvailable}
               >
                 <ShoppingBag size={18} />
                 Add to Cart
               </button>
               <button
-                onClick={() => addItem(product.id)}
+                onClick={() => addItem(product.id, quantity, selectedVariantId ?? undefined)}
                 className="lt-btn lt-btn-lg lt-btn-accent flex-1"
-                disabled={product.availability === "out-of-stock"}
+                disabled={!isAvailable}
               >
                 <Zap size={18} />
                 Buy Now

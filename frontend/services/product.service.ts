@@ -20,6 +20,7 @@ import type {
 } from "@/types/products";
 
 import { apiRequest, buildQueryString, withApiFallback } from "@/services/api";
+import type { CommerceProduct, CommerceCategory } from "@/types/commerce";
 
 const DEFAULT_PAGE_SIZE = 12;
 
@@ -167,11 +168,62 @@ export async function getAllProducts() {
 	);
 }
 
+export async function getPublicProducts() {
+	const catalog = await apiRequest<Product[]>("/products");
+	return catalog.map(normalizeProduct);
+}
+
 export async function getProductById(productId: string) {
 	return withApiFallback(
 		() => apiRequest<Product>(`/products/${productId}`).then((product) => normalizeProduct(product)),
 		() => products.find((product) => product.id === productId) ?? null
 	);
+}
+
+export async function getPublicProduct(productId: string) {
+	const product = await apiRequest<Product>(`/products/${productId}`);
+	return normalizeProduct(product);
+}
+
+const COMMERCE_CATEGORIES = new Set<CommerceCategory>([
+	"jewellery", "hair-style", "beauty-tools", "accessories", "gifts",
+]);
+
+function categoryLabel(slug: string) {
+	return slug.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+
+export function toCommerceProduct(product: Product): CommerceProduct {
+	const variants = product.variants ?? [];
+	const category = COMMERCE_CATEGORIES.has(product.category as CommerceCategory)
+		? product.category as CommerceCategory
+		: product.parentCategory && COMMERCE_CATEGORIES.has(product.parentCategory as CommerceCategory)
+			? product.parentCategory as CommerceCategory
+			: product.category;
+
+	return {
+		id: product.id,
+		slug: product.id,
+		name: product.name,
+		description: product.description,
+		price: product.priceValue,
+		currency: "INR",
+		images: product.images.length > 0 ? product.images : ["/images/products/placeholder.svg"],
+		category,
+		categoryLabel: categoryLabel(product.category),
+		catalogVariants: variants.map((variant) => ({
+			id: variant.id,
+			label: variant.label,
+			price: variant.priceValue,
+			available: variant.available,
+			inventory: variant.inventory,
+		})),
+		availability: variants.some((variant) => variant.available) ? "in-stock" : "out-of-stock",
+		tags: product.tags,
+		specs: product.specs,
+		estimatedDelivery: "Delivery calculated at checkout",
+		returnInfo: "Returns subject to product policy",
+	};
 }
 
 export async function getProductsByIds(productIds: string[]) {

@@ -40,6 +40,15 @@ class ProductBuyLinkDTO(BaseModel):
     click_count: int = 0
 
 
+class ProductVariantDTO(BaseModel):
+    id: str
+    label: str
+    price: str
+    priceValue: Decimal
+    available: bool
+    inventory: int
+
+
 class ProductDTO(BaseModel):
     id: str
     name: str
@@ -49,6 +58,7 @@ class ProductDTO(BaseModel):
     image: str
     images: list[str]
     fallbackImage: str
+    variants: list[ProductVariantDTO]
     category: str
     parentCategory: str | None = None
     availability: str

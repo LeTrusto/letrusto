@@ -67,6 +67,7 @@ export type Product = {
   image: string;
   images: string[];
   fallbackImage: string;
+  variants?: CatalogVariant[];
   category: ProductCategory;
   parentCategory?: string | null;
   availability: ProductAvailability;
@@ -96,6 +97,15 @@ export type Product = {
   storage?: string | null;
   ram?: string | null;
   color?: string | null;
+};
+
+export type CatalogVariant = {
+  id: string;
+  label: string;
+  price: string;
+  priceValue: number;
+  available: boolean;
+  inventory: number;
 };
 
 export type ProductSortOption =

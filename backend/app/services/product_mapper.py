@@ -7,6 +7,7 @@ from app.schemas.product import (
     ProductPriceHistoryDTO,
     ProductReviewDTO,
     ProductSpecificationDTO,
+    ProductVariantDTO,
 )
 
 
@@ -49,32 +50,54 @@ def format_inr(value: Decimal) -> str:
 def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> ProductDTO:
     images = [item.url for item in sorted(product.images, key=lambda item: item.position)]
     fallback_image = images[0] if images else ""
+    stored_variant_prices = [
+        variant.selling_price
+        for variant in product.variants
+        if variant.active and variant.selling_price is not None
+    ]
+    public_price = product.price_value or (min(stored_variant_prices) if stored_variant_prices else None)
+    if public_price is None:
+        raise ValueError(f"Product {product.slug} has no stored customer selling price")
+    public_variants = [
+        ProductVariantDTO(
+            id=f"variant-{variant.position}",
+            label=variant.name or variant.attributes or f"Option {variant.position}",
+            price=format_inr(variant.selling_price),
+            priceValue=variant.selling_price,
+            available=bool(variant.active and (variant.cj_inventory or 0) > 0),
+            inventory=max(0, variant.cj_inventory or 0),
+        )
+        for variant in sorted(product.variants, key=lambda item: item.position)
+        if variant.active and variant.selling_price is not None
+    ]
 
-    parent_category = product.category.parent.slug if product.category.parent else None
+    category_slug = product.category.slug if product.category else "uncategorized"
+    parent_category = product.category.parent.slug if product.category and product.category.parent else None
 
     return ProductDTO(
         id=product.slug,
         name=product.name,
-        brand=product.brand.name,
-        price=format_inr(product.price_value),
-        priceValue=product.price_value,
+        brand=product.brand.name if product.brand else "Unbranded",
+        price=format_inr(public_price),
+        priceValue=public_price,
         image=fallback_image,
         images=images,
         fallbackImage=fallback_image,
-        category=product.category.slug,
+        variants=public_variants,
+        category=category_slug,
         parentCategory=parent_category,
         availability=product.availability,
         description=product.description,
         features=[item.value for item in sorted(product.features, key=lambda item: item.position)],
-        aiScore=product.ai_score,
-        rating=product.rating,
+        aiScore=product.ai_score or 0,
+        rating=product.rating or Decimal("0"),
         specs=[
             ProductSpecificationDTO(label=item.label, value=item.value)
             for item in sorted(product.specifications, key=lambda item: item.position)
         ],
         pros=[item.value for item in sorted(product.pros, key=lambda item: item.position)],
         cons=[item.value for item in sorted(product.cons, key=lambda item: item.position)],
-        aiSummary=product.ai_summary,
+        aiSummary=product.ai_summary or "",
         bestFor=[item.value for item in sorted(product.best_for, key=lambda item: item.position)],
         notRecommendedFor=[
             item.value
@@ -101,7 +124,7 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
             )
             for item in sorted(product.reviews, key=lambda item: item.date)
         ],
-        reviewSummary=product.review_summary,
+        reviewSummary=product.review_summary or "",
         buyLinks=[
             ProductBuyLinkDTO(
                 id=item.id,

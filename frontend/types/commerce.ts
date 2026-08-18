@@ -14,7 +14,7 @@ export type CommerceProduct = {
   compareAtPrice?: number;
   currency: "INR";
   images: string[];
-  category: CommerceCategory;
+  category: CommerceCategory | string;
   categoryLabel: string;
   variants?: ProductVariant[];
   availability: "in-stock" | "limited" | "out-of-stock";
@@ -26,6 +26,15 @@ export type CommerceProduct = {
   bundleProducts?: string[];
   estimatedDelivery?: string;
   returnInfo?: string;
+  catalogVariants?: CatalogVariant[];
+};
+
+export type CatalogVariant = {
+  id: string;
+  label: string;
+  price: number;
+  available: boolean;
+  inventory: number;
 };
 
 export type ProductVariant = {
@@ -37,12 +46,12 @@ export type ProductVariant = {
 export type CartItem = {
   productId: string;
   quantity: number;
-  selectedVariants?: Record<string, string>;
+  selectedVariantId?: string;
 };
 
 export type CartState = {
   items: CartItem[];
-  addItem: (productId: string, quantity?: number) => void;
+  addItem: (productId: string, quantity?: number, selectedVariantId?: string) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;

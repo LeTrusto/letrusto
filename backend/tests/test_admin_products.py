@@ -9,7 +9,7 @@ from app.api.deps import get_admin_product_service, get_current_admin
 from app.core.exceptions import BadRequestError
 from app.main import app
 from app.db.session import SessionLocal
-from app.models.entities import Brand, Category, Product
+from app.models.entities import Brand, Category, Product, ProductVariant
 from app.services.admin_product_service import AdminProductService
 from app.suppliers.base import RawSupplierProduct, RawVariant, ShippingOption, ShippingResult, ShippingValidation
 
@@ -273,6 +273,83 @@ def test_admin_catalog_separates_legacy_and_supplier_products():
     finally:
         db.delete(supplier)
         db.delete(legacy)
+        db.delete(brand)
+        db.delete(category)
+        db.commit()
+        db.close()
+
+
+def test_public_catalog_exposes_only_safe_active_variant_data():
+    from app.api.deps import get_product_service
+
+    db = SessionLocal()
+    suffix = str(uuid4())[:8]
+    category = Category(name=f"Public Category {suffix}", slug=f"public-category-{suffix}")
+    brand = Brand(name=f"Public Brand {suffix}", slug=f"public-brand-{suffix}")
+    db.add_all([category, brand])
+    db.flush()
+    product = Product(
+        id=uuid4(), slug=f"public-product-{suffix}", name="Public product", description="Public",
+        status="ACTIVE", supplier="cj", supplier_product_id=f"cj-{suffix}", category_id=category.id,
+        brand_id=brand.id, price_value=Decimal("299.00"), selling_price=Decimal("299.00"),
+        ai_score=80, rating=Decimal("4.0"), availability="In Stock", ai_summary="Public summary",
+        review_summary="Public reviews",
+    )
+    product.variants = [
+        ProductVariant(
+            supplier_variant_id=f"VID-{suffix}", supplier_variant_sku=f"SKU-{suffix}", name="Red",
+            selling_price=Decimal("299.00"), cj_inventory=4, factory_inventory=999, active=True, position=1,
+        ),
+        ProductVariant(
+            supplier_variant_id=f"VID-OUT-{suffix}", supplier_variant_sku=f"SKU-OUT-{suffix}", name="Blue",
+            selling_price=Decimal("399.00"), cj_inventory=0, factory_inventory=999, active=True, position=2,
+        ),
+    ]
+    db.add(product)
+    db.commit()
+    service = get_product_service(db)
+    try:
+        response = service.get_product(product.slug)
+        assert [variant.label for variant in response.variants] == ["Red", "Blue"]
+        assert response.variants[0].priceValue == Decimal("299.00")
+        assert response.variants[0].available is True
+        assert response.variants[0].inventory == 4
+        assert response.variants[1].available is False
+        serialized = response.model_dump_json()
+        assert f"VID-{suffix}" not in serialized
+        assert f"SKU-{suffix}" not in serialized
+        assert "factory_inventory" not in serialized
+        assert "supplier_cost" not in serialized
+    finally:
+        db.delete(product)
+        db.delete(brand)
+        db.delete(category)
+        db.commit()
+        db.close()
+
+
+def test_public_catalog_hides_active_product_without_stored_customer_price():
+    from app.services.product_service import ProductService
+    from app.repositories.product_repository import ProductRepository
+
+    db = SessionLocal()
+    suffix = str(uuid4())[:8]
+    category = Category(name=f"Unpriced Category {suffix}", slug=f"unpriced-category-{suffix}")
+    brand = Brand(name=f"Unpriced Brand {suffix}", slug=f"unpriced-brand-{suffix}")
+    db.add_all([category, brand])
+    db.flush()
+    product = Product(
+        id=uuid4(), slug=f"unpriced-product-{suffix}", name="Unpriced product", description="Unpriced",
+        status="ACTIVE", category_id=category.id, brand_id=brand.id, ai_score=1, rating=Decimal("1.0"),
+        availability="Out of Stock", ai_summary="", review_summary="",
+    )
+    db.add(product)
+    db.commit()
+    try:
+        public_products = ProductService(ProductRepository(db)).list_products([product.slug])
+        assert product.slug not in {item.id for item in public_products}
+    finally:
+        db.delete(product)
         db.delete(brand)
         db.delete(category)
         db.commit()

@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
-import { MOCK_PRODUCTS } from "@/lib/mockData";
 import { CATEGORY_MAP, type CommerceCategory } from "@/types/commerce";
 import CommerceProductCard from "@/components/products/CommerceProductCard";
+import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
 const SORT_OPTIONS = [
   { value: "recommended", label: "Recommended" },
@@ -27,17 +27,35 @@ export default function ShopPageView() {
   const [query, setQuery] = useState(initialQuery);
   const [maxPrice, setMaxPrice] = useState<number | null>(initialMaxPrice ? Number(initialMaxPrice) : null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [products, setProducts] = useState<ReturnType<typeof toCommerceProduct>[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getPublicProducts()
+      .then((catalog) => {
+        if (!cancelled) setProducts(catalog.map(toCommerceProduct));
+      })
+      .catch(() => {
+        if (!cancelled) setError("The live catalog is temporarily unavailable.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = useMemo(() => {
-    let products = [...MOCK_PRODUCTS];
+    let result = [...products];
 
     if (selectedCategory) {
-      products = products.filter((p) => p.category === selectedCategory);
+      result = result.filter((p) => p.category === selectedCategory);
     }
 
     if (query.trim()) {
       const q = query.toLowerCase();
-      products = products.filter(
+      result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
           p.description.toLowerCase().includes(q) ||
@@ -46,23 +64,23 @@ export default function ShopPageView() {
     }
 
     if (maxPrice) {
-      products = products.filter((p) => p.price <= maxPrice);
+      result = result.filter((p) => p.price <= maxPrice);
     }
 
     switch (sortBy) {
       case "price-asc":
-        products.sort((a, b) => a.price - b.price);
+        result.sort((a, b) => a.price - b.price);
         break;
       case "price-desc":
-        products.sort((a, b) => b.price - a.price);
+        result.sort((a, b) => b.price - a.price);
         break;
       case "newest":
-        products.sort((a, b) => (b.isNewDrop ? 1 : 0) - (a.isNewDrop ? 1 : 0));
+        result.sort((a, b) => (b.isNewDrop ? 1 : 0) - (a.isNewDrop ? 1 : 0));
         break;
     }
 
-    return products;
-  }, [selectedCategory, sortBy, query, maxPrice]);
+    return result;
+  }, [products, selectedCategory, sortBy, query, maxPrice]);
 
   const activeFilterCount = [selectedCategory, maxPrice, query.trim()].filter(Boolean).length;
 
@@ -74,7 +92,7 @@ export default function ShopPageView() {
           <h1 className="lt-heading-2">
             {selectedCategory ? CATEGORY_MAP[selectedCategory] : "All Products"}
           </h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">{filtered.length} products</p>
+          <p className="text-sm text-[var(--text-muted)] mt-1">{loading ? "Loading catalog..." : `${filtered.length} products`}</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -186,7 +204,11 @@ export default function ShopPageView() {
 
         {/* Product grid */}
         <div className="flex-1">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-20"><p className="text-sm text-[var(--text-muted)]">Loading live products...</p></div>
+          ) : error ? (
+            <div className="text-center py-20"><p className="text-lg font-semibold text-[var(--text-primary)]">Catalog unavailable</p><p className="text-sm text-[var(--text-muted)] mt-1">{error}</p></div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-lg font-semibold text-[var(--text-primary)]">No products found</p>
               <p className="text-sm text-[var(--text-muted)] mt-1">Try adjusting your filters</p>

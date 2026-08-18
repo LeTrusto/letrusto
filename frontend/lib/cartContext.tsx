@@ -2,13 +2,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { CartItem } from "@/types/commerce";
-import { getMockProductById } from "@/lib/mockData";
+import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
 const STORAGE_KEY = "letrusto:cart";
 
 type CartContextValue = {
   items: CartItem[];
-  addItem: (productId: string, quantity?: number) => void;
+  addItem: (productId: string, quantity?: number, selectedVariantId?: string) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -35,20 +35,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [];
     }
   });
+  const [products, setProducts] = useState<Record<string, ReturnType<typeof toCommerceProduct>>>({});
+
+  useEffect(() => {
+    void getPublicProducts().then((catalog) => {
+      setProducts(Object.fromEntries(catalog.map((product) => {
+        const commerceProduct = toCommerceProduct(product);
+        return [commerceProduct.id, commerceProduct];
+      })));
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     saveCart(items);
   }, [items]);
 
-  const addItem = useCallback((productId: string, quantity = 1) => {
+  const addItem = useCallback((productId: string, quantity = 1, selectedVariantId?: string) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.productId === productId);
+      const existing = prev.find((i) => i.productId === productId && i.selectedVariantId === selectedVariantId);
       if (existing) {
         return prev.map((i) =>
-          i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i
+          i === existing ? { ...i, quantity: i.quantity + quantity } : i
         );
       }
-      return [...prev, { productId, quantity }];
+      return [...prev, { productId, quantity, selectedVariantId }];
     });
   }, []);
 
@@ -71,17 +81,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   const subtotal = items.reduce((sum, item) => {
-    const product = getMockProductById(item.productId);
-    return sum + (product ? product.price * item.quantity : 0);
+    const product = products[item.productId];
+    const variant = product?.catalogVariants?.find((candidate) => candidate.id === item.selectedVariantId);
+    return sum + (variant?.price ?? product?.price ?? 0) * item.quantity;
   }, 0);
 
-  const savings = items.reduce((sum, item) => {
-    const product = getMockProductById(item.productId);
-    if (product?.compareAtPrice) {
-      return sum + (product.compareAtPrice - product.price) * item.quantity;
-    }
-    return sum;
-  }, 0);
+  const savings = 0;
 
   return (
     <CartContext.Provider
