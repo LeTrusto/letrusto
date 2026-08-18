@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.models.entities import InventoryReservation, Order, Product, ProductVariant, RefundRequest
+from app.services.marketing_service import MarketingAnalyticsContext, MarketingService
 from app.schemas.admin_analytics import (
     AnalyticsExportRow,
     AnalyticsPeriod,
@@ -93,6 +94,27 @@ class AdminAnalyticsService:
         shipping_metric = MetricAvailability(value=shipping_cost, status="COMPLETE" if shipping_cost is not None else "UNKNOWN", reason=None if shipping_cost is not None else "Historical shipping cost is unavailable")
         return product_metric, shipping_metric, contribution, margin, "PARTIAL", sorted(set(missing))
 
+    def _cac_metric(self, value: Decimal | None, status: str, reason: str) -> MetricAvailability:
+        return MetricAvailability(value=self._quantize(value) if value is not None else None, status=status, reason=None if value is not None else reason)
+
+    def _after_cac(self, contribution: MetricAvailability, cac_amount: Decimal | None, cac_status: str, net_sales: Decimal) -> tuple[MetricAvailability, Decimal | None, str]:
+        if contribution.value is None:
+            return self._unknown("Contribution before CAC is unavailable"), None, "UNKNOWN"
+        if cac_amount is None:
+            return self._unknown("Actual CAC is not attributed"), None, cac_status
+        value = self._quantize(contribution.value - cac_amount)
+        margin = self._quantize(value * Decimal("100") / net_sales) if net_sales > 0 else None
+        return MetricAvailability(value=value, status="PARTIAL", reason="Actual Cashfree payment fee is not stored"), margin, "PARTIAL"
+
+    @staticmethod
+    def _order_cac_status(order: Order, context: MarketingAnalyticsContext) -> str:
+        if not order.paid_at or order.payment_status != "PAID":
+            return "UNKNOWN"
+        return context.order_status.get(order.id, "NOT_ATTRIBUTED")
+
+    def _marketing_context(self, period: AnalyticsPeriod, paid_orders: list[Order]) -> MarketingAnalyticsContext:
+        return MarketingService(self.db).analytics_context(period.start, period.end, paid_orders)
+
     @staticmethod
     def _quantize(value: Decimal) -> Decimal:
         return value.quantize(CENT, rounding=ROUND_HALF_UP)
@@ -128,6 +150,22 @@ class AdminAnalyticsService:
         net_sales = paid - refunded
         paid_items = [item for order in paid_orders for item in order.items]
         product_cost_metric, shipping_cost_metric, contribution_metric, contribution_margin, contribution_status, _ = self._contribution_metric(net_sales, paid_items)
+        marketing = self._marketing_context(period, paid_orders)
+        attributed_orders = [order for order in paid_orders if order.id in marketing.attributed_orders]
+        attributed_refunds = {refund.order_id: refund.amount for refund in refunds if refund.order_id in marketing.attributed_orders}
+        after_total = Decimal("0")
+        after_sales = Decimal("0")
+        known_after = 0
+        for order in attributed_orders:
+            order_net_sales = order.total - attributed_refunds.get(order.id, Decimal("0"))
+            order_contribution = self._contribution_metric(order_net_sales, order.items)[2]
+            if order_contribution.value is not None:
+                after_total += order_contribution.value - marketing.order_cac[order.id]
+                after_sales += order_net_sales
+                known_after += 1
+        attributed_cac = self._cac_metric(marketing.attributed_cac, marketing.actual_cac_status, "No paid orders have both attribution and matching marketing spend")
+        blended_cac = self._cac_metric(marketing.blended_cac, "BLENDED" if marketing.blended_cac is not None else "NOT_CONFIGURED", "No paid orders or marketing spend are available")
+        contribution_after = MetricAvailability(value=self._quantize(after_total), status="PARTIAL", reason="Only attributed orders with known historical costs are included") if known_after else self._unknown("No attributed orders have calculable contribution")
         status_breakdown = defaultdict(int)
         for order in orders:
             status_breakdown[f"payment:{order.payment_status}"] += 1
@@ -143,8 +181,15 @@ class AdminAnalyticsService:
             landed_cost=product_cost_metric,
             shipping_cost=shipping_cost_metric,
             contribution_before_cac=contribution_metric,
-            cac=self._unknown("Marketing spend and attribution are not configured"),
-            contribution_after_cac=self._unknown("Contribution before CAC and actual CAC are unavailable"),
+            cac=attributed_cac,
+            contribution_after_cac=contribution_after,
+            marketing_spend=self._quantize(marketing.spend),
+            attributed_orders=len(marketing.attributed_orders),
+            attributed_sales=self._quantize(marketing.attributed_sales),
+            attributed_cac=attributed_cac,
+            blended_cac=blended_cac,
+            roas=self._cac_metric(marketing.roas, "ATTRIBUTED" if marketing.roas is not None else "NOT_CONFIGURED", "No attributed spend and sales are available"),
+            contribution_after_cac_status=contribution_after.status,
             order_count=len(orders),
             paid_order_count=len(paid_orders),
             refunded_order_count=len({refund.order_id for refund in refunds}),
@@ -181,6 +226,7 @@ class AdminAnalyticsService:
 
     def product_performance(self, period: AnalyticsPeriod) -> list[ProductPerformanceDTO]:
         orders = self._paid_orders(period)
+        marketing = self._marketing_context(period, orders)
         refund_allocations = self._refund_allocations(orders)
         product_ids = {item.product_id for order in orders for item in order.items if item.product_id}
         products = {product.id: product for product in self.db.scalars(select(Product).where(Product.id.in_(product_ids))).all()} if product_ids else {}
@@ -199,7 +245,14 @@ class AdminAnalyticsService:
             net_sales = self._quantize(group["sales"] - group["refunds"])
             group_items = [item for order in orders for item in order.items if item.product_id == product_id]
             product_cost, shipping_cost, contribution, margin, contribution_status, missing = self._contribution_metric(net_sales, group_items)
-            quality = ["ACTUAL_PAYMENT_FEES_UNKNOWN", "ACTUAL_CAC_NOT_CONFIGURED", *missing]
+            eligible_orders = [order for order in orders if order.id in marketing.order_cac and {item.product_id for item in order.items} == {product_id}]
+            attributed_spend = sum((marketing.order_cac[order.id] for order in eligible_orders), Decimal("0"))
+            actual_cac = attributed_spend / len(eligible_orders) if eligible_orders else None
+            cac_status = "ATTRIBUTED" if eligible_orders else "NOT_ATTRIBUTED"
+            cac_metric = self._cac_metric(actual_cac, cac_status, "No product-specific order attribution is available")
+            spend_metric = self._cac_metric(attributed_spend if eligible_orders else None, cac_status, "No product-specific order attribution is available")
+            after, after_margin, after_status = self._after_cac(contribution, attributed_spend if eligible_orders else None, cac_status, net_sales)
+            quality = ["ACTUAL_PAYMENT_FEES_UNKNOWN", *missing]
             result.append(ProductPerformanceDTO(
                 product_id=product_id,
                 product_name=group["name"],
@@ -208,8 +261,7 @@ class AdminAnalyticsService:
                 landed_cost=product_cost,
                 shipping_cost=shipping_cost,
                 contribution_before_cac=contribution,
-                cac=self._unknown("Marketing spend and attribution are not configured"),
-                contribution_after_cac=self._unknown("Contribution and CAC are unavailable"),
+                cac=cac_metric, actual_cac=cac_metric, attributed_marketing_spend=spend_metric, contribution_after_cac=after,
                 average_selling_price=self._quantize(sum(group["prices"], Decimal("0")) / len(group["prices"])),
                 inventory_available=product.cj_inventory if product else None,
                 cj_inventory=product.cj_inventory if product else None,
@@ -217,11 +269,14 @@ class AdminAnalyticsService:
                 data_quality=quality if product else quality + ["CURRENT_PRODUCT_RECORD_UNAVAILABLE"],
                 contribution_status=contribution_status,
                 contribution_margin_percent=margin,
+                contribution_after_cac_margin_percent=after_margin,
+                cac_status=cac_status,
             ))
         return sorted(result, key=lambda item: item.net_sales, reverse=True)
 
     def variant_performance(self, period: AnalyticsPeriod) -> list[VariantPerformanceDTO]:
         orders = self._paid_orders(period)
+        marketing = self._marketing_context(period, orders)
         refund_allocations = self._refund_allocations(orders)
         variant_ids = {item.variant_id for order in orders for item in order.items if item.variant_id}
         variants = self._current_variant_map(variant_ids)
@@ -233,11 +288,20 @@ class AdminAnalyticsService:
         result = []
         for variant_id, group in groups.items():
             variant = variants.get(variant_id)
+            costs = self._contribution_metric(self._quantize(group["sales"] - group["refunds"]), [item for order in orders for item in order.items if item.variant_id == variant_id])
+            eligible_orders = [order for order in orders if order.id in marketing.order_cac and {item.variant_id for item in order.items} == {variant_id}]
+            attributed_spend = sum((marketing.order_cac[order.id] for order in eligible_orders), Decimal("0"))
+            actual_cac = attributed_spend / len(eligible_orders) if eligible_orders else None
+            cac_status = "ATTRIBUTED" if eligible_orders else "NOT_ATTRIBUTED"
+            cac_metric = self._cac_metric(actual_cac, cac_status, "No variant-specific order attribution is available")
+            spend_metric = self._cac_metric(attributed_spend if eligible_orders else None, cac_status, "No variant-specific order attribution is available")
+            variant_net_sales = self._quantize(group["sales"] - group["refunds"])
+            after, after_margin, after_status = self._after_cac(costs[2], attributed_spend if eligible_orders else None, cac_status, variant_net_sales)
             result.append(VariantPerformanceDTO(
                 product_id=group["product_id"], product_name=group["product_name"], variant_id=variant_id, variant_name=group["variant_name"],
                 supplier_variant_id=variant.supplier_variant_id if variant else None, supplier_variant_sku=variant.supplier_variant_sku if variant else None,
                 orders=len(group["orders"]), units_sold=group["units"], paid_units=group["units"], gross_sales=self._quantize(group["sales"]), refunds=self._quantize(group["refunds"]), net_sales=self._quantize(group["sales"] - group["refunds"]),
-                landed_cost=(costs := self._contribution_metric(self._quantize(group["sales"] - group["refunds"]), [item for order in orders for item in order.items if item.variant_id == variant_id]))[0], shipping_cost=costs[1], contribution_before_cac=costs[2], cac=self._unknown("Marketing spend and attribution are not configured"), contribution_after_cac=self._unknown("Contribution and CAC are unavailable"), average_selling_price=self._quantize(sum(group["prices"], Decimal("0")) / len(group["prices"])), inventory_available=variant.cj_inventory if variant else None, cj_inventory=variant.cj_inventory if variant else None, factory_inventory=variant.factory_inventory if variant else None, data_quality=costs[5], contribution_status=costs[4], contribution_margin_percent=costs[3],
+                landed_cost=costs[0], shipping_cost=costs[1], contribution_before_cac=costs[2], cac=cac_metric, actual_cac=cac_metric, attributed_marketing_spend=spend_metric, contribution_after_cac=after, average_selling_price=self._quantize(sum(group["prices"], Decimal("0")) / len(group["prices"])), inventory_available=variant.cj_inventory if variant else None, cj_inventory=variant.cj_inventory if variant else None, factory_inventory=variant.factory_inventory if variant else None, data_quality=costs[5], contribution_status=costs[4], contribution_margin_percent=costs[3], contribution_after_cac_margin_percent=after_margin, cac_status=cac_status,
             ))
         return sorted(result, key=lambda item: item.net_sales, reverse=True)
 
@@ -256,14 +320,28 @@ class AdminAnalyticsService:
 
     def sales_trend(self, period: AnalyticsPeriod) -> list[SalesTrendPoint]:
         orders = self._orders(period); paid_orders = self._paid_orders(period); refunds = self._successful_refunds(period)
-        points = {current.date().isoformat(): {"orders": 0, "paid_orders": 0, "gross": Decimal("0"), "refunds": Decimal("0")} for current in (period.start + timedelta(days=index) for index in range((period.end - period.start).days))}
+        marketing = self._marketing_context(period, paid_orders)
+        refunds_by_order: dict[UUID, Decimal] = defaultdict(Decimal)
+        for refund in refunds:
+            refunds_by_order[refund.order_id] += refund.amount
+        points = {current.date().isoformat(): {"orders": 0, "paid_orders": 0, "gross": Decimal("0"), "refunds": Decimal("0"), "contribution": Decimal("0"), "cac": Decimal("0"), "attributed": 0} for current in (period.start + timedelta(days=index) for index in range((period.end - period.start).days))}
         for order in orders: points[order.created_at.astimezone(timezone.utc).date().isoformat()]["orders"] += 1; points[order.created_at.astimezone(timezone.utc).date().isoformat()]["gross"] += order.total
-        for order in paid_orders: points[order.paid_at.astimezone(timezone.utc).date().isoformat()]["paid_orders"] += 1
+        for order in paid_orders:
+            key = order.paid_at.astimezone(timezone.utc).date().isoformat()
+            points[key]["paid_orders"] += 1
+            if order.id in marketing.order_cac:
+                contribution = self._contribution_metric(order.total - refunds_by_order[order.id], order.items)[2]
+                if contribution.value is not None:
+                    points[key]["contribution"] += contribution.value
+                    points[key]["cac"] += marketing.order_cac[order.id]
+                    points[key]["attributed"] += 1
         for refund in refunds: points[refund.completed_at.astimezone(timezone.utc).date().isoformat()]["refunds"] += refund.amount
-        return [SalesTrendPoint(date=key, orders=value["orders"], paid_orders=value["paid_orders"], gross_sales=self._quantize(value["gross"]), refunds=self._quantize(value["refunds"]), net_sales=self._quantize(value["gross"] - value["refunds"]), contribution_before_cac=None) for key, value in sorted(points.items())]
+        return [SalesTrendPoint(date=key, orders=value["orders"], paid_orders=value["paid_orders"], gross_sales=self._quantize(value["gross"]), refunds=self._quantize(value["refunds"]), net_sales=self._quantize(value["gross"] - value["refunds"]), contribution_before_cac=self._quantize(value["contribution"]) if value["attributed"] else None, marketing_spend=self._quantize(marketing.spend_by_date.get(date.fromisoformat(key), Decimal("0"))), attributed_orders=value["attributed"], actual_cac=self._quantize(value["cac"] / value["attributed"]) if value["attributed"] else None, contribution_after_cac=self._quantize(value["contribution"] - value["cac"]) if value["attributed"] else None, cac_status="ATTRIBUTED" if value["attributed"] else "NOT_ATTRIBUTED") for key, value in sorted(points.items())]
 
     def export_rows(self, period: AnalyticsPeriod) -> list[AnalyticsExportRow]:
         rows = []
+        paid_orders = self._paid_orders(period)
+        marketing = self._marketing_context(period, paid_orders)
         for order in self._orders(period):
             refunds = [refund for refund in order.refund_requests if refund.status == "SUCCESS"]
             refund_amount = sum((refund.amount for refund in refunds), Decimal("0")) or None
@@ -271,8 +349,11 @@ class AdminAnalyticsService:
             gross_sales = order.total if order.payment_status == "PAID" and order.paid_at else Decimal("0")
             net_sales = gross_sales - (refund_amount or Decimal("0"))
             product_cost, shipping_cost, contribution, _, _, missing = self._contribution_metric(net_sales, order.items)
+            cac_status = self._order_cac_status(order, marketing)
+            actual_cac = marketing.order_cac.get(order.id)
+            after, _, _ = self._after_cac(contribution, actual_cac, cac_status, net_sales)
             for item in order.items:
-                rows.append(AnalyticsExportRow(order_number=order.order_number, order_date=order.created_at.isoformat(), payment_date=order.paid_at.isoformat() if order.payment_status == "PAID" and order.paid_at else None, product=item.product_name, variant=item.variant_name, quantity=item.quantity, unit_price=item.unit_price, line_total=item.line_total, shipping=order.shipping_amount, payment_status=order.payment_status, refund_status=refunds[0].status if refunds else None, refund_amount=item_refunds.get(item.id), fulfillment_status=order.fulfillment_status, supplier_cost=item.supplier_cost_inr_snapshot * item.quantity if item.supplier_cost_inr_snapshot is not None else None, shipping_cost=item.shipping_cost_inr_snapshot * item.quantity if item.shipping_cost_inr_snapshot is not None else None, contribution=contribution.value, data_quality="; ".join([*missing, "actual_payment_fee", "actual_cac"])))
+                rows.append(AnalyticsExportRow(order_number=order.order_number, order_date=order.created_at.isoformat(), payment_date=order.paid_at.isoformat() if order.payment_status == "PAID" and order.paid_at else None, product=item.product_name, variant=item.variant_name, quantity=item.quantity, unit_price=item.unit_price, line_total=item.line_total, shipping=order.shipping_amount, payment_status=order.payment_status, refund_status=refunds[0].status if refunds else None, refund_amount=item_refunds.get(item.id), fulfillment_status=order.fulfillment_status, supplier_cost=item.supplier_cost_inr_snapshot * item.quantity if item.supplier_cost_inr_snapshot is not None else None, shipping_cost=item.shipping_cost_inr_snapshot * item.quantity if item.shipping_cost_inr_snapshot is not None else None, contribution=contribution.value, marketing_spend=actual_cac, attributed_orders=1 if actual_cac is not None else 0, attributed_sales=order.total if actual_cac is not None else None, actual_cac=actual_cac, blended_cac=marketing.blended_cac, contribution_before_cac=contribution.value, contribution_after_cac=after.value, cac_status=cac_status, roas=marketing.roas if actual_cac is not None else None, data_quality="; ".join([*missing, "actual_payment_fee"] + ([] if actual_cac is not None else ["actual_cac"]))))
         return rows
 
     def export_csv(self, period: AnalyticsPeriod) -> str:
@@ -288,5 +369,9 @@ class AdminAnalyticsService:
         net_sales = gross - refunded
         product_cost, shipping_cost, contribution, margin, contribution_status, missing = self._contribution_metric(net_sales, order.items)
         payment_fees = self._unknown("Actual Cashfree payment fee is not stored")
-        actual_cac = self._unknown("Marketing spend and attribution are not configured")
-        return OrderProfitabilityDTO(order_id=order.id, order_number=order.order_number, payment_status=order.payment_status, refund_status=refunds[0].status if refunds else None, gross_sales=self._quantize(gross), refunds=self._quantize(refunded), net_sales=self._quantize(net_sales), product_cost=product_cost, shipping_cost=shipping_cost, payment_fees=payment_fees, contribution_before_cac=contribution, contribution_margin_percent=margin, contribution_status=contribution_status, actual_cac=actual_cac, contribution_after_cac=self._unknown("Actual CAC is not configured"), missing=sorted(set([*missing, "actual_payment_fee", "actual_cac"])))
+        paid_orders = [order] if order.payment_status == "PAID" and order.paid_at else []
+        context = MarketingService(self.db).analytics_context(order.paid_at, order.paid_at + timedelta(days=1), paid_orders) if paid_orders else None
+        cac_status = self._order_cac_status(order, context) if context else "UNKNOWN"
+        actual_cac = self._cac_metric(context.order_cac.get(order.id) if context else None, cac_status, "No matching attributed marketing spend is available")
+        after, after_margin, profitability_status = self._after_cac(contribution, actual_cac.value, cac_status, net_sales)
+        return OrderProfitabilityDTO(order_id=order.id, order_number=order.order_number, payment_status=order.payment_status, refund_status=refunds[0].status if refunds else None, gross_sales=self._quantize(gross), refunds=self._quantize(refunded), net_sales=self._quantize(net_sales), product_cost=product_cost, shipping_cost=shipping_cost, payment_fees=payment_fees, contribution_before_cac=contribution, contribution_margin_percent=margin, contribution_status=contribution_status, actual_cac=actual_cac, contribution_after_cac=after, contribution_after_cac_margin_percent=after_margin, cac_status=cac_status, profitability_status=profitability_status, missing=sorted(set([*missing, "actual_payment_fee"] + ([] if actual_cac.value is not None else ["actual_cac"]))))

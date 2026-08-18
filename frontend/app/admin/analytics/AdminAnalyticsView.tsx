@@ -20,17 +20,25 @@ type Summary = {
   contribution_before_cac: Metric;
   cac: Metric;
   contribution_after_cac: Metric;
+  marketing_spend: number;
+  attributed_orders: number;
+  attributed_sales: number;
+  attributed_cac: Metric;
+  blended_cac: Metric;
+  roas: Metric;
+  contribution_after_cac_status: string;
+  policy_assumptions: { target_cac_inr: number };
   order_count: number;
   paid_order_count: number;
   pending_payment_count: number;
   status_breakdown: Record<string, number>;
 };
-type Product = { product_name: string; orders: number; units_sold: number; refunds: number; net_sales: number; contribution_before_cac: Metric };
+type Product = { product_name: string; orders: number; units_sold: number; refunds: number; net_sales: number; contribution_before_cac: Metric; actual_cac: Metric; contribution_after_cac: Metric; cac_status: string };
 type Inventory = { product_name: string; variant_name: string; cj_inventory: number | null; factory_inventory: number | null; active_reservations: number; available_customer_inventory: number; sellable_inventory_status: string };
-type Trend = { date: string; orders: number; paid_orders: number; gross_sales: number; refunds: number; net_sales: number };
+type Trend = { date: string; orders: number; paid_orders: number; gross_sales: number; refunds: number; net_sales: number; marketing_spend: number; attributed_orders: number; actual_cac: number | null; contribution_after_cac: number | null; cac_status: string };
 
-function money(value: number | null) { return value == null ? "Not available" : `₹${value.toLocaleString("en-IN")}`; }
-function actual(metric: Metric) { return metric.value == null ? "Not available" : money(metric.value); }
+function money(value: number | null) { return value == null ? "—" : `₹${value.toLocaleString("en-IN")}`; }
+function actual(metric: Metric) { if (metric.value != null) return money(metric.value); return metric.status === "NOT_ATTRIBUTED" ? "Not attributed" : metric.status === "NOT_CONFIGURED" ? "Not configured" : "Insufficient data"; }
 
 export default function AdminAnalyticsView() {
   const { accessToken, isLoading, isAuthenticated, isAdmin } = useAuth();
@@ -90,13 +98,15 @@ export default function AdminAnalyticsView() {
       {summary && <>
         <section className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4"><Kpi label="Gross order value" value={money(summary.gross_order_value)} /><Kpi label="Paid sales" value={money(summary.paid_sales)} /><Kpi label="Refunded" value={money(summary.refunded_amount)} /><Kpi label="Net sales" value={money(summary.net_sales)} /></section>
         <section className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4"><Kpi label="Orders" value={String(summary.order_count)} /><Kpi label="Paid orders" value={String(summary.paid_order_count)} /><Kpi label="Pending payment" value={String(summary.pending_payment_count)} /><Kpi label="Average paid order" value={summary.paid_order_count ? money(summary.paid_sales / summary.paid_order_count) : "Not available"} /></section>
-        <section className="mt-8 grid gap-4 md:grid-cols-4"><MetricCard label="Payment fees" metric={summary.payment_fees} /><MetricCard label="Landed cost" metric={summary.landed_cost} /><MetricCard label="Shipping cost" metric={summary.shipping_cost} /><MetricCard label="Contribution before CAC" metric={summary.contribution_before_cac} /></section>
+        <section className="mt-8 grid gap-4 md:grid-cols-4"><MetricCard label="Payment fees" metric={summary.payment_fees} /><MetricCard label="Landed cost" metric={summary.landed_cost} /><MetricCard label="Shipping cost" metric={summary.shipping_cost} /><MetricCard label="Contribution Before CAC" metric={summary.contribution_before_cac} /></section>
+        <section className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4"><Kpi label="Marketing Spend" value={money(summary.marketing_spend)} /><MetricCard label="ACTUAL CAC" metric={summary.attributed_cac} /><MetricCard label="BLENDED CAC" metric={summary.blended_cac} /><Kpi label="TARGET CAC" value={money(summary.policy_assumptions.target_cac_inr)} /></section>
+        <section className="mt-4 grid gap-4 md:grid-cols-3"><MetricCard label="Contribution After CAC" metric={summary.contribution_after_cac} /><MetricCard label="ROAS" metric={{ ...summary.roas, value: summary.roas.value == null ? null : summary.roas.value }} suffix="x" /><Kpi label="Attributed Orders" value={String(summary.attributed_orders)} /></section>
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.3fr_1fr]">
-          <section className="lt-card"><h2 className="text-lg font-bold">Sales trend</h2><div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-[var(--text-muted)]"><tr><th className="py-2 pr-4">Date</th><th className="py-2 pr-4">Orders</th><th className="py-2 pr-4">Paid</th><th className="py-2 pr-4">Net sales</th></tr></thead><tbody>{trend.filter((point) => point.orders || point.paid_orders || point.refunds).map((point) => <tr key={point.date} className="border-t border-[var(--border)]"><td className="py-2 pr-4">{point.date}</td><td className="py-2 pr-4">{point.orders}</td><td className="py-2 pr-4">{point.paid_orders}</td><td className="py-2">{money(point.net_sales)}</td></tr>)}</tbody></table>{!trend.some((point) => point.orders || point.paid_orders || point.refunds) && <Empty />}</div></section>
+          <section className="lt-card"><h2 className="text-lg font-bold">Sales trend</h2><div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-[var(--text-muted)]"><tr><th className="py-2 pr-4">Date</th><th className="py-2 pr-4">Net sales</th><th className="py-2 pr-4">Spend</th><th className="py-2 pr-4">Actual CAC</th><th className="py-2">After CAC</th></tr></thead><tbody>{trend.filter((point) => point.orders || point.paid_orders || point.refunds || point.marketing_spend).map((point) => <tr key={point.date} className="border-t border-[var(--border)]"><td className="py-2 pr-4">{point.date}</td><td className="py-2 pr-4">{money(point.net_sales)}</td><td className="py-2 pr-4">{money(point.marketing_spend)}</td><td className="py-2 pr-4">{point.actual_cac == null ? "Not attributed" : money(point.actual_cac)}</td><td className="py-2">{point.contribution_after_cac == null ? "—" : money(point.contribution_after_cac)}</td></tr>)}</tbody></table>{!trend.some((point) => point.orders || point.paid_orders || point.refunds || point.marketing_spend) && <Empty />}</div></section>
           <section className="lt-card"><h2 className="text-lg font-bold">Payment / fulfillment status</h2><div className="mt-4 space-y-2 text-sm">{Object.entries(summary.status_breakdown).map(([key, count]) => <div key={key} className="flex justify-between border-b border-[var(--border)] pb-2"><span>{key.replaceAll("_", " ")}</span><strong>{count}</strong></div>)}</div></section>
         </div>
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.3fr_1fr]">
-          <section className="lt-card"><h2 className="text-lg font-bold">Product performance</h2>{products.length === 0 ? <Empty /> : <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-[var(--text-muted)]"><tr><th className="py-2 pr-4">Product</th><th className="py-2 pr-4">Units</th><th className="py-2 pr-4">Refunds</th><th className="py-2 pr-4">Net sales</th><th className="py-2">Contribution</th></tr></thead><tbody>{products.map((product) => <tr key={product.product_name} className="border-t border-[var(--border)]"><td className="py-3 pr-4 font-semibold">{product.product_name}</td><td className="py-3 pr-4">{product.units_sold}</td><td className="py-3 pr-4">{money(product.refunds)}</td><td className="py-3 pr-4">{money(product.net_sales)}</td><td className="py-3">{actual(product.contribution_before_cac)}</td></tr>)}</tbody></table></div>}</section>
+          <section className="lt-card"><h2 className="text-lg font-bold">Product performance</h2>{products.length === 0 ? <Empty /> : <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-[var(--text-muted)]"><tr><th className="py-2 pr-4">Product</th><th className="py-2 pr-4">Net sales</th><th className="py-2 pr-4">Before CAC</th><th className="py-2 pr-4">Actual CAC</th><th className="py-2 pr-4">After CAC</th><th className="py-2">CAC status</th></tr></thead><tbody>{products.map((product) => <tr key={product.product_name} className="border-t border-[var(--border)]"><td className="py-3 pr-4 font-semibold">{product.product_name}</td><td className="py-3 pr-4">{money(product.net_sales)}</td><td className="py-3 pr-4">{actual(product.contribution_before_cac)}</td><td className="py-3 pr-4">{actual(product.actual_cac)}</td><td className="py-3 pr-4">{actual(product.contribution_after_cac)}</td><td className="py-3">{product.cac_status === "NOT_ATTRIBUTED" ? "Not attributed" : product.cac_status}</td></tr>)}</tbody></table></div>}</section>
           <section className="lt-card"><h2 className="text-lg font-bold">Inventory exposure</h2>{inventory.length === 0 ? <Empty /> : <div className="mt-4 space-y-3">{inventory.map((row) => <div key={`${row.product_name}-${row.variant_name}`} className="border-t border-[var(--border)] pt-3 first:border-0 first:pt-0"><p className="text-sm font-semibold">{row.product_name}</p><p className="text-xs text-[var(--text-secondary)]">{row.variant_name} · CJ {row.cj_inventory ?? "Unknown"} · Factory {row.factory_inventory ?? "Unknown"} · Reserved {row.active_reservations} · Available {row.available_customer_inventory}</p></div>)}</div>}</section>
         </div>
       </>}
@@ -105,5 +115,5 @@ export default function AdminAnalyticsView() {
 }
 
 function Kpi({ label, value }: { label: string; value: string }) { return <div className="lt-card"><p className="lt-label">{label}</p><p className="mt-2 text-xl font-bold">{value}</p></div>; }
-function MetricCard({ label, metric }: { label: string; metric: Metric }) { return <div className="lt-card"><p className="lt-label">{label}</p><p className="mt-2 font-bold">{actual(metric)}</p><p className="mt-1 text-xs text-[var(--text-muted)]">{metric.status === "NOT_AVAILABLE" ? metric.reason : "Actual"}</p></div>; }
+function MetricCard({ label, metric, suffix = "" }: { label: string; metric: Metric; suffix?: string }) { return <div className="lt-card"><p className="lt-label">{label}</p><p className="mt-2 font-bold">{metric.value == null ? actual(metric) : `${actual(metric)}${suffix}`}</p><p className="mt-1 text-xs text-[var(--text-muted)]">{metric.value == null ? metric.reason : "Actual"}</p></div>; }
 function Empty() { return <p className="mt-6 text-sm text-[var(--text-muted)]">No data for this period.</p>; }

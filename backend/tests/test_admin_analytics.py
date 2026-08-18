@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 
 from app.db.session import SessionLocal
 from app.main import app
-from app.models.entities import InventoryReservation, Order, OrderItem, PaymentAttempt, Product, ProductVariant, RefundRequest, User
+from app.core.security import create_access_token
+from app.models.entities import InventoryReservation, MarketingSpend, Order, OrderItem, OrderMarketingAttribution, PaymentAttempt, Product, ProductVariant, RefundRequest, User
 from app.schemas.orders import CartItemRequest, CreateOrderRequest, CustomerDetails, ShippingAddress
 from app.services.admin_analytics_service import AdminAnalyticsService
 from app.services.order_service import OrderService
@@ -52,7 +53,7 @@ def test_summary_distinguishes_actuals_from_unknown_costs():
         assert summary.net_sales == Decimal("90.00")
         assert summary.landed_cost.value is None
         assert summary.payment_fees.status == "NOT_AVAILABLE"
-        assert summary.cac.status == "NOT_AVAILABLE"
+        assert summary.cac.status == "NOT_CONFIGURED"
         assert summary.policy_assumptions["target_cac_inr"] == Decimal("150.00")
     finally:
         cleanup(db, user, product)
@@ -144,3 +145,87 @@ def test_export_allocates_refund_once_across_multiple_items():
         assert sum((row.refund_amount or Decimal("0") for row in rows if row.order_number == order.order_number), Decimal("0")) == Decimal("10.00")
     finally:
         cleanup(db, user, product)
+
+
+def test_attributed_cac_updates_order_product_variant_and_summary_without_using_target_cac():
+    db = SessionLocal()
+    user, product, order, refund, reservation = fixture(db)
+    spend = None
+    try:
+        item = order.items[0]
+        item.supplier_cost_inr_snapshot = Decimal("40")
+        item.shipping_cost_inr_snapshot = Decimal("10")
+        spend = MarketingSpend(spend_date=order.paid_at.date(), channel="META", campaign="fixture", spend_amount=Decimal("20"), currency="INR")
+        attribution = OrderMarketingAttribution(order_id=order.id, channel="META", campaign="fixture", attribution_method="test", status="ATTRIBUTED")
+        db.add_all([spend, attribution])
+        db.commit()
+        period = AdminAnalyticsService.resolve_period("custom", order.paid_at.date(), order.paid_at.date())
+        service = AdminAnalyticsService(db)
+        order_profit = service.order_profitability(order.id)
+        assert order_profit.contribution_before_cac.value == Decimal("40.00")
+        assert order_profit.actual_cac.value == Decimal("20.00")
+        assert order_profit.contribution_after_cac.value == Decimal("20.00")
+        assert order_profit.cac_status == "ATTRIBUTED"
+        summary = service.summary(period)
+        assert summary.marketing_spend == Decimal("20.00")
+        assert summary.attributed_cac.value == Decimal("20.00")
+        assert summary.blended_cac.value == Decimal("20.00")
+        assert summary.contribution_after_cac.value == Decimal("20.00")
+        assert summary.roas.value == Decimal("5.00")
+        product_row = service.product_performance(period)[0]
+        variant_row = service.variant_performance(period)[0]
+        assert product_row.actual_cac.value == Decimal("20.00")
+        assert product_row.contribution_after_cac.value == Decimal("20.00")
+        assert variant_row.actual_cac.value == Decimal("20.00")
+        assert variant_row.contribution_after_cac.value == Decimal("20.00")
+    finally:
+        if spend is not None:
+            db.delete(spend)
+            db.commit()
+        cleanup(db, user, product)
+
+
+def test_non_attributed_product_and_variant_do_not_receive_blended_cac():
+    db = SessionLocal()
+    user, product, order, refund, reservation = fixture(db)
+    spend = None
+    try:
+        spend = MarketingSpend(spend_date=order.paid_at.date(), channel="META", campaign="unattributed", spend_amount=Decimal("150"), currency="INR")
+        db.add(spend)
+        db.commit()
+        period = AdminAnalyticsService.resolve_period("custom", order.paid_at.date(), order.paid_at.date())
+        service = AdminAnalyticsService(db)
+        assert service.summary(period).blended_cac.value == Decimal("150.00")
+        product_row = service.product_performance(period)[0]
+        variant_row = service.variant_performance(period)[0]
+        assert product_row.actual_cac.value is None and product_row.cac_status == "NOT_ATTRIBUTED"
+        assert variant_row.actual_cac.value is None and variant_row.cac_status == "NOT_ATTRIBUTED"
+        order_profit = service.order_profitability(order.id)
+        assert order_profit.actual_cac.value is None
+        assert order_profit.cac_status == "NOT_ATTRIBUTED"
+    finally:
+        if spend is not None:
+            db.delete(spend)
+            db.commit()
+        cleanup(db, user, product)
+
+
+def test_analytics_financial_endpoints_require_admin_role():
+    db = SessionLocal()
+    suffix = uuid4().hex[:8]
+    customer = User(email=f"customer-{suffix}@example.com", full_name="Customer")
+    admin = User(email=f"admin-{suffix}@example.com", full_name="Admin", role="admin")
+    db.add_all([customer, admin])
+    db.commit()
+    try:
+        client = TestClient(app)
+        assert client.get("/api/v1/admin/analytics/summary").status_code == 401
+        customer_token = create_access_token(str(customer.id))
+        assert client.get("/api/v1/admin/analytics/summary", headers={"Authorization": f"Bearer {customer_token}"}).status_code == 401
+        admin_token = create_access_token(str(admin.id))
+        assert client.get("/api/v1/admin/analytics/summary", headers={"Authorization": f"Bearer {admin_token}"}).status_code == 200
+    finally:
+        db.delete(customer)
+        db.delete(admin)
+        db.commit()
+        db.close()

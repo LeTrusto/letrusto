@@ -38,8 +38,45 @@ from app.schemas.reservations import AdminInventoryReservationDTO
 from app.schemas.payments import AdminFulfillmentOrderDTO, FulfillmentDTO
 from app.schemas.admin_analytics import AnalyticsPeriod, AnalyticsSummary, InventoryAnalyticsDTO, OrderProfitabilityDTO, ProductPerformanceDTO, SalesTrendPoint, VariantPerformanceDTO
 from app.services.admin_analytics_service import AdminAnalyticsService
+from app.schemas.marketing import AttributionCreate, AttributionDTO, MarketingCACResponse, MarketingSpendCreate, MarketingSpendDTO
+from app.services.marketing_service import MarketingService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+@router.post("/marketing/spend", response_model=MarketingSpendDTO, status_code=201)
+def create_marketing_spend(payload: MarketingSpendCreate, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    return MarketingService(db).create_spend(payload)
+
+@router.get("/marketing/spend", response_model=list[MarketingSpendDTO])
+def list_marketing_spend(period: str = Query(default="last_30_days"), _: User = Depends(get_current_admin), db=Depends(get_db)):
+    start, end = MarketingService.periods(period)
+    return MarketingService(db).list_spend(start, end)
+
+@router.get("/marketing/spend/{spend_id}", response_model=MarketingSpendDTO)
+def get_marketing_spend(spend_id: UUID, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    return MarketingService(db).get_spend(spend_id)
+
+@router.put("/marketing/spend/{spend_id}", response_model=MarketingSpendDTO)
+def update_marketing_spend(spend_id: UUID, payload: MarketingSpendCreate, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    return MarketingService(db).update_spend(spend_id, payload)
+
+@router.delete("/marketing/spend/{spend_id}", status_code=204)
+def delete_marketing_spend(spend_id: UUID, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    MarketingService(db).delete_spend(spend_id)
+
+@router.post("/marketing/attribution", response_model=AttributionDTO, status_code=201)
+def create_marketing_attribution(payload: AttributionCreate, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    return MarketingService(db).attribute(payload)
+
+@router.get("/marketing/cac", response_model=MarketingCACResponse)
+def marketing_cac(period: str = Query(default="last_30_days"), _: User = Depends(get_current_admin), db=Depends(get_db)):
+    start, end = MarketingService.periods(period)
+    return MarketingService(db).cac(start, end)
+
+@router.get("/marketing/campaigns", response_model=MarketingCACResponse)
+def marketing_campaigns(period: str = Query(default="last_30_days"), _: User = Depends(get_current_admin), db=Depends(get_db)):
+    start, end = MarketingService.periods(period)
+    return MarketingService(db).cac(start, end)
 
 
 def _analytics_period(period: str, start_date: date | None, end_date: date | None) -> AnalyticsPeriod:

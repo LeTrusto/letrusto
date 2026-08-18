@@ -33,6 +33,13 @@ class AnalyticsSummary(BaseModel):
     contribution_before_cac: MetricAvailability
     cac: MetricAvailability
     contribution_after_cac: MetricAvailability
+    marketing_spend: Decimal
+    attributed_orders: int
+    attributed_sales: Decimal
+    attributed_cac: MetricAvailability
+    blended_cac: MetricAvailability
+    roas: MetricAvailability
+    contribution_after_cac_status: str
     order_count: int
     paid_order_count: int
     refunded_order_count: int
@@ -57,6 +64,8 @@ class ProductPerformanceDTO(BaseModel):
     shipping_cost: MetricAvailability
     contribution_before_cac: MetricAvailability
     cac: MetricAvailability
+    actual_cac: MetricAvailability
+    attributed_marketing_spend: MetricAvailability
     contribution_after_cac: MetricAvailability
     average_selling_price: Decimal | None
     inventory_available: int | None
@@ -65,6 +74,8 @@ class ProductPerformanceDTO(BaseModel):
     data_quality: list[str]
     contribution_status: str
     contribution_margin_percent: Decimal | None
+    contribution_after_cac_margin_percent: Decimal | None
+    cac_status: str
 
 
 class VariantPerformanceDTO(ProductPerformanceDTO):
@@ -94,6 +105,11 @@ class SalesTrendPoint(BaseModel):
     refunds: Decimal
     net_sales: Decimal
     contribution_before_cac: Decimal | None
+    marketing_spend: Decimal
+    attributed_orders: int
+    actual_cac: Decimal | None
+    contribution_after_cac: Decimal | None
+    cac_status: str
 
 
 class AnalyticsExportRow(BaseModel):
@@ -113,6 +129,15 @@ class AnalyticsExportRow(BaseModel):
     supplier_cost: Decimal | None
     shipping_cost: Decimal | None
     contribution: Decimal | None
+    marketing_spend: Decimal | None
+    attributed_orders: int
+    attributed_sales: Decimal | None
+    actual_cac: Decimal | None
+    blended_cac: Decimal | None
+    contribution_before_cac: Decimal | None
+    contribution_after_cac: Decimal | None
+    cac_status: str
+    roas: Decimal | None
     data_quality: str
 
 
@@ -132,4 +157,7 @@ class OrderProfitabilityDTO(BaseModel):
     contribution_status: str
     actual_cac: MetricAvailability
     contribution_after_cac: MetricAvailability
+    contribution_after_cac_margin_percent: Decimal | None
+    cac_status: str
+    profitability_status: str
     missing: list[str]
