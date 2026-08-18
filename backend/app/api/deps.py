@@ -49,6 +49,11 @@ def get_cashfree_service(db: Session = Depends(get_db)) -> CashfreeService:
     return CashfreeService(db)
 
 
+def get_cancellation_service(db: Session = Depends(get_db)) -> "CancellationService":
+    from app.services.cancellation_service import CancellationService
+    return CancellationService(db, cashfree_service=CashfreeService(db))
+
+
 def get_fulfillment_service(db: Session = Depends(get_db)) -> FulfillmentService:
     return FulfillmentService(db)
 

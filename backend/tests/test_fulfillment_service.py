@@ -56,7 +56,7 @@ def cleanup(db, user, product):
 def test_unpaid_order_is_blocked_before_cj(monkeypatch):
     db = SessionLocal(); user, product, order = make_paid_order(db); order.payment_status = "PENDING"; db.commit();
     try:
-        with pytest.raises(BadRequestError, match="PAID"):
+        with pytest.raises(BadRequestError, match="not eligible"):
             asyncio.run(FulfillmentService(db).submit(order.id))
     finally: cleanup(db, user, product)
 

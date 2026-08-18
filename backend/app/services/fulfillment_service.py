@@ -8,6 +8,7 @@ from app.core.config import get_settings
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.models.entities import Order, OrderItem, User
 from app.schemas.payments import AdminFulfillmentOrderDTO
+from app.services.cancellation_service import is_fulfillable
 from app.suppliers.base import SupplierTrackingResult
 from app.suppliers.factory import build_supplier_adapter
 
@@ -16,10 +17,11 @@ class FulfillmentService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def _get_order(self, order_id: UUID) -> Order:
-        order = self.db.scalar(
-            select(Order).where(Order.id == order_id).options(selectinload(Order.items).selectinload(OrderItem.product), selectinload(Order.items).selectinload(OrderItem.variant))
-        )
+    def _get_order(self, order_id: UUID, *, for_update: bool = False) -> Order:
+        statement = select(Order).where(Order.id == order_id).options(selectinload(Order.items).selectinload(OrderItem.product), selectinload(Order.items).selectinload(OrderItem.variant))
+        if for_update:
+            statement = statement.with_for_update()
+        order = self.db.scalar(statement)
         if order is None:
             raise NotFoundError("Order not found")
         return order
@@ -99,9 +101,11 @@ class FulfillmentService:
         return results
 
     async def submit(self, order_id: UUID, _: User | None = None) -> Order:
-        order = self._get_order(order_id)
+        order = self._get_order(order_id, for_update=True)
         if order.supplier_order_id:
             return order
+        if not is_fulfillable(order):
+            raise BadRequestError("Order is not eligible for fulfillment")
         if order.payment_status != "PAID":
             raise BadRequestError("Only server-verified PAID orders can be fulfilled")
         if order.status in {"CANCELLED", "REFUNDED"}:

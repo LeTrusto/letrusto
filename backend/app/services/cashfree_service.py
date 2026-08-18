@@ -39,6 +39,43 @@ class CashfreeService:
             headers["x-idempotency-key"] = idempotency_key
         return headers
 
+    def request_refund(self, provider_order_id: str, refund_amount, idempotency_key: str, reason: str) -> dict:
+        if not self.configured:
+            return {"configured": False, "provider_status": "PENDING", "failure_reason": "Cashfree credentials not configured"}
+
+        payload = {
+            "refund_amount": float(refund_amount),
+            "refund_id": idempotency_key,
+            "refund_note": reason or "Customer cancellation",
+            "refund_speed": "STANDARD",
+        }
+        try:
+            response = httpx.post(
+                f"{self.base_url}/orders/{provider_order_id}/refunds",
+                headers=self._headers(idempotency_key),
+                json=payload,
+                timeout=15,
+            )
+        except httpx.HTTPError as exc:
+            return {"configured": True, "provider_status": "FAILED", "failure_reason": str(exc)[:500]}
+
+        try:
+            body = response.json()
+        except ValueError:
+            body = {}
+        if response.status_code >= 300:
+            return {
+                "configured": True,
+                "provider_status": "FAILED",
+                "failure_reason": body.get("message") or f"HTTP {response.status_code}",
+            }
+        return {
+            "configured": True,
+            "provider_refund_id": body.get("cf_refund_id"),
+            "provider_status": body.get("refund_status") or "PENDING",
+            "provider_order_id": body.get("order_id") or provider_order_id,
+        }
+
     def _order(self, user: User, order_id: UUID) -> Order:
         order = self.db.scalar(select(Order).where(Order.id == order_id, Order.user_id == user.id))
         if order is None:
@@ -101,6 +138,16 @@ class CashfreeService:
             raise BadRequestError("Invalid Cashfree webhook signature")
         body = __import__("json").loads(raw_body)
         data = body.get("data") or {}
+        if body.get("type") == "REFUND_STATUS_WEBHOOK" and data.get("refund"):
+            from app.services.cancellation_service import CancellationService
+
+            refund = data["refund"]
+            CancellationService(self.db).process_refund_webhook(
+                provider_refund_id=str(refund.get("cf_refund_id") or ""),
+                status=str(refund.get("refund_status") or ""),
+                order_id_str=str(refund.get("order_id") or ""),
+            )
+            return
         provider_order_id = ((data.get("order") or {}).get("order_id"))
         payment = data.get("payment") or {}
         if not provider_order_id:
