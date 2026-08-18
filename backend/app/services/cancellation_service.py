@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings, get_settings
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.models.entities import Order, PaymentAttempt, RefundRequest, User
+from app.services.inventory_reservation_service import InventoryReservationService
 
 # States that block CJ fulfillment
 UNFULFILLABLE_STATUSES = frozenset({"CANCELLED", "REFUND_PENDING", "REFUNDED"})
@@ -75,6 +76,7 @@ class CancellationService:
         else:
             order.status = "CANCELLED"
             order.payment_status = "CANCELLED"
+        InventoryReservationService(self.db).release_for_order(order.id)
 
         order.cancelled_at = datetime.now(timezone.utc)
         order.cancellation_reason = reason
@@ -93,6 +95,7 @@ class CancellationService:
         else:
             order.status = "CANCELLED"
             order.payment_status = "CANCELLED"
+        InventoryReservationService(self.db).release_for_order(order.id)
 
         order.cancelled_at = datetime.now(timezone.utc)
         order.cancellation_reason = reason

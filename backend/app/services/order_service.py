@@ -3,11 +3,13 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.models.entities import Cart, CartItem, Order, OrderItem, Product, ProductVariant, User
 from app.schemas.orders import CartDTO, CartItemDTO, CartItemRequest, CreateOrderRequest, OrderDTO, OrderItemDTO, OrderListDTO
+from app.services.inventory_reservation_service import InventoryReservationService
 
 
 class OrderService:
@@ -163,8 +165,19 @@ class OrderService:
         resolved: list[tuple[Product, ProductVariant, int]] = []
         for item in payload.items:
             product, variant = self._resolve_variant(self.db, item.product_id, item.variant_id)
-            self._validate_inventory(variant, item.quantity)
             resolved.append((product, variant, item.quantity))
+        locked_variants = list(self.db.scalars(
+            select(ProductVariant)
+            .where(ProductVariant.id.in_([variant.id for _, variant, _ in resolved]))
+            .order_by(ProductVariant.id)
+            .with_for_update()
+        ).all())
+        variants_by_id = {variant.id: variant for variant in locked_variants}
+        if len(variants_by_id) != len({variant.id for _, variant, _ in resolved}):
+            raise BadRequestError("Product variant is unavailable")
+        resolved = [(product, variants_by_id[variant.id], quantity) for product, variant, quantity in resolved]
+        for _, variant, quantity in resolved:
+            self._validate_inventory(variant, quantity)
         subtotal = sum((variant.selling_price * quantity for _, variant, quantity in resolved), Decimal("0"))
         now = datetime.now(timezone.utc)
         order = Order(
@@ -186,8 +199,18 @@ class OrderService:
             OrderItem(product_id=product.id, variant_id=variant.id, product_name=product.name, product_image_url=product.images[0].url if product.images else None, variant_name=variant.name or variant.attributes, quantity=quantity, unit_price=variant.selling_price, line_total=variant.selling_price * quantity)
             for product, variant, quantity in resolved
         ]
-        self.db.add(order)
-        self.db.commit()
+        try:
+            self.db.add(order)
+            self.db.flush()
+            InventoryReservationService(self.db).reserve_order(order, variants_by_id)
+            self.db.commit()
+        except Exception as exc:
+            self.db.rollback()
+            if isinstance(exc, IntegrityError):
+                existing = self.db.scalar(select(Order).where(Order.user_id == user.id, Order.idempotency_key == payload.idempotency_key).options(selectinload(Order.items), selectinload(Order.refund_requests)))
+                if existing:
+                    return self._order_dto(existing)
+            raise
         self.db.refresh(order)
         return self._order_dto(order)
 

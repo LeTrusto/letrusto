@@ -13,6 +13,7 @@ from app.core.exceptions import BadRequestError, NotFoundError
 from app.models.entities import Order, PaymentAttempt, User
 from app.schemas.payments import PaymentSessionDTO, PaymentStatusDTO
 from app.services.fulfillment_service import FulfillmentService
+from app.services.inventory_reservation_service import InventoryReservationService
 
 
 class CashfreeService:
@@ -165,16 +166,22 @@ class CashfreeService:
             self.db.commit()
             return
         attempt.status = status or attempt.status
+        reservation_safe = True
         if status == "SUCCESS":
             order.payment_status = "PAID"
             order.status = "PAID"
             order.paid_at = order.paid_at or datetime.now(timezone.utc)
             order.provider_reference = provider_payment_id
+            reservation_safe = InventoryReservationService(self.db).consume_for_order(order.id)
+            if not reservation_safe:
+                order.fulfillment_status = "FAILED"
+                order.fulfillment_failure_reason = "Inventory reservation expired before payment confirmation"
         elif status in {"FAILED", "USER_DROPPED", "CANCELLED", "VOID"}:
             order.payment_status = "FAILED"
             order.payment_failure_reason = payment.get("payment_message") or status
+            InventoryReservationService(self.db).release_for_order(order.id)
         self.db.commit()
-        if status == "SUCCESS":
+        if status == "SUCCESS" and reservation_safe:
             await FulfillmentService(self.db).submit(order.id)
 
     async def verify_payment(self, user: User, order_id: UUID) -> PaymentStatusDTO:

@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
 
+    INVENTORY_RESERVATION_TTL_MINUTES: int = 15
+
     # Supplier integration (Phase 2 validation)
     SUPPLIER_PROVIDER: str = "cj"
     CJ_API_KEY: str = ""

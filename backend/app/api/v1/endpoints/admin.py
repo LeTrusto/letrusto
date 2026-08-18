@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_admin_product_service, get_admin_service, get_current_admin, get_fulfillment_service
+from app.api.deps import get_admin_product_service, get_admin_service, get_current_admin, get_fulfillment_service, get_db
 from app.models.entities import User
 from app.schemas.admin import AdminDashboardStats, AdminUserListResponse
 from app.schemas.admin_products import (
@@ -28,9 +28,37 @@ from app.schemas.admin_products import (
 from app.services.admin_service import AdminService
 from app.services.admin_product_service import AdminProductService
 from app.services.fulfillment_service import FulfillmentService
+from app.services.inventory_reservation_service import InventoryReservationService
+from app.schemas.reservations import AdminInventoryReservationDTO
 from app.schemas.payments import AdminFulfillmentOrderDTO, FulfillmentDTO
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get("/inventory-reservations", response_model=list[AdminInventoryReservationDTO])
+def list_inventory_reservations(
+    order_id: UUID | None = Query(default=None),
+    _: User = Depends(get_current_admin),
+    db=Depends(get_db),
+) -> list[AdminInventoryReservationDTO]:
+    service = InventoryReservationService(db)
+    service.release_expired()
+    return [
+        AdminInventoryReservationDTO(
+            id=row.id,
+            order_number=row.order.order_number,
+            product_name=row.order_item.product_name,
+            variant_name=row.order_item.variant_name,
+            variant_id=row.variant_id,
+            quantity=row.quantity,
+            status=row.status,
+            created_at=row.created_at.isoformat(),
+            expires_at=row.expires_at.isoformat(),
+            released_at=row.released_at.isoformat() if row.released_at else None,
+            consumed_at=row.consumed_at.isoformat() if row.consumed_at else None,
+        )
+        for row in service.list_for_admin(order_id)
+    ]
 
 
 @router.get("/orders/fulfillment", response_model=list[AdminFulfillmentOrderDTO])

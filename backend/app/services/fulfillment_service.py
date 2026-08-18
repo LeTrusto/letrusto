@@ -9,6 +9,7 @@ from app.core.exceptions import BadRequestError, NotFoundError
 from app.models.entities import Order, OrderItem, User
 from app.schemas.payments import AdminFulfillmentOrderDTO
 from app.services.cancellation_service import is_fulfillable
+from app.services.inventory_reservation_service import InventoryReservationService
 from app.suppliers.base import SupplierTrackingResult
 from app.suppliers.factory import build_supplier_adapter
 
@@ -106,6 +107,8 @@ class FulfillmentService:
             return order
         if not is_fulfillable(order):
             raise BadRequestError("Order is not eligible for fulfillment")
+        if not InventoryReservationService(self.db).fulfillment_safe(order.id):
+            raise BadRequestError("Order inventory reservation is not consumed")
         if order.payment_status != "PAID":
             raise BadRequestError("Only server-verified PAID orders can be fulfilled")
         if order.status in {"CANCELLED", "REFUNDED"}:

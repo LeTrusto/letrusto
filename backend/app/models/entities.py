@@ -622,6 +622,7 @@ class Order(Base):
     items: Mapped[list["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     payment_attempts: Mapped[list["PaymentAttempt"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     refund_requests: Mapped[list["RefundRequest"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    inventory_reservations: Mapped[list["InventoryReservation"]] = relationship(back_populates="order", cascade="all, delete-orphan")
 
 
 class OrderItem(Base):
@@ -642,6 +643,7 @@ class OrderItem(Base):
     order: Mapped[Order] = relationship(back_populates="items")
     product: Mapped[Product | None] = relationship()
     variant: Mapped[ProductVariant | None] = relationship()
+    inventory_reservation: Mapped["InventoryReservation | None"] = relationship(back_populates="order_item", uselist=False)
 
 
 class PaymentAttempt(Base):
@@ -690,6 +692,29 @@ class RefundRequest(Base):
 
     order: Mapped[Order] = relationship(back_populates="refund_requests")
     payment_attempt: Mapped[PaymentAttempt | None] = relationship()
+
+
+class InventoryReservation(Base):
+    __tablename__ = "inventory_reservations"
+    __table_args__ = (
+        UniqueConstraint("order_item_id", name="uq_inventory_reservations_order_item"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
+    order_item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("order_items.id", ondelete="CASCADE"), nullable=False)
+    variant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("product_variants.id", ondelete="RESTRICT"), index=True)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="ACTIVE", index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    order: Mapped[Order] = relationship(back_populates="inventory_reservations")
+    order_item: Mapped[OrderItem] = relationship(back_populates="inventory_reservation")
+    variant: Mapped[ProductVariant] = relationship()
 
 
 class RefreshToken(Base):

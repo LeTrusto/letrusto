@@ -9,6 +9,7 @@ from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
 from app.models.entities import Cart, CartItem, Order, OrderItem, PaymentAttempt, Product, ProductVariant, User
 from app.services.fulfillment_service import FulfillmentService
+from app.services.inventory_reservation_service import InventoryReservationService
 from app.suppliers.base import SupplierOrderResult, SupplierTrackingResult
 from app.schemas.orders import CartItemRequest, CreateOrderRequest, CustomerDetails, ShippingAddress
 from app.services.order_service import OrderService
@@ -36,6 +37,7 @@ def make_paid_order(db):
     order = db.get(Order, result.id)
     order.payment_status = "PAID"
     order.status = "PAID"
+    InventoryReservationService(db).consume_for_order(order.id)
     db.commit()
     return user, product, order
 
