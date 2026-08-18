@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.config import get_settings
 from app.models.entities import Cart, CartItem, Order, OrderItem, Product, ProductVariant, User
 from app.schemas.orders import CartDTO, CartItemDTO, CartItemRequest, CreateOrderRequest, OrderDTO, OrderItemDTO, OrderListDTO
 from app.services.inventory_reservation_service import InventoryReservationService
@@ -67,6 +68,33 @@ class OrderService:
             for item in cart.items
         ]
         return CartDTO(id=cart.id, items=items, subtotal=sum((item.unit_price * item.quantity for item in items), Decimal("0")))
+
+    @staticmethod
+    def _economics_snapshot(product: Product, variant: ProductVariant) -> dict:
+        settings = get_settings()
+        supplier_cost = variant.supplier_cost
+        shipping_cost = product.shipping_cost
+        missing: list[str] = []
+        if supplier_cost is None:
+            missing.append("historical_supplier_cost")
+        if shipping_cost is None:
+            missing.append("historical_shipping_cost")
+        # Shipping is the existing product-level per-unit economics value; order creation never invents allocation.
+        landed_cost = supplier_cost + shipping_cost if supplier_cost is not None and shipping_cost is not None else None
+        return {
+            "supplier_cost_inr_snapshot": supplier_cost,
+            "supplier_cost_usd_snapshot": variant.supplier_cost_usd,
+            "supplier_cost_currency_snapshot": "INR" if supplier_cost is not None else None,
+            "shipping_cost_inr_snapshot": shipping_cost,
+            "landed_cost_inr_snapshot": landed_cost,
+            "pricing_fx_rate_snapshot": settings.PRICING_FX_RATE,
+            "payment_gateway_policy_pct_snapshot": settings.PAYMENT_GATEWAY_PCT,
+            "rto_reserve_policy_pct_snapshot": settings.RTO_RESERVE_PCT,
+            "target_contribution_margin_pct_snapshot": settings.TARGET_CONTRIBUTION_MARGIN_PCT,
+            "target_cac_inr_snapshot": settings.TARGET_CAC_INR,
+            "economics_status": "COMPLETE" if not missing else "PARTIAL" if supplier_cost is not None or shipping_cost is not None else "UNKNOWN",
+            "economics_missing": missing,
+        }
 
     def get_cart(self, user: User) -> CartDTO:
         return self._cart_dto(self._cart(user))
@@ -196,7 +224,7 @@ class OrderService:
             idempotency_key=payload.idempotency_key,
         )
         order.items = [
-            OrderItem(product_id=product.id, variant_id=variant.id, product_name=product.name, product_image_url=product.images[0].url if product.images else None, variant_name=variant.name or variant.attributes, quantity=quantity, unit_price=variant.selling_price, line_total=variant.selling_price * quantity)
+            OrderItem(product_id=product.id, variant_id=variant.id, product_name=product.name, product_image_url=product.images[0].url if product.images else None, variant_name=variant.name or variant.attributes, quantity=quantity, unit_price=variant.selling_price, line_total=variant.selling_price * quantity, **self._economics_snapshot(product, variant))
             for product, variant, quantity in resolved
         ]
         try:

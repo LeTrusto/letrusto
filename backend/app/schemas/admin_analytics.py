@@ -40,6 +40,8 @@ class AnalyticsSummary(BaseModel):
     average_order_value: Decimal | None
     status_breakdown: dict[str, int]
     policy_assumptions: dict[str, Decimal]
+    contribution_status: str
+    contribution_margin_percent: Decimal | None
 
 
 class ProductPerformanceDTO(BaseModel):
@@ -61,6 +63,8 @@ class ProductPerformanceDTO(BaseModel):
     cj_inventory: int | None
     factory_inventory: int | None
     data_quality: list[str]
+    contribution_status: str
+    contribution_margin_percent: Decimal | None
 
 
 class VariantPerformanceDTO(ProductPerformanceDTO):
@@ -110,3 +114,22 @@ class AnalyticsExportRow(BaseModel):
     shipping_cost: Decimal | None
     contribution: Decimal | None
     data_quality: str
+
+
+class OrderProfitabilityDTO(BaseModel):
+    order_id: UUID
+    order_number: str
+    payment_status: str
+    refund_status: str | None
+    gross_sales: Decimal
+    refunds: Decimal
+    net_sales: Decimal
+    product_cost: MetricAvailability
+    shipping_cost: MetricAvailability
+    payment_fees: MetricAvailability
+    contribution_before_cac: MetricAvailability
+    contribution_margin_percent: Decimal | None
+    contribution_status: str
+    actual_cac: MetricAvailability
+    contribution_after_cac: MetricAvailability
+    missing: list[str]

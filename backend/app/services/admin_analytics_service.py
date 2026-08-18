@@ -17,6 +17,7 @@ from app.schemas.admin_analytics import (
     InventoryAnalyticsDTO,
     MetricAvailability,
     ProductPerformanceDTO,
+    OrderProfitabilityDTO,
     SalesTrendPoint,
     VariantPerformanceDTO,
 )
@@ -61,6 +62,37 @@ class AdminAnalyticsService:
     def _unknown(reason: str) -> MetricAvailability:
         return MetricAvailability(value=None, status="NOT_AVAILABLE", reason=reason)
 
+    def _snapshot_costs(self, items) -> tuple[Decimal | None, Decimal | None, list[str]]:
+        product_cost = Decimal("0")
+        shipping_cost = Decimal("0")
+        missing: list[str] = []
+        for item in items:
+            if item.supplier_cost_inr_snapshot is None:
+                missing.append("historical_supplier_cost")
+            else:
+                product_cost += item.supplier_cost_inr_snapshot * item.quantity
+            if item.shipping_cost_inr_snapshot is None:
+                missing.append("historical_shipping_cost")
+            else:
+                shipping_cost += item.shipping_cost_inr_snapshot * item.quantity
+        return (
+            self._quantize(product_cost) if "historical_supplier_cost" not in missing else None,
+            self._quantize(shipping_cost) if "historical_shipping_cost" not in missing else None,
+            sorted(set(missing)),
+        )
+
+    def _contribution_metric(self, net_sales: Decimal, items) -> tuple[MetricAvailability, MetricAvailability, MetricAvailability, Decimal | None, str, list[str]]:
+        product_cost, shipping_cost, missing = self._snapshot_costs(items)
+        missing = [*missing, "actual_payment_fee"]
+        if product_cost is None and shipping_cost is None:
+            return self._unknown("Historical product and shipping costs are unavailable"), self._unknown("Historical shipping cost is unavailable"), self._unknown("Required historical economics are unavailable"), None, "UNKNOWN", sorted(set(missing))
+        known = net_sales - (product_cost or Decimal("0")) - (shipping_cost or Decimal("0"))
+        contribution = MetricAvailability(value=self._quantize(known), status="PARTIAL", reason="Actual Cashfree payment fee is not stored")
+        margin = self._quantize(known * Decimal("100") / net_sales) if net_sales > 0 else None
+        product_metric = MetricAvailability(value=product_cost, status="COMPLETE" if product_cost is not None else "UNKNOWN", reason=None if product_cost is not None else "Historical supplier cost is unavailable")
+        shipping_metric = MetricAvailability(value=shipping_cost, status="COMPLETE" if shipping_cost is not None else "UNKNOWN", reason=None if shipping_cost is not None else "Historical shipping cost is unavailable")
+        return product_metric, shipping_metric, contribution, margin, "PARTIAL", sorted(set(missing))
+
     @staticmethod
     def _quantize(value: Decimal) -> Decimal:
         return value.quantize(CENT, rounding=ROUND_HALF_UP)
@@ -93,6 +125,9 @@ class AdminAnalyticsService:
         gross = sum((order.total for order in orders), Decimal("0"))
         paid = sum((order.total for order in paid_orders), Decimal("0"))
         refunded = sum((refund.amount for refund in refunds), Decimal("0"))
+        net_sales = paid - refunded
+        paid_items = [item for order in paid_orders for item in order.items]
+        product_cost_metric, shipping_cost_metric, contribution_metric, contribution_margin, contribution_status, _ = self._contribution_metric(net_sales, paid_items)
         status_breakdown = defaultdict(int)
         for order in orders:
             status_breakdown[f"payment:{order.payment_status}"] += 1
@@ -103,11 +138,11 @@ class AdminAnalyticsService:
             gross_order_value=self._quantize(gross),
             paid_sales=self._quantize(paid),
             refunded_amount=self._quantize(refunded),
-            net_sales=self._quantize(paid - refunded),
+            net_sales=self._quantize(net_sales),
             payment_fees=self._unknown("Actual Cashfree fee data is not stored"),
-            landed_cost=self._unknown("Historical order-item supplier cost is not stored"),
-            shipping_cost=self._unknown("Historical order shipping cost is not stored separately"),
-            contribution_before_cac=self._unknown("Historical landed, shipping, and actual fee inputs are incomplete"),
+            landed_cost=product_cost_metric,
+            shipping_cost=shipping_cost_metric,
+            contribution_before_cac=contribution_metric,
             cac=self._unknown("Marketing spend and attribution are not configured"),
             contribution_after_cac=self._unknown("Contribution before CAC and actual CAC are unavailable"),
             order_count=len(orders),
@@ -123,6 +158,8 @@ class AdminAnalyticsService:
                 "target_contribution_margin_percent": self.settings.TARGET_CONTRIBUTION_MARGIN_PCT,
                 "target_cac_inr": self.settings.TARGET_CAC_INR,
             },
+            contribution_status=contribution_status,
+            contribution_margin_percent=contribution_margin,
         )
 
     def _current_variant_map(self, ids: set[UUID]) -> dict[UUID, ProductVariant]:
@@ -159,15 +196,18 @@ class AdminAnalyticsService:
         result = []
         for product_id, group in groups.items():
             product = products.get(product_id)
-            quality = ["HISTORICAL_LANDED_COST_UNKNOWN", "HISTORICAL_SHIPPING_COST_UNKNOWN", "ACTUAL_PAYMENT_FEES_UNKNOWN", "ACTUAL_CAC_NOT_CONFIGURED"]
+            net_sales = self._quantize(group["sales"] - group["refunds"])
+            group_items = [item for order in orders for item in order.items if item.product_id == product_id]
+            product_cost, shipping_cost, contribution, margin, contribution_status, missing = self._contribution_metric(net_sales, group_items)
+            quality = ["ACTUAL_PAYMENT_FEES_UNKNOWN", "ACTUAL_CAC_NOT_CONFIGURED", *missing]
             result.append(ProductPerformanceDTO(
                 product_id=product_id,
                 product_name=group["name"],
                 orders=len(group["orders"]), units_sold=group["units"], paid_units=group["units"],
-                gross_sales=self._quantize(group["sales"]), refunds=self._quantize(group["refunds"]), net_sales=self._quantize(group["sales"] - group["refunds"]),
-                landed_cost=self._unknown("Historical order-item supplier cost is not stored"),
-                shipping_cost=self._unknown("Historical order shipping cost is not stored separately"),
-                contribution_before_cac=self._unknown("Historical cost inputs are incomplete"),
+                gross_sales=self._quantize(group["sales"]), refunds=self._quantize(group["refunds"]), net_sales=net_sales,
+                landed_cost=product_cost,
+                shipping_cost=shipping_cost,
+                contribution_before_cac=contribution,
                 cac=self._unknown("Marketing spend and attribution are not configured"),
                 contribution_after_cac=self._unknown("Contribution and CAC are unavailable"),
                 average_selling_price=self._quantize(sum(group["prices"], Decimal("0")) / len(group["prices"])),
@@ -175,6 +215,8 @@ class AdminAnalyticsService:
                 cj_inventory=product.cj_inventory if product else None,
                 factory_inventory=product.factory_inventory if product else None,
                 data_quality=quality if product else quality + ["CURRENT_PRODUCT_RECORD_UNAVAILABLE"],
+                contribution_status=contribution_status,
+                contribution_margin_percent=margin,
             ))
         return sorted(result, key=lambda item: item.net_sales, reverse=True)
 
@@ -195,7 +237,7 @@ class AdminAnalyticsService:
                 product_id=group["product_id"], product_name=group["product_name"], variant_id=variant_id, variant_name=group["variant_name"],
                 supplier_variant_id=variant.supplier_variant_id if variant else None, supplier_variant_sku=variant.supplier_variant_sku if variant else None,
                 orders=len(group["orders"]), units_sold=group["units"], paid_units=group["units"], gross_sales=self._quantize(group["sales"]), refunds=self._quantize(group["refunds"]), net_sales=self._quantize(group["sales"] - group["refunds"]),
-                landed_cost=self._unknown("Historical variant supplier cost is not stored on order items"), shipping_cost=self._unknown("Historical shipping cost is unavailable"), contribution_before_cac=self._unknown("Historical cost inputs are incomplete"), cac=self._unknown("Marketing spend and attribution are not configured"), contribution_after_cac=self._unknown("Contribution and CAC are unavailable"), average_selling_price=self._quantize(sum(group["prices"], Decimal("0")) / len(group["prices"])), inventory_available=variant.cj_inventory if variant else None, cj_inventory=variant.cj_inventory if variant else None, factory_inventory=variant.factory_inventory if variant else None, data_quality=["HISTORICAL_COST_UNKNOWN", "ACTUAL_CAC_NOT_CONFIGURED"],
+                landed_cost=(costs := self._contribution_metric(self._quantize(group["sales"] - group["refunds"]), [item for order in orders for item in order.items if item.variant_id == variant_id]))[0], shipping_cost=costs[1], contribution_before_cac=costs[2], cac=self._unknown("Marketing spend and attribution are not configured"), contribution_after_cac=self._unknown("Contribution and CAC are unavailable"), average_selling_price=self._quantize(sum(group["prices"], Decimal("0")) / len(group["prices"])), inventory_available=variant.cj_inventory if variant else None, cj_inventory=variant.cj_inventory if variant else None, factory_inventory=variant.factory_inventory if variant else None, data_quality=costs[5], contribution_status=costs[4], contribution_margin_percent=costs[3],
             ))
         return sorted(result, key=lambda item: item.net_sales, reverse=True)
 
@@ -225,9 +267,26 @@ class AdminAnalyticsService:
         for order in self._orders(period):
             refunds = [refund for refund in order.refund_requests if refund.status == "SUCCESS"]
             refund_amount = sum((refund.amount for refund in refunds), Decimal("0")) or None
+            item_refunds = self._refund_allocations([order])
+            gross_sales = order.total if order.payment_status == "PAID" and order.paid_at else Decimal("0")
+            net_sales = gross_sales - (refund_amount or Decimal("0"))
+            product_cost, shipping_cost, contribution, _, _, missing = self._contribution_metric(net_sales, order.items)
             for item in order.items:
-                rows.append(AnalyticsExportRow(order_number=order.order_number, order_date=order.created_at.isoformat(), payment_date=order.paid_at.isoformat() if order.paid_at else None, product=item.product_name, variant=item.variant_name, quantity=item.quantity, unit_price=item.unit_price, line_total=item.line_total, shipping=order.shipping_amount, payment_status=order.payment_status, refund_status=refunds[0].status if refunds else None, refund_amount=refund_amount, fulfillment_status=order.fulfillment_status, supplier_cost=None, shipping_cost=None, contribution=None, data_quality="HISTORICAL_COST_UNKNOWN; ACTUAL_PAYMENT_FEE_UNKNOWN; ACTUAL_CAC_NOT_CONFIGURED"))
+                rows.append(AnalyticsExportRow(order_number=order.order_number, order_date=order.created_at.isoformat(), payment_date=order.paid_at.isoformat() if order.payment_status == "PAID" and order.paid_at else None, product=item.product_name, variant=item.variant_name, quantity=item.quantity, unit_price=item.unit_price, line_total=item.line_total, shipping=order.shipping_amount, payment_status=order.payment_status, refund_status=refunds[0].status if refunds else None, refund_amount=item_refunds.get(item.id), fulfillment_status=order.fulfillment_status, supplier_cost=item.supplier_cost_inr_snapshot * item.quantity if item.supplier_cost_inr_snapshot is not None else None, shipping_cost=item.shipping_cost_inr_snapshot * item.quantity if item.shipping_cost_inr_snapshot is not None else None, contribution=contribution.value, data_quality="; ".join([*missing, "actual_payment_fee", "actual_cac"])))
         return rows
 
     def export_csv(self, period: AnalyticsPeriod) -> str:
         output = StringIO(); writer = csv.DictWriter(output, fieldnames=list(AnalyticsExportRow.model_fields)); writer.writeheader(); writer.writerows([row.model_dump(mode="json") for row in self.export_rows(period)]); return output.getvalue()
+
+    def order_profitability(self, order_id: UUID) -> OrderProfitabilityDTO:
+        order = self.db.scalar(select(Order).where(Order.id == order_id).options(selectinload(Order.items), selectinload(Order.refund_requests)))
+        if order is None:
+            raise ValueError("Order not found")
+        refunds = [refund for refund in order.refund_requests if refund.status == "SUCCESS"]
+        gross = order.total if order.paid_at else Decimal("0")
+        refunded = sum((refund.amount for refund in refunds), Decimal("0"))
+        net_sales = gross - refunded
+        product_cost, shipping_cost, contribution, margin, contribution_status, missing = self._contribution_metric(net_sales, order.items)
+        payment_fees = self._unknown("Actual Cashfree payment fee is not stored")
+        actual_cac = self._unknown("Marketing spend and attribution are not configured")
+        return OrderProfitabilityDTO(order_id=order.id, order_number=order.order_number, payment_status=order.payment_status, refund_status=refunds[0].status if refunds else None, gross_sales=self._quantize(gross), refunds=self._quantize(refunded), net_sales=self._quantize(net_sales), product_cost=product_cost, shipping_cost=shipping_cost, payment_fees=payment_fees, contribution_before_cac=contribution, contribution_margin_percent=margin, contribution_status=contribution_status, actual_cac=actual_cac, contribution_after_cac=self._unknown("Actual CAC is not configured"), missing=sorted(set([*missing, "actual_payment_fee", "actual_cac"])))

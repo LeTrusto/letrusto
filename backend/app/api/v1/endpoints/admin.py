@@ -36,7 +36,7 @@ from app.services.order_reconciliation_service import OrderLifecycleReconciliati
 from app.schemas.reconciliation import ReconciliationResultDTO
 from app.schemas.reservations import AdminInventoryReservationDTO
 from app.schemas.payments import AdminFulfillmentOrderDTO, FulfillmentDTO
-from app.schemas.admin_analytics import AnalyticsPeriod, AnalyticsSummary, InventoryAnalyticsDTO, ProductPerformanceDTO, SalesTrendPoint, VariantPerformanceDTO
+from app.schemas.admin_analytics import AnalyticsPeriod, AnalyticsSummary, InventoryAnalyticsDTO, OrderProfitabilityDTO, ProductPerformanceDTO, SalesTrendPoint, VariantPerformanceDTO
 from app.services.admin_analytics_service import AdminAnalyticsService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -76,6 +76,17 @@ def analytics_variants(
 @router.get("/analytics/inventory", response_model=list[InventoryAnalyticsDTO])
 def analytics_inventory(_: User = Depends(get_current_admin), db=Depends(get_db)) -> list[InventoryAnalyticsDTO]:
     return AdminAnalyticsService(db).inventory()
+
+
+@router.get("/analytics/orders/{order_id}/profitability", response_model=OrderProfitabilityDTO)
+def analytics_order_profitability(
+    order_id: UUID,
+    _: User = Depends(get_current_admin), db=Depends(get_db),
+) -> OrderProfitabilityDTO:
+    try:
+        return AdminAnalyticsService(db).order_profitability(order_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/analytics/sales-trend", response_model=list[SalesTrendPoint])
