@@ -52,8 +52,8 @@ export type CartItem = {
 export type CartState = {
   items: CartItem[];
   addItem: (productId: string, quantity?: number, selectedVariantId?: string) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: string, selectedVariantId?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedVariantId?: string) => void;
   clearCart: () => void;
   itemCount: number;
   subtotal: number;

@@ -71,16 +71,8 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
-      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
-    shortcut: ["/favicon.ico"],
-    other: [
-      { rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#111827" },
-    ],
+    icon: [{ url: "/letrusto-icon.svg", type: "image/svg+xml", sizes: "any" }],
+    shortcut: ["/letrusto-icon.svg"],
   },
   robots: { index: true, follow: true },
 };
@@ -122,9 +114,9 @@ export default function RootLayout({
             url: "https://letrusto.com",
             logo: {
               "@type": "ImageObject",
-              url: "https://letrusto.com/android-chrome-512x512.png",
-              width: 512,
-              height: 512,
+              url: "https://letrusto.com/LeTrusto%20Brand%20Logo.png",
+              width: 1774,
+              height: 887,
             },
             description: "Curated discovery commerce for beauty, jewellery and style finds in India.",
             sameAs: ["https://x.com/letrusto", "https://instagram.com/letrusto"],
@@ -133,7 +125,7 @@ export default function RootLayout({
         <AuthProvider>
           <CartProvider>
             <CommerceNavbar />
-            <main className="flex-1 pb-16 md:pb-0">{children}</main>
+            <main className="flex-1 pb-16 lg:pb-0">{children}</main>
             <CommerceFooter />
             <MobileNav />
           </CartProvider>

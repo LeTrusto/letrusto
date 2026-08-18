@@ -81,15 +81,8 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-white/95 shadow-[var(--shadow-sm)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-3.5 sm:px-6">
         {/* Logo */}
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <Image src="/images/logo/logo.png" alt="LeTrusto" width={60} height={52} priority className="h-10 w-auto" />
-          <div className="hidden sm:block">
-            <span className="text-[1.625rem] font-black leading-none tracking-tight">
-              <span className="bg-gradient-to-r from-[var(--lt-purple)] to-[var(--lt-pink)] bg-clip-text text-transparent">Le</span>
-              <span className="text-slate-900">Trusto</span>
-            </span>
-            <p className="mt-0.5 text-xs font-medium text-slate-400">AI Tools and Software Advisor</p>
-          </div>
+        <Link href="/" aria-label="LeTrusto home" className="flex shrink-0 items-center">
+          <Image src="/LeTrusto%20Brand%20Logo.png" alt="LeTrusto - Discover. Choose. Trust." width={1774} height={887} priority unoptimized className="h-auto w-40 sm:w-44" />
         </Link>
 
         {/* Desktop nav */}

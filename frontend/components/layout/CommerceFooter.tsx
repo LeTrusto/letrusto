@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BrandMark from "./BrandMark";
 
 const SHOP_LINKS = [
   { label: "All Products", href: "/shop" },
@@ -24,14 +25,12 @@ const POLICY_LINKS = [
 
 export default function CommerceFooter() {
   return (
-    <footer className="hidden md:block bg-[var(--lt-primary)] text-white">
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-4 gap-8">
+    <footer className="bg-[var(--lt-primary)] pb-24 text-white lg:pb-0">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-12">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div>
-            <Link href="/" className="text-xl font-extrabold tracking-tight">
-              LeTrusto
-            </Link>
+            <BrandMark />
             <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
               Trending finds. Everyday prices.<br />
               Curated beauty, jewellery &amp; style.
@@ -81,7 +80,7 @@ export default function CommerceFooter() {
           </div>
         </div>
 
-        <div className="mt-10 pt-8 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-10 flex flex-col items-start justify-between gap-4 border-t border-zinc-800 pt-8 sm:flex-row sm:items-center">
           <p className="text-xs text-zinc-500">© {new Date().getFullYear()} LeTrusto. All rights reserved.</p>
           <div className="flex items-center gap-5">
             <a href="https://instagram.com/letrusto" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors text-xs">

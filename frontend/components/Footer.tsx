@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const FOOTER_LINKS = {
@@ -36,11 +37,8 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-10 md:grid-cols-4 lg:gap-14">
           {/* Brand column */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <span className="text-[1.625rem] font-black tracking-tight">
-                <span className="bg-gradient-to-r from-[var(--lt-purple)] to-[var(--lt-pink)] bg-clip-text text-transparent">Le</span>
-                <span className="text-slate-900">Trusto</span>
-              </span>
+            <Link href="/" aria-label="LeTrusto home" className="inline-flex items-center">
+              <Image src="/LeTrusto%20Brand%20Logo.png" alt="LeTrusto - Discover. Choose. Trust." width={1774} height={887} priority unoptimized className="h-auto w-40" />
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
               Research-backed AI tool and software recommendations, comparisons, and buying guidance for teams that want clarity before they pay.

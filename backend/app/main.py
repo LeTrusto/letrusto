@@ -2,11 +2,11 @@ import os
 import sys
 from collections import OrderedDict
 
-# Print raw environment BEFORE any app imports — shows exactly what Railway injects
-_raw_db_url = os.environ.get("DATABASE_URL", "<<NOT SET IN ENVIRONMENT>>")
+# Report connection configuration without exposing credentials in deployment logs.
+_database_url_configured = bool(os.environ.get("DATABASE_URL"))
 print(f"[LeTrusto BOOT] sys.version={sys.version}", flush=True)
 print(
-    f"[LeTrusto BOOT] Raw DATABASE_URL from os.environ = {_raw_db_url[:60] if len(_raw_db_url) > 60 else _raw_db_url}",
+    f"[LeTrusto BOOT] DATABASE_URL configured={_database_url_configured}",
     flush=True,
 )
 
@@ -20,18 +20,6 @@ from app.core.rate_limit import RateLimitMiddleware
 from app.core.security import TokenPayloadError
 
 settings = get_settings()
-
-# Mask password in logged URL for debugging Railway startup
-_db_url_display = settings.DATABASE_URL
-try:
-    from urllib.parse import urlparse
-
-    _p = urlparse(_db_url_display)
-    if _p.password:
-        _db_url_display = _db_url_display.replace(_p.password, "****")
-except Exception:
-    pass
-
 
 def _build_cors_origins(raw_origins: str) -> list[str]:
     configured = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
@@ -50,22 +38,21 @@ def _build_cors_origins(raw_origins: str) -> list[str]:
 _cors_origins = _build_cors_origins(settings.CORS_ORIGINS)
 
 print(f"[LeTrusto] APP_ENV={settings.APP_ENV}")
-print(f"[LeTrusto] DATABASE_URL={_db_url_display}")
+print(f"[LeTrusto] DATABASE_URL configured={bool(settings.DATABASE_URL)}")
 print(f"[LeTrusto] CORS_ORIGINS={settings.CORS_ORIGINS}")
 print(f"[LeTrusto] Effective CORS origins={_cors_origins}")
 
 app = FastAPI(
     title=settings.APP_NAME,
     version="5.0.0",
-    openapi_url="/openapi.json",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    openapi_url="/openapi.json" if settings.APP_ENV != "production" else None,
+    docs_url="/docs" if settings.APP_ENV != "production" else None,
+    redoc_url="/redoc" if settings.APP_ENV != "production" else None,
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
-    allow_origin_regex=r"https://([a-z0-9-]+\.)?vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

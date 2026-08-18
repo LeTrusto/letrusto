@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -45,11 +46,8 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="rounded-3xl border border-white/80 bg-white/90 p-8 shadow-2xl backdrop-blur-xl">
           <div className="mb-8 text-center">
-            <h1 className="text-3xl font-black text-slate-900">
-              Join{" "}
-              <span className="text-pink-600">Le</span>
-              <span>Trusto</span>
-            </h1>
+            <Image src="/LeTrusto%20Brand%20Logo.png" alt="LeTrusto - Discover. Choose. Trust." width={1774} height={887} priority unoptimized className="mx-auto h-auto w-48" />
+            <h1 className="mt-5 text-3xl font-black text-slate-900">Create your account</h1>
             <p className="mt-2 text-gray-500">Create your free account</p>
           </div>
 

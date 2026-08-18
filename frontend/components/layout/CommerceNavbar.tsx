@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Search, ShoppingBag, Heart, User, X } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
+import BrandMark from "./BrandMark";
 
 export default function CommerceNavbar() {
   const { itemCount } = useCart();
@@ -22,10 +23,8 @@ export default function CommerceNavbar() {
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-[var(--border)]">
       {/* Mobile header */}
-      <div className="md:hidden flex items-center justify-between h-14 px-4">
-        <Link href="/" className="text-lg font-extrabold tracking-tight text-[var(--text-primary)]">
-          LeTrusto
-        </Link>
+      <div className="flex h-14 items-center justify-between px-4 lg:hidden">
+        <BrandMark compact />
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSearchOpen(!searchOpen)}
@@ -47,7 +46,7 @@ export default function CommerceNavbar() {
 
       {/* Mobile search overlay */}
       {searchOpen && (
-        <div className="md:hidden px-4 pb-3">
+        <div className="px-4 pb-3 lg:hidden">
           <form onSubmit={handleSearch} className="flex gap-2">
             <input
               type="search"
@@ -65,11 +64,9 @@ export default function CommerceNavbar() {
       )}
 
       {/* Desktop header */}
-      <div className="hidden md:flex items-center justify-between h-16 max-w-7xl mx-auto px-6">
+      <div className="mx-auto hidden h-16 max-w-7xl items-center justify-between px-6 lg:flex">
         <div className="flex items-center gap-8">
-          <Link href="/" className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">
-            LeTrusto
-          </Link>
+          <BrandMark />
           <nav className="flex items-center gap-6 text-sm font-medium text-[var(--text-secondary)]">
             <Link href="/shop" className="hover:text-[var(--text-primary)] transition-colors">
               Shop

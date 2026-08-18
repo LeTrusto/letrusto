@@ -3,18 +3,18 @@ import { Truck, RotateCcw, ShieldCheck } from "lucide-react";
 const SIGNALS = [
   {
     icon: Truck,
-    title: "Fast Delivery",
-    description: "Shipped within 24-48 hours across India.",
+    title: "Shipping details",
+    description: "Delivery information is shown during checkout.",
   },
   {
     icon: RotateCcw,
-    title: "Easy Returns",
-    description: "7-day hassle-free return policy.",
+    title: "Returns & refunds",
+    description: "Review the returns policy before placing an order.",
   },
   {
     icon: ShieldCheck,
-    title: "Trusted Quality",
-    description: "Every product is hand-picked and quality checked.",
+    title: "Order updates",
+    description: "View payment and fulfillment status from your account.",
   },
 ];
 

@@ -17,7 +17,7 @@ export default function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[var(--border)] safe-area-pb" aria-label="Mobile navigation">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-white safe-area-pb lg:hidden" aria-label="Mobile navigation">
       <div className="flex items-center justify-around h-16">
         {TABS.map((tab) => {
           const isActive = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href.split("?")[0]);

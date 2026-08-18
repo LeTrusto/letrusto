@@ -1,4 +1,3 @@
-import os
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
@@ -83,18 +82,20 @@ def get_settings() -> Settings:
 
     # Only fail loudly in production — localhost is valid for local development
     if s.APP_ENV == "production" and ("localhost" in s.DATABASE_URL or "127.0.0.1" in s.DATABASE_URL):
-        env_val = os.environ.get("DATABASE_URL", "<not set>")
         raise RuntimeError(
             f"\n\n"
             f"=================================================================\n"
             f"FATAL: DATABASE_URL is pointing to localhost.\n"
-            f"  Env var DATABASE_URL = {env_val}\n"
-            f"  Resolved DATABASE_URL = {s.DATABASE_URL}\n"
+            f"  DATABASE_URL is configured but resolves to a local host.\n"
             f"\n"
             f"  Fix: In Railway → your service → Variables, add:\n"
             f"    DATABASE_URL = (copy from the PostgreSQL service plugin)\n"
             f"=================================================================\n"
         )
+    if s.APP_ENV == "production" and (
+        s.JWT_SECRET_KEY.startswith("change-this-") or len(s.JWT_SECRET_KEY) < 32
+    ):
+        raise RuntimeError("FATAL: JWT_SECRET_KEY must be a non-placeholder value of at least 32 characters in production.")
     if s.CASHFREE_ENV not in {"sandbox", "production"}:
         raise ValueError("CASHFREE_ENV must be sandbox or production")
     if s.APP_ENV == "production" and s.CASHFREE_ENV != "production":

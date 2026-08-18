@@ -9,8 +9,8 @@ const STORAGE_KEY = "letrusto:cart";
 type CartContextValue = {
   items: CartItem[];
   addItem: (productId: string, quantity?: number, selectedVariantId?: string) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: string, selectedVariantId?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedVariantId?: string) => void;
   clearCart: () => void;
   itemCount: number;
   subtotal: number;
@@ -71,19 +71,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, [products]);
 
-  const removeItem = useCallback((productId: string) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId));
+  const removeItem = useCallback((productId: string, selectedVariantId?: string) => {
+    setItems((prev) => prev.filter((item) => item.productId !== productId || item.selectedVariantId !== selectedVariantId));
   }, []);
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number, selectedVariantId?: string) => {
     if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => i.productId !== productId));
+      setItems((prev) => prev.filter((item) => item.productId !== productId || item.selectedVariantId !== selectedVariantId));
       return;
     }
-    setItems((prev) => prev.map((i) => {
-      if (i.productId !== productId) return i;
-      const inventory = products[i.productId]?.catalogVariants?.find((variant) => variant.id === i.selectedVariantId)?.inventory;
-      return inventory !== undefined && quantity > inventory ? i : { ...i, quantity };
+    setItems((prev) => prev.map((item) => {
+      if (item.productId !== productId || item.selectedVariantId !== selectedVariantId) return item;
+      const inventory = products[item.productId]?.catalogVariants?.find((variant) => variant.id === item.selectedVariantId)?.inventory;
+      return inventory !== undefined && quantity > inventory ? item : { ...item, quantity };
     }));
   }, [products]);
 

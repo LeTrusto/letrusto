@@ -71,7 +71,7 @@ export default async function ArticlePage({ params }: Props) {
       "@type": "Organization",
       name: "LeTrusto",
       url: "https://letrusto.com",
-      logo: { "@type": "ImageObject", url: "https://letrusto.com/android-chrome-512x512.png" },
+      logo: { "@type": "ImageObject", url: "https://letrusto.com/LeTrusto%20Brand%20Logo.png" },
     },
   };
 

@@ -26,22 +26,22 @@ export default function CartPageView() {
 
   if (items.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+      <main className="mx-auto max-w-2xl px-4 py-20 text-center">
         <ShoppingBag size={48} strokeWidth={1} className="mx-auto text-[var(--text-muted)]" />
         <h1 className="mt-4 text-xl font-bold text-[var(--text-primary)]">Your cart is empty</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">Looks like you haven&apos;t added anything yet.</p>
         <Link href="/shop" className="lt-btn lt-btn-lg lt-btn-primary mt-6 inline-flex">
           Start Shopping
         </Link>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="lt-heading-2">Cart ({itemCount})</h1>
-        <button onClick={clearCart} className="text-sm text-[var(--text-muted)] hover:text-[var(--lt-rose)] transition-colors">
+    <main className="mx-auto max-w-5xl px-4 py-6 md:px-6 md:py-10">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div><p className="lt-label">Your selection</p><h1 className="lt-heading-2 mt-1">Cart ({itemCount})</h1></div>
+        <button type="button" onClick={clearCart} className="lt-btn lt-btn-ghost lt-btn-sm text-[var(--lt-rose)]" aria-label="Remove all items from cart">
           Clear Cart
         </button>
       </div>
@@ -55,7 +55,7 @@ export default function CartPageView() {
             const selectedVariant = product.catalogVariants?.find((variant) => variant.id === item.selectedVariantId);
 
             return (
-              <div key={item.productId} className="lt-card p-4 flex gap-4">
+              <div key={`${item.productId}-${item.selectedVariantId ?? "default"}`} className="lt-card flex gap-3 p-4 sm:gap-4">
                 <Link href={`/product/${product.slug}`} className="shrink-0">
                   <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-[var(--surface-muted)]">
                     <Image
@@ -79,12 +79,13 @@ export default function CartPageView() {
                       <span className="text-xs text-[var(--text-muted)] line-through">{formatPrice(product.compareAtPrice)}</span>
                     )}
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="flex items-center border border-[var(--border)] rounded-md">
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center rounded-md border border-[var(--border)]" aria-label={`Quantity for ${product.name}${selectedVariant ? `, ${selectedVariant.label}` : ""}`}>
                       <button
-                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                        type="button"
+                        onClick={() => updateQuantity(item.productId, item.quantity - 1, item.selectedVariantId)}
                         className="w-8 h-8 flex items-center justify-center hover:bg-[var(--surface-muted)] transition-colors"
-                        aria-label="Decrease quantity"
+                        aria-label={`Decrease quantity for ${product.name}`}
                       >
                         <Minus size={14} />
                       </button>
@@ -92,15 +93,18 @@ export default function CartPageView() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                        type="button"
+                        onClick={() => updateQuantity(item.productId, item.quantity + 1, item.selectedVariantId)}
+                        disabled={selectedVariant ? item.quantity >= selectedVariant.inventory : false}
                         className="w-8 h-8 flex items-center justify-center hover:bg-[var(--surface-muted)] transition-colors"
-                        aria-label="Increase quantity"
+                        aria-label={`Increase quantity for ${product.name}`}
                       >
                         <Plus size={14} />
                       </button>
                     </div>
                     <button
-                      onClick={() => removeItem(item.productId)}
+                      type="button"
+                      onClick={() => removeItem(item.productId, item.selectedVariantId)}
                       className="p-1.5 text-[var(--text-muted)] hover:text-[var(--lt-rose)] transition-colors"
                       aria-label={`Remove ${product.name}`}
                     >
@@ -115,7 +119,7 @@ export default function CartPageView() {
 
         {/* Summary */}
         <div className="md:col-span-1">
-          <div className="lt-card p-5 sticky top-20">
+          <div className="lt-card p-5 md:sticky md:top-20">
             <h2 className="text-sm font-bold text-[var(--text-primary)] mb-4">Order Summary</h2>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
@@ -130,7 +134,7 @@ export default function CartPageView() {
               )}
               <div className="flex justify-between text-[var(--text-muted)]">
                 <span>Shipping</span>
-                <span>Calculated at checkout</span>
+                <span>Included in total</span>
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-[var(--border)] flex justify-between text-base font-bold">
@@ -140,8 +144,8 @@ export default function CartPageView() {
             <Link href="/checkout" className="lt-btn lt-btn-lg lt-btn-primary w-full mt-5 justify-center">
               Proceed to Checkout
             </Link>
-            <p className="text-[10px] text-[var(--text-muted)] text-center mt-2">
-              Payment remains pending until payment integration is added.
+            <p className="mt-3 text-center text-xs text-[var(--text-muted)]">
+              You&apos;ll review payment after creating your order.
             </p>
             <Link href="/shop" className="lt-btn lt-btn-md lt-btn-ghost w-full mt-2">
               Continue Shopping
@@ -149,6 +153,6 @@ export default function CartPageView() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
