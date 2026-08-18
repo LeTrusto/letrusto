@@ -72,6 +72,7 @@ export default function CartPageView() {
                     {product.name}
                   </Link>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">{product.categoryLabel}</p>
+                  {selectedVariant && <p className="text-xs text-[var(--text-secondary)] mt-1">Variant: {selectedVariant.label}</p>}
                   <div className="mt-2 flex items-center gap-1.5">
                     <span className="text-sm font-bold">{formatPrice(selectedVariant?.price ?? product.price)}</span>
                     {product.compareAtPrice && (
@@ -136,11 +137,11 @@ export default function CartPageView() {
               <span>Total</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
-            <button className="lt-btn lt-btn-lg lt-btn-primary w-full mt-5" disabled>
+            <Link href="/checkout" className="lt-btn lt-btn-lg lt-btn-primary w-full mt-5 justify-center">
               Proceed to Checkout
-            </button>
+            </Link>
             <p className="text-[10px] text-[var(--text-muted)] text-center mt-2">
-              Checkout coming soon — development preview only
+              Payment remains pending until payment integration is added.
             </p>
             <Link href="/shop" className="lt-btn lt-btn-md lt-btn-ghost w-full mt-2">
               Continue Shopping

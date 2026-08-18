@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     favorites,
     health,
     notifications,
+    orders,
     products,
     recommendations,
     search,
@@ -36,6 +37,7 @@ api_router.include_router(favorites.router)
 api_router.include_router(auth.router)
 api_router.include_router(users.router)
 api_router.include_router(notifications.router)
+api_router.include_router(orders.router)
 api_router.include_router(deals.router)
 api_router.include_router(support.router)
 api_router.include_router(analytics.router)

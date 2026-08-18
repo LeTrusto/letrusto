@@ -23,6 +23,7 @@ from app.services.auth_service import AuthService
 from app.services.deal_service import DealService
 from app.services.favorite_service import FavoriteService
 from app.services.notification_service import NotificationService
+from app.services.order_service import OrderService
 from app.services.product_service import ProductService
 from app.services.support_service import SupportService
 from app.services.user_service import UserService
@@ -36,6 +37,10 @@ ai_tool_intent_router = AIToolIntentRouter()
 
 def get_product_service(db: Session = Depends(get_db)) -> ProductService:
     return ProductService(ProductRepository(db))
+
+
+def get_order_service(db: Session = Depends(get_db)) -> OrderService:
+    return OrderService(db)
 
 
 def get_favorite_service(db: Session = Depends(get_db)) -> FavoriteService:

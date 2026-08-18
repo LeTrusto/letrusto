@@ -26,16 +26,19 @@ function saveCart(items: CartItem[]) {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as CartItem[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const [products, setProducts] = useState<Record<string, ReturnType<typeof toCommerceProduct>>>({});
+
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) setItems(JSON.parse(raw) as CartItem[]);
+      } catch { /* ignore malformed local cart */ }
+      setHydrated(true);
+    });
+  }, []);
 
   useEffect(() => {
     void getPublicProducts().then((catalog) => {
@@ -47,12 +50,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveCart(items);
-  }, [items]);
+  }, [hydrated, items]);
 
   const addItem = useCallback((productId: string, quantity = 1, selectedVariantId?: string) => {
+    const product = products[productId];
+    const variant = product?.catalogVariants?.find((candidate) => candidate.id === selectedVariantId);
+    if (variant && (!variant.available || quantity > variant.inventory)) return;
     setItems((prev) => {
       const existing = prev.find((i) => i.productId === productId && i.selectedVariantId === selectedVariantId);
+      const nextQuantity = quantity + (existing?.quantity ?? 0);
+      if (variant && nextQuantity > variant.inventory) return prev;
       if (existing) {
         return prev.map((i) =>
           i === existing ? { ...i, quantity: i.quantity + quantity } : i
@@ -60,7 +69,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { productId, quantity, selectedVariantId }];
     });
-  }, []);
+  }, [products]);
 
   const removeItem = useCallback((productId: string) => {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
@@ -71,10 +80,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems((prev) => prev.filter((i) => i.productId !== productId));
       return;
     }
-    setItems((prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, quantity } : i))
-    );
-  }, []);
+    setItems((prev) => prev.map((i) => {
+      if (i.productId !== productId) return i;
+      const inventory = products[i.productId]?.catalogVariants?.find((variant) => variant.id === i.selectedVariantId)?.inventory;
+      return inventory !== undefined && quantity > inventory ? i : { ...i, quantity };
+    }));
+  }, [products]);
 
   const clearCart = useCallback(() => setItems([]), []);
 
