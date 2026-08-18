@@ -1,0 +1,233 @@
+import csv
+from collections import defaultdict
+from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal, ROUND_HALF_UP
+from io import StringIO
+from uuid import UUID
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, selectinload
+
+from app.core.config import get_settings
+from app.models.entities import InventoryReservation, Order, Product, ProductVariant, RefundRequest
+from app.schemas.admin_analytics import (
+    AnalyticsExportRow,
+    AnalyticsPeriod,
+    AnalyticsSummary,
+    InventoryAnalyticsDTO,
+    MetricAvailability,
+    ProductPerformanceDTO,
+    SalesTrendPoint,
+    VariantPerformanceDTO,
+)
+
+CENT = Decimal("0.01")
+
+
+class AdminAnalyticsService:
+    """Read-only operational and accounting foundation over authoritative records."""
+
+    def __init__(self, db: Session) -> None:
+        self.db = db
+        self.settings = get_settings()
+
+    @staticmethod
+    def resolve_period(period: str = "last_30_days", start_date: date | None = None, end_date: date | None = None) -> AnalyticsPeriod:
+        today = datetime.now(timezone.utc).date()
+        if period == "today":
+            start, end, label = today, today + timedelta(days=1), "Today"
+        elif period == "yesterday":
+            start, end, label = today - timedelta(days=1), today, "Yesterday"
+        elif period == "last_7_days":
+            start, end, label = today - timedelta(days=6), today + timedelta(days=1), "Last 7 days"
+        elif period == "this_month":
+            start, end, label = today.replace(day=1), today + timedelta(days=1), "This month"
+        elif period == "previous_month":
+            first_this = today.replace(day=1)
+            previous_end = first_this
+            previous_start = (first_this - timedelta(days=1)).replace(day=1)
+            start, end, label = previous_start, previous_end, "Previous month"
+        elif period == "custom":
+            if start_date is None or end_date is None:
+                raise ValueError("Custom reporting period requires start_date and end_date")
+            if end_date < start_date:
+                raise ValueError("end_date must not be before start_date")
+            start, end, label = start_date, end_date + timedelta(days=1), "Custom"
+        else:
+            start, end, label = today - timedelta(days=29), today + timedelta(days=1), "Last 30 days"
+        return AnalyticsPeriod(label=label, start=datetime.combine(start, time.min, timezone.utc), end=datetime.combine(end, time.min, timezone.utc))
+
+    @staticmethod
+    def _unknown(reason: str) -> MetricAvailability:
+        return MetricAvailability(value=None, status="NOT_AVAILABLE", reason=reason)
+
+    @staticmethod
+    def _quantize(value: Decimal) -> Decimal:
+        return value.quantize(CENT, rounding=ROUND_HALF_UP)
+
+    def _orders(self, period: AnalyticsPeriod) -> list[Order]:
+        return list(self.db.scalars(
+            select(Order).where(Order.created_at >= period.start, Order.created_at < period.end).options(
+                selectinload(Order.items), selectinload(Order.refund_requests)
+            )
+        ).all())
+
+    def _paid_orders(self, period: AnalyticsPeriod) -> list[Order]:
+        return list(self.db.scalars(
+            select(Order).where(Order.paid_at >= period.start, Order.paid_at < period.end, Order.paid_at.is_not(None)).options(
+                selectinload(Order.items), selectinload(Order.refund_requests)
+            )
+        ).all())
+
+    def _successful_refunds(self, period: AnalyticsPeriod) -> list[RefundRequest]:
+        return list(self.db.scalars(select(RefundRequest).where(
+            RefundRequest.status == "SUCCESS",
+            RefundRequest.completed_at >= period.start,
+            RefundRequest.completed_at < period.end,
+        )).all())
+
+    def summary(self, period: AnalyticsPeriod) -> AnalyticsSummary:
+        orders = self._orders(period)
+        paid_orders = self._paid_orders(period)
+        refunds = self._successful_refunds(period)
+        gross = sum((order.total for order in orders), Decimal("0"))
+        paid = sum((order.total for order in paid_orders), Decimal("0"))
+        refunded = sum((refund.amount for refund in refunds), Decimal("0"))
+        status_breakdown = defaultdict(int)
+        for order in orders:
+            status_breakdown[f"payment:{order.payment_status}"] += 1
+            status_breakdown[f"fulfillment:{order.fulfillment_status}"] += 1
+        paid_average = self._quantize(paid / len(paid_orders)) if paid_orders else None
+        return AnalyticsSummary(
+            period=period,
+            gross_order_value=self._quantize(gross),
+            paid_sales=self._quantize(paid),
+            refunded_amount=self._quantize(refunded),
+            net_sales=self._quantize(paid - refunded),
+            payment_fees=self._unknown("Actual Cashfree fee data is not stored"),
+            landed_cost=self._unknown("Historical order-item supplier cost is not stored"),
+            shipping_cost=self._unknown("Historical order shipping cost is not stored separately"),
+            contribution_before_cac=self._unknown("Historical landed, shipping, and actual fee inputs are incomplete"),
+            cac=self._unknown("Marketing spend and attribution are not configured"),
+            contribution_after_cac=self._unknown("Contribution before CAC and actual CAC are unavailable"),
+            order_count=len(orders),
+            paid_order_count=len(paid_orders),
+            refunded_order_count=len({refund.order_id for refund in refunds}),
+            pending_payment_count=sum(1 for order in orders if order.payment_status == "PENDING"),
+            average_order_value=paid_average,
+            status_breakdown=dict(status_breakdown),
+            policy_assumptions={
+                "fx_rate_usd_to_inr": self.settings.PRICING_FX_RATE,
+                "gateway_fee_percent": self.settings.PAYMENT_GATEWAY_PCT,
+                "rto_reserve_percent": self.settings.RTO_RESERVE_PCT,
+                "target_contribution_margin_percent": self.settings.TARGET_CONTRIBUTION_MARGIN_PCT,
+                "target_cac_inr": self.settings.TARGET_CAC_INR,
+            },
+        )
+
+    def _current_variant_map(self, ids: set[UUID]) -> dict[UUID, ProductVariant]:
+        if not ids:
+            return {}
+        variants = list(self.db.scalars(select(ProductVariant).where(ProductVariant.id.in_(ids)).options(selectinload(ProductVariant.product))).all())
+        return {variant.id: variant for variant in variants}
+
+    def _refund_allocations(self, orders: list[Order]) -> dict[UUID, Decimal]:
+        allocations: dict[UUID, Decimal] = defaultdict(Decimal)
+        for order in orders:
+            successful = [refund for refund in order.refund_requests if refund.status == "SUCCESS"]
+            refund_total = sum((refund.amount for refund in successful), Decimal("0"))
+            if refund_total <= 0 or order.total <= 0:
+                continue
+            for item in order.items:
+                allocations[item.id] += self._quantize(refund_total * item.line_total / order.total)
+        return allocations
+
+    def product_performance(self, period: AnalyticsPeriod) -> list[ProductPerformanceDTO]:
+        orders = self._paid_orders(period)
+        refund_allocations = self._refund_allocations(orders)
+        product_ids = {item.product_id for order in orders for item in order.items if item.product_id}
+        products = {product.id: product for product in self.db.scalars(select(Product).where(Product.id.in_(product_ids))).all()} if product_ids else {}
+        groups: dict[UUID | None, dict] = {}
+        for order in orders:
+            for item in order.items:
+                group = groups.setdefault(item.product_id, {"name": item.product_name, "orders": set(), "units": 0, "sales": Decimal("0"), "refunds": Decimal("0"), "prices": []})
+                group["orders"].add(order.id)
+                group["units"] += item.quantity
+                group["sales"] += item.line_total
+                group["refunds"] += refund_allocations.get(item.id, Decimal("0"))
+                group["prices"].append(item.unit_price)
+        result = []
+        for product_id, group in groups.items():
+            product = products.get(product_id)
+            quality = ["HISTORICAL_LANDED_COST_UNKNOWN", "HISTORICAL_SHIPPING_COST_UNKNOWN", "ACTUAL_PAYMENT_FEES_UNKNOWN", "ACTUAL_CAC_NOT_CONFIGURED"]
+            result.append(ProductPerformanceDTO(
+                product_id=product_id,
+                product_name=group["name"],
+                orders=len(group["orders"]), units_sold=group["units"], paid_units=group["units"],
+                gross_sales=self._quantize(group["sales"]), refunds=self._quantize(group["refunds"]), net_sales=self._quantize(group["sales"] - group["refunds"]),
+                landed_cost=self._unknown("Historical order-item supplier cost is not stored"),
+                shipping_cost=self._unknown("Historical order shipping cost is not stored separately"),
+                contribution_before_cac=self._unknown("Historical cost inputs are incomplete"),
+                cac=self._unknown("Marketing spend and attribution are not configured"),
+                contribution_after_cac=self._unknown("Contribution and CAC are unavailable"),
+                average_selling_price=self._quantize(sum(group["prices"], Decimal("0")) / len(group["prices"])),
+                inventory_available=product.cj_inventory if product else None,
+                cj_inventory=product.cj_inventory if product else None,
+                factory_inventory=product.factory_inventory if product else None,
+                data_quality=quality if product else quality + ["CURRENT_PRODUCT_RECORD_UNAVAILABLE"],
+            ))
+        return sorted(result, key=lambda item: item.net_sales, reverse=True)
+
+    def variant_performance(self, period: AnalyticsPeriod) -> list[VariantPerformanceDTO]:
+        orders = self._paid_orders(period)
+        refund_allocations = self._refund_allocations(orders)
+        variant_ids = {item.variant_id for order in orders for item in order.items if item.variant_id}
+        variants = self._current_variant_map(variant_ids)
+        groups: dict[UUID | None, dict] = {}
+        for order in orders:
+            for item in order.items:
+                group = groups.setdefault(item.variant_id, {"product_id": item.product_id, "product_name": item.product_name, "variant_name": item.variant_name, "orders": set(), "units": 0, "sales": Decimal("0"), "refunds": Decimal("0"), "prices": []})
+                group["orders"].add(order.id); group["units"] += item.quantity; group["sales"] += item.line_total; group["refunds"] += refund_allocations.get(item.id, Decimal("0")); group["prices"].append(item.unit_price)
+        result = []
+        for variant_id, group in groups.items():
+            variant = variants.get(variant_id)
+            result.append(VariantPerformanceDTO(
+                product_id=group["product_id"], product_name=group["product_name"], variant_id=variant_id, variant_name=group["variant_name"],
+                supplier_variant_id=variant.supplier_variant_id if variant else None, supplier_variant_sku=variant.supplier_variant_sku if variant else None,
+                orders=len(group["orders"]), units_sold=group["units"], paid_units=group["units"], gross_sales=self._quantize(group["sales"]), refunds=self._quantize(group["refunds"]), net_sales=self._quantize(group["sales"] - group["refunds"]),
+                landed_cost=self._unknown("Historical variant supplier cost is not stored on order items"), shipping_cost=self._unknown("Historical shipping cost is unavailable"), contribution_before_cac=self._unknown("Historical cost inputs are incomplete"), cac=self._unknown("Marketing spend and attribution are not configured"), contribution_after_cac=self._unknown("Contribution and CAC are unavailable"), average_selling_price=self._quantize(sum(group["prices"], Decimal("0")) / len(group["prices"])), inventory_available=variant.cj_inventory if variant else None, cj_inventory=variant.cj_inventory if variant else None, factory_inventory=variant.factory_inventory if variant else None, data_quality=["HISTORICAL_COST_UNKNOWN", "ACTUAL_CAC_NOT_CONFIGURED"],
+            ))
+        return sorted(result, key=lambda item: item.net_sales, reverse=True)
+
+    def inventory(self) -> list[InventoryAnalyticsDTO]:
+        now = datetime.now(timezone.utc)
+        variants = list(self.db.scalars(select(ProductVariant).options(selectinload(ProductVariant.product))).all())
+        active = defaultdict(int)
+        rows = self.db.execute(select(InventoryReservation.variant_id, func.coalesce(func.sum(InventoryReservation.quantity), 0)).where(InventoryReservation.status == "ACTIVE", InventoryReservation.expires_at > now).group_by(InventoryReservation.variant_id)).all()
+        for variant_id, quantity in rows: active[variant_id] = int(quantity)
+        result = []
+        for variant in variants:
+            cj = max(0, variant.cj_inventory or 0)
+            available = max(0, cj - active[variant.id])
+            result.append(InventoryAnalyticsDTO(product_id=variant.product_id, product_name=variant.product.name, variant_id=variant.id, variant_name=variant.name or variant.attributes, cj_inventory=variant.cj_inventory, factory_inventory=variant.factory_inventory, active_reservations=active[variant.id], available_customer_inventory=available, sellable_inventory_status="OUT_OF_STOCK" if cj == 0 else "LOW" if available <= 5 else "AVAILABLE"))
+        return result
+
+    def sales_trend(self, period: AnalyticsPeriod) -> list[SalesTrendPoint]:
+        orders = self._orders(period); paid_orders = self._paid_orders(period); refunds = self._successful_refunds(period)
+        points = {current.date().isoformat(): {"orders": 0, "paid_orders": 0, "gross": Decimal("0"), "refunds": Decimal("0")} for current in (period.start + timedelta(days=index) for index in range((period.end - period.start).days))}
+        for order in orders: points[order.created_at.astimezone(timezone.utc).date().isoformat()]["orders"] += 1; points[order.created_at.astimezone(timezone.utc).date().isoformat()]["gross"] += order.total
+        for order in paid_orders: points[order.paid_at.astimezone(timezone.utc).date().isoformat()]["paid_orders"] += 1
+        for refund in refunds: points[refund.completed_at.astimezone(timezone.utc).date().isoformat()]["refunds"] += refund.amount
+        return [SalesTrendPoint(date=key, orders=value["orders"], paid_orders=value["paid_orders"], gross_sales=self._quantize(value["gross"]), refunds=self._quantize(value["refunds"]), net_sales=self._quantize(value["gross"] - value["refunds"]), contribution_before_cac=None) for key, value in sorted(points.items())]
+
+    def export_rows(self, period: AnalyticsPeriod) -> list[AnalyticsExportRow]:
+        rows = []
+        for order in self._orders(period):
+            refunds = [refund for refund in order.refund_requests if refund.status == "SUCCESS"]
+            refund_amount = sum((refund.amount for refund in refunds), Decimal("0")) or None
+            for item in order.items:
+                rows.append(AnalyticsExportRow(order_number=order.order_number, order_date=order.created_at.isoformat(), payment_date=order.paid_at.isoformat() if order.paid_at else None, product=item.product_name, variant=item.variant_name, quantity=item.quantity, unit_price=item.unit_price, line_total=item.line_total, shipping=order.shipping_amount, payment_status=order.payment_status, refund_status=refunds[0].status if refunds else None, refund_amount=refund_amount, fulfillment_status=order.fulfillment_status, supplier_cost=None, shipping_cost=None, contribution=None, data_quality="HISTORICAL_COST_UNKNOWN; ACTUAL_PAYMENT_FEE_UNKNOWN; ACTUAL_CAC_NOT_CONFIGURED"))
+        return rows
+
+    def export_csv(self, period: AnalyticsPeriod) -> str:
+        output = StringIO(); writer = csv.DictWriter(output, fieldnames=list(AnalyticsExportRow.model_fields)); writer.writeheader(); writer.writerows([row.model_dump(mode="json") for row in self.export_rows(period)]); return output.getvalue()

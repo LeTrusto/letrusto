@@ -1,6 +1,8 @@
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import StreamingResponse
 
 from app.api.deps import get_admin_product_service, get_admin_service, get_current_admin, get_fulfillment_service, get_db
 from app.core.config import get_settings
@@ -34,8 +36,63 @@ from app.services.order_reconciliation_service import OrderLifecycleReconciliati
 from app.schemas.reconciliation import ReconciliationResultDTO
 from app.schemas.reservations import AdminInventoryReservationDTO
 from app.schemas.payments import AdminFulfillmentOrderDTO, FulfillmentDTO
+from app.schemas.admin_analytics import AnalyticsPeriod, AnalyticsSummary, InventoryAnalyticsDTO, ProductPerformanceDTO, SalesTrendPoint, VariantPerformanceDTO
+from app.services.admin_analytics_service import AdminAnalyticsService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def _analytics_period(period: str, start_date: date | None, end_date: date | None) -> AnalyticsPeriod:
+    try:
+        return AdminAnalyticsService.resolve_period(period, start_date, end_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/analytics/summary", response_model=AnalyticsSummary)
+def analytics_summary(
+    period: str = Query(default="last_30_days"), start_date: date | None = None, end_date: date | None = None,
+    _: User = Depends(get_current_admin), db=Depends(get_db),
+) -> AnalyticsSummary:
+    return AdminAnalyticsService(db).summary(_analytics_period(period, start_date, end_date))
+
+
+@router.get("/analytics/products", response_model=list[ProductPerformanceDTO])
+def analytics_products(
+    period: str = Query(default="last_30_days"), start_date: date | None = None, end_date: date | None = None,
+    _: User = Depends(get_current_admin), db=Depends(get_db),
+) -> list[ProductPerformanceDTO]:
+    return AdminAnalyticsService(db).product_performance(_analytics_period(period, start_date, end_date))
+
+
+@router.get("/analytics/variants", response_model=list[VariantPerformanceDTO])
+def analytics_variants(
+    period: str = Query(default="last_30_days"), start_date: date | None = None, end_date: date | None = None,
+    _: User = Depends(get_current_admin), db=Depends(get_db),
+) -> list[VariantPerformanceDTO]:
+    return AdminAnalyticsService(db).variant_performance(_analytics_period(period, start_date, end_date))
+
+
+@router.get("/analytics/inventory", response_model=list[InventoryAnalyticsDTO])
+def analytics_inventory(_: User = Depends(get_current_admin), db=Depends(get_db)) -> list[InventoryAnalyticsDTO]:
+    return AdminAnalyticsService(db).inventory()
+
+
+@router.get("/analytics/sales-trend", response_model=list[SalesTrendPoint])
+def analytics_sales_trend(
+    period: str = Query(default="last_30_days"), start_date: date | None = None, end_date: date | None = None,
+    _: User = Depends(get_current_admin), db=Depends(get_db),
+) -> list[SalesTrendPoint]:
+    return AdminAnalyticsService(db).sales_trend(_analytics_period(period, start_date, end_date))
+
+
+@router.get("/analytics/export")
+def analytics_export(
+    period: str = Query(default="last_30_days"), start_date: date | None = None, end_date: date | None = None,
+    _: User = Depends(get_current_admin), db=Depends(get_db),
+) -> StreamingResponse:
+    content = AdminAnalyticsService(db).export_csv(_analytics_period(period, start_date, end_date))
+    return StreamingResponse(iter([content]), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=letrusto-analytics.csv"})
 
 
 @router.post("/reconciliation/run", response_model=ReconciliationResultDTO)
