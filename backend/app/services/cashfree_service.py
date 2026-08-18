@@ -200,3 +200,30 @@ class CashfreeService:
                 base64.b64encode(hmac.new((self.settings.CASHFREE_WEBHOOK_SECRET or self.settings.CASHFREE_SECRET_KEY).encode(), b"server-verification" + __import__("json").dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": successful}}).encode(), hashlib.sha256).digest()).decode(),
             )
         return PaymentStatusDTO(order_id=order.id, payment_status=order.payment_status, order_status=order.status, fulfillment_status=order.fulfillment_status, provider_reference=order.provider_reference)
+
+    async def reconcile_order_payment(self, order_id: UUID) -> dict[str, str | None]:
+        order = self.db.scalar(select(Order).where(Order.id == order_id))
+        if order is None:
+            return {"state": "UNKNOWN", "failure": "Order not found"}
+        if not self.configured:
+            return {"state": "PROVIDER_UNAVAILABLE", "failure": "Cashfree credentials are not configured"}
+        if not order.provider_order_id:
+            return {"state": "SKIPPED", "failure": "Order has no Cashfree provider order ID"}
+        try:
+            response = httpx.get(f"{self.base_url}/orders/{order.provider_order_id}/payments", headers=self._headers(), timeout=10)
+        except httpx.HTTPError as exc:
+            return {"state": "PROVIDER_UNAVAILABLE", "failure": str(exc)[:500]}
+        if response.status_code >= 400:
+            return {"state": "PROVIDER_UNAVAILABLE", "failure": f"Cashfree returned HTTP {response.status_code}"}
+        payments = response.json()
+        payment = next((item for item in payments if item.get("payment_status") == "SUCCESS"), None)
+        if payment is None:
+            payment = next((item for item in payments if item.get("payment_status") in {"FAILED", "USER_DROPPED", "CANCELLED", "VOID"}), None)
+        if payment is None:
+            return {"state": "PENDING", "failure": None}
+        status = str(payment.get("payment_status"))
+        body = __import__("json").dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": payment}}).encode()
+        timestamp = "reconciliation"
+        signature = base64.b64encode(hmac.new((self.settings.CASHFREE_WEBHOOK_SECRET or self.settings.CASHFREE_SECRET_KEY).encode(), timestamp.encode() + body, hashlib.sha256).digest()).decode()
+        await self.process_webhook(body, timestamp, signature)
+        return {"state": status, "failure": None}

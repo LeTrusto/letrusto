@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.deps import get_admin_product_service, get_admin_service, get_current_admin, get_fulfillment_service, get_db
+from app.core.config import get_settings
 from app.models.entities import User
 from app.schemas.admin import AdminDashboardStats, AdminUserListResponse
 from app.schemas.admin_products import (
@@ -29,10 +30,22 @@ from app.services.admin_service import AdminService
 from app.services.admin_product_service import AdminProductService
 from app.services.fulfillment_service import FulfillmentService
 from app.services.inventory_reservation_service import InventoryReservationService
+from app.services.order_reconciliation_service import OrderLifecycleReconciliationService
+from app.schemas.reconciliation import ReconciliationResultDTO
 from app.schemas.reservations import AdminInventoryReservationDTO
 from app.schemas.payments import AdminFulfillmentOrderDTO, FulfillmentDTO
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.post("/reconciliation/run", response_model=ReconciliationResultDTO)
+async def run_reconciliation(
+    _: User = Depends(get_current_admin),
+    db=Depends(get_db),
+) -> ReconciliationResultDTO:
+    if not get_settings().ORDER_RECONCILIATION_ENABLED:
+        raise HTTPException(status_code=503, detail="Order reconciliation is disabled")
+    return await OrderLifecycleReconciliationService(db).run_order_lifecycle_reconciliation()
 
 
 @router.get("/inventory-reservations", response_model=list[AdminInventoryReservationDTO])

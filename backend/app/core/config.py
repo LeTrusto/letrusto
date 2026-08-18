@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
 
     INVENTORY_RESERVATION_TTL_MINUTES: int = 15
+    PENDING_PAYMENT_RECONCILIATION_AGE_MINUTES: int = 30
+    RECONCILIATION_BATCH_SIZE: int = 50
+    ORDER_RECONCILIATION_ENABLED: bool = True
 
     # Supplier integration (Phase 2 validation)
     SUPPLIER_PROVIDER: str = "cj"

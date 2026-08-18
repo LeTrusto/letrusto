@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
@@ -18,18 +18,25 @@ class InventoryReservationService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def release_expired(self, now: datetime | None = None) -> int:
+    def release_expired(self, now: datetime | None = None, *, commit: bool = True) -> int:
         now = now or datetime.now(timezone.utc)
-        result = self.db.execute(
-            update(InventoryReservation)
+        rows = list(self.db.scalars(
+            select(InventoryReservation)
             .where(InventoryReservation.status == ACTIVE, InventoryReservation.expires_at <= now)
-            .values(status=EXPIRED, released_at=now)
-        )
-        return result.rowcount or 0
+            .with_for_update()
+        ).all())
+        for reservation in rows:
+            if reservation.status == ACTIVE and reservation.expires_at <= now:
+                reservation.status = EXPIRED
+                reservation.released_at = now
+        expired = len(rows)
+        if expired and commit:
+            self.db.commit()
+        return expired
 
     def active_quantity(self, variant_id: UUID, now: datetime | None = None) -> int:
         now = now or datetime.now(timezone.utc)
-        self.release_expired(now)
+        self.release_expired(now, commit=False)
         return int(self.db.scalar(
             select(func.coalesce(func.sum(InventoryReservation.quantity), 0)).where(
                 InventoryReservation.variant_id == variant_id,
@@ -40,7 +47,7 @@ class InventoryReservationService:
 
     def reserve_order(self, order: Order, variants_by_id: dict[UUID, ProductVariant], now: datetime | None = None) -> list[InventoryReservation]:
         now = now or datetime.now(timezone.utc)
-        self.release_expired(now)
+        self.release_expired(now, commit=False)
         ttl = timedelta(minutes=get_settings().INVENTORY_RESERVATION_TTL_MINUTES)
         reservations: list[InventoryReservation] = []
         for item in order.items:
