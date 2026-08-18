@@ -136,6 +136,8 @@ class OrderService:
                 for item in order.items
             ],
             created_at=order.created_at.isoformat(),
+            payment_provider=order.payment_provider,
+            paid_at=order.paid_at.isoformat() if order.paid_at else None,
         )
 
     def create_order(self, user: User, payload: CreateOrderRequest) -> OrderDTO:

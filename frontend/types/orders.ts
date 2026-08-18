@@ -45,3 +45,12 @@ export type Order = {
   items: OrderItem[];
   created_at: string;
 };
+
+export type PaymentSession = {
+  order_id: string;
+  provider: "CASHFREE";
+  provider_order_id: string;
+  payment_session_id: string;
+  amount: number;
+  currency: string;
+};

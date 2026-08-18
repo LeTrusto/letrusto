@@ -1,24 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Script from "next/script";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/lib/cartContext";
-import { createOrder } from "@/services/order.service";
+import { createCashfreeSession, createOrder } from "@/services/order.service";
+import type { Order, PaymentSession } from "@/types/orders";
 import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
 function money(value: number) { return `₹${value.toLocaleString("en-IN")}`; }
 
 export default function CheckoutPage() {
-  const router = useRouter();
   const { accessToken, isLoading, isAuthenticated, user } = useAuth();
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal } = useCart();
   const [products, setProducts] = useState<Record<string, ReturnType<typeof toCommerceProduct>>>({});
   const [form, setForm] = useState({ name: user?.full_name ?? "", email: user?.email ?? "", phone: "", address: "", city: "", state: "", postal_code: "", country: "IN" });
   const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
+  const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
+  const [paymentSession, setPaymentSession] = useState<PaymentSession | null>(null);
 
   useEffect(() => {
     void getPublicProducts().then((catalog) => {
@@ -48,14 +50,28 @@ export default function CheckoutPage() {
         shipping_address: { address: form.address, city: form.city, state: form.state, postal_code: form.postal_code, country: form.country },
         idempotency_key: `checkout-${crypto.randomUUID()}`,
       });
-      clearCart();
-      router.push(`/orders/${order.id}`);
+      setCreatedOrder(order);
+      try {
+        const session = await createCashfreeSession(accessToken, order.id);
+        setPaymentSession(session);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Cashfree payment session unavailable");
+      }
     } catch (err) { setError(err instanceof Error ? err.message : "Unable to create order"); }
     finally { setWorking(false); }
   }
 
   const update = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, [field]: event.target.value }));
-  return <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+  async function openCashfree() {
+    if (!paymentSession) return;
+    const cashfree = (window as Window & { Cashfree?: (options: { mode: "sandbox" | "production" }) => { checkout: (options: { paymentSessionId: string; redirectTarget: string }) => Promise<unknown> } }).Cashfree;
+    if (!cashfree) { setError("Cashfree checkout is unavailable. Configure the sandbox payment script and credentials."); return; }
+    await cashfree({ mode: "sandbox" }).checkout({ paymentSessionId: paymentSession.payment_session_id, redirectTarget: "_self" });
+  }
+
+  if (createdOrder) return <main className="max-w-2xl mx-auto px-4 py-20 text-center"><h1 className="lt-heading-2">Order ready for payment</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Order {createdOrder.order_number} is still pending payment.</p>{paymentSession ? <button onClick={() => { void openCashfree(); }} className="lt-btn lt-btn-primary mt-6">Open Cashfree Payment</button> : <p role="alert" className="mt-6 text-sm text-[var(--lt-rose)]">{error || "Cashfree sandbox credentials are not configured."}</p>}<Link href={`/orders/${createdOrder.id}`} className="lt-btn lt-btn-ghost mt-4 inline-flex">View pending order</Link></main>;
+
+  return <><Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="afterInteractive" /><main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
     <h1 className="lt-heading-2">Checkout</h1><p className="mt-1 text-sm text-[var(--text-muted)]">Your order will remain pending until payment integration is available.</p>
     <form onSubmit={(event) => { void submit(event); }} className="mt-6 grid gap-8 lg:grid-cols-[1fr_22rem]">
       <section className="space-y-6">
@@ -75,5 +91,5 @@ export default function CheckoutPage() {
       </section>
       <aside className="lt-card h-fit p-5"><h2 className="font-bold">Order summary</h2><div className="mt-4 space-y-3 text-sm">{items.map((item) => { const product = products[item.productId]; const variant = product?.catalogVariants?.find((candidate) => candidate.id === item.selectedVariantId); const unitPrice = variant?.price ?? product?.price ?? 0; return <div key={`${item.productId}-${item.selectedVariantId}`} className="flex justify-between gap-3"><span>{product?.name ?? item.productId}<br /><span className="text-xs text-[var(--text-muted)]">{variant?.label ?? "Selected variant"} × {item.quantity} · {money(unitPrice)} each</span></span><strong>{money(unitPrice * item.quantity)}</strong></div>; })}</div><div className="mt-5 flex justify-between border-t border-[var(--border)] pt-4 font-bold"><span>Total</span><span>{money(subtotal)}</span></div><button disabled={working} className="lt-btn lt-btn-primary mt-5 w-full">{working ? "Creating order..." : "Place Order"}</button></aside>
     </form>
-  </main>;
+  </main></>;
 }

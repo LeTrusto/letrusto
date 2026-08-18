@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
-import { getOrder } from "@/services/order.service";
+import { getOrder, verifyCashfreePayment } from "@/services/order.service";
 import type { Order } from "@/types/orders";
 
 function money(value: number) { return `₹${value.toLocaleString("en-IN")}`; }
@@ -15,7 +15,7 @@ export default function OrderConfirmationPage() {
   const params = useParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState("");
-  useEffect(() => { if (!accessToken || !params.id) return; void getOrder(accessToken, params.id).then(setOrder).catch((err) => setError(err instanceof Error ? err.message : "Unable to load order")); }, [accessToken, params.id]);
+  useEffect(() => { if (!accessToken || !params.id) return; void getOrder(accessToken, params.id).then(async () => { try { await verifyCashfreePayment(accessToken, params.id); } catch { /* Missing sandbox credentials or pending payment is safe. */ } setOrder(await getOrder(accessToken, params.id)); }).catch((err) => setError(err instanceof Error ? err.message : "Unable to load order")); }, [accessToken, params.id]);
   if (isLoading || !order && !error) return <main className="max-w-2xl mx-auto px-4 py-20 text-center">Loading order...</main>;
   if (error) return <main className="max-w-2xl mx-auto px-4 py-20 text-center"><p role="alert">{error}</p><Link href="/shop" className="lt-btn lt-btn-primary mt-6 inline-flex">Return to shop</Link></main>;
   if (!order) return null;

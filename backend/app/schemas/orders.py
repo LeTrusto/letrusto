@@ -78,3 +78,5 @@ class OrderDTO(BaseModel):
     shipping_address: ShippingAddress
     items: list[OrderItemDTO]
     created_at: str
+    payment_provider: str | None = None
+    paid_at: str | None = None

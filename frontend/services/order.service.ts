@@ -1,5 +1,5 @@
 import { buildApiUrl } from "@/services/api";
-import type { CreateOrderPayload, Order } from "@/types/orders";
+import type { CreateOrderPayload, Order, PaymentSession } from "@/types/orders";
 
 async function orderRequest<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(buildApiUrl(path), {
@@ -20,4 +20,12 @@ export function createOrder(token: string, payload: CreateOrderPayload) {
 
 export function getOrder(token: string, orderId: string) {
   return orderRequest<Order>(`/orders/${orderId}`, token);
+}
+
+export function createCashfreeSession(token: string, orderId: string) {
+  return orderRequest<PaymentSession>(`/orders/${orderId}/cashfree-session`, token, { method: "POST" });
+}
+
+export function verifyCashfreePayment(token: string, orderId: string) {
+  return orderRequest<{ payment_status: string; order_status: string; fulfillment_status: string }>(`/orders/${orderId}/payment-status`, token);
 }

@@ -57,6 +57,15 @@ class Settings(BaseSettings):
     TARGET_CONTRIBUTION_MARGIN_PCT: Decimal = Decimal("20.00")
     TARGET_CAC_INR: Decimal = Decimal("150.00")
 
+    # Cashfree Payments. Keep sandbox as the only default; production must be explicit.
+    CASHFREE_ENV: str = "sandbox"
+    CASHFREE_APP_ID: str = ""
+    CASHFREE_SECRET_KEY: str = ""
+    CASHFREE_WEBHOOK_SECRET: str = ""
+    CASHFREE_API_VERSION: str = "2026-01-01"
+    CASHFREE_RETURN_URL: str = "http://localhost:3000/orders/{order_id}"
+    CASHFREE_NOTIFY_URL: str = "http://localhost:8000/api/v1/payments/cashfree/webhook"
+
     # Rate limiting (requests per minute per IP)
     RATE_LIMIT_AUTH: int = 10
     RATE_LIMIT_DEFAULT: int = 120
@@ -81,4 +90,8 @@ def get_settings() -> Settings:
             f"    DATABASE_URL = (copy from the PostgreSQL service plugin)\n"
             f"=================================================================\n"
         )
+    if s.CASHFREE_ENV not in {"sandbox", "production"}:
+        raise ValueError("CASHFREE_ENV must be sandbox or production")
+    if s.APP_ENV == "production" and s.CASHFREE_ENV != "production":
+        raise RuntimeError("Production app requires CASHFREE_ENV=production")
     return s

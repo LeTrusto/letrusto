@@ -594,6 +594,13 @@ class Order(Base):
     customer_phone: Mapped[str] = mapped_column(String(30), nullable=False)
     shipping_address: Mapped[dict] = mapped_column(JSON, nullable=False)
     idempotency_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    payment_provider: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    provider_order_id: Mapped[str | None] = mapped_column(String(120), nullable=True, unique=True, index=True)
+    payment_session_id: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    payment_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    payment_failure_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    provider_reference: Mapped[str | None] = mapped_column(String(160), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
@@ -601,6 +608,7 @@ class Order(Base):
 
     user: Mapped[User] = relationship(back_populates="orders")
     items: Mapped[list["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    payment_attempts: Mapped[list["PaymentAttempt"]] = relationship(back_populates="order", cascade="all, delete-orphan")
 
 
 class OrderItem(Base):
@@ -618,6 +626,24 @@ class OrderItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     order: Mapped[Order] = relationship(back_populates="items")
+
+
+class PaymentAttempt(Base):
+    __tablename__ = "payment_attempts"
+    __table_args__ = (UniqueConstraint("provider", "provider_payment_id", name="uq_payment_attempt_provider_payment"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String(30), nullable=False)
+    provider_order_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    provider_payment_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING")
+    failure_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    order: Mapped[Order] = relationship(back_populates="payment_attempts")
 
 
 class RefreshToken(Base):
