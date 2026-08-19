@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Calculator, Check, CirclePause, ClipboardCheck, ExternalLink, Play, Trash2, X } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -701,6 +702,10 @@ export default function AdminProductsView() {
                   <button type="button" disabled={syncingProductId !== null} onClick={() => void syncInventory(product)} className="lt-btn lt-btn-secondary text-sm">
                     {syncingProductId === product.id ? "Syncing..." : "Sync Inventory"}
                   </button>
+                  <Link href={`/admin/products/${product.id}/trust`} className="lt-btn lt-btn-secondary text-sm inline-flex items-center gap-2">
+                    <ClipboardCheck size={16} aria-hidden="true" />
+                    Trust
+                  </Link>
                 </div>
               </div>
               {rejectingProductId === product.id && (

@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 
 from app.api.deps import get_admin_product_service, get_admin_service, get_current_admin, get_fulfillment_service, get_db
 from app.core.config import get_settings
+from app.core.trust import TRUST_CLAIM_STATUSES, TRUST_VERIFICATION_METHODS
 from app.models.entities import User
 from app.schemas.admin import AdminDashboardStats, AdminUserListResponse
 from app.schemas.admin_products import (
@@ -57,6 +58,11 @@ from app.schemas.trust import (
 from app.services.trust_service import TrustService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get("/trust/options")
+def trust_options(_: User = Depends(get_current_admin)):
+    return {"claim_statuses": TRUST_CLAIM_STATUSES, "verification_methods": TRUST_VERIFICATION_METHODS}
 
 
 @router.post("/trust/claims", response_model=TrustClaimDTO, status_code=201)

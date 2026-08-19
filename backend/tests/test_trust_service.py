@@ -192,10 +192,14 @@ def test_trust_endpoints_are_admin_only(trust_context):
     app.dependency_overrides[get_db] = lambda: db
     try:
         client = TestClient(app)
+        assert client.get("/api/v1/admin/trust/options").status_code == 401
         assert client.get(f"/api/v1/admin/trust/products/{product.id}/claims").status_code == 401
         customer_token = create_access_token(str(customer.id))
         assert client.get(f"/api/v1/admin/trust/products/{product.id}/claims", headers={"Authorization": f"Bearer {customer_token}"}).status_code == 401
         admin_token = create_access_token(str(admin.id))
+        options = client.get("/api/v1/admin/trust/options", headers={"Authorization": f"Bearer {admin_token}"})
+        assert options.status_code == 200
+        assert "SUPPLIER_DOCUMENT" in options.json()["verification_methods"]
         response = client.post("/api/v1/admin/trust/claims", json=claim_payload(product.id).model_dump(mode="json"), headers={"Authorization": f"Bearer {admin_token}"})
         assert response.status_code == 201
     finally:
