@@ -261,6 +261,7 @@ class Product(Base):
         foreign_keys="ProductSimilarity.product_id",
         cascade="all, delete-orphan",
     )
+    trust_claims: Mapped[list["TrustClaim"]] = relationship(back_populates="product", cascade="all, delete-orphan")
 
 
 class ProductVariant(Base):
@@ -754,6 +755,116 @@ class OrderMarketingAttribution(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     order: Mapped[Order] = relationship()
+
+
+class TrustClaim(Base):
+    __tablename__ = "trust_claims"
+    __table_args__ = (
+        CheckConstraint("verification_status IN ('UNVERIFIED', 'PENDING', 'VERIFIED', 'REJECTED', 'EXPIRED')", name="ck_trust_claim_status"),
+        CheckConstraint("confidence IS NULL OR (confidence >= 0 AND confidence <= 100)", name="ck_trust_claim_confidence"),
+        Index("ix_trust_claims_product_status", "product_id", "verification_status"),
+        Index("ix_trust_claims_type", "claim_type"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    claim_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    claim_value: Mapped[str] = mapped_column(Text, nullable=False)
+    claim_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    verification_status: Mapped[str] = mapped_column(String(20), nullable=False, default="UNVERIFIED", index=True)
+    confidence: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    assessment_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    product: Mapped[Product] = relationship(back_populates="trust_claims")
+    evidence_links: Mapped[list["TrustClaimEvidence"]] = relationship(back_populates="claim", cascade="all, delete-orphan")
+    verifications: Mapped[list["TrustVerification"]] = relationship(back_populates="claim", cascade="all, delete-orphan")
+    audit_events: Mapped[list["TrustAuditEvent"]] = relationship(back_populates="claim", cascade="all, delete-orphan")
+
+
+class TrustEvidence(Base):
+    __tablename__ = "trust_evidence"
+    __table_args__ = (
+        CheckConstraint("(reference_url IS NOT NULL) OR (storage_reference IS NOT NULL)", name="ck_trust_evidence_reference"),
+        Index("ix_trust_evidence_type_active", "evidence_type", "is_active"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    evidence_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    title: Mapped[str] = mapped_column(String(240), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    reference_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    storage_reference: Mapped[str | None] = mapped_column(Text, nullable=True)
+    issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    evidence_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    claim_links: Mapped[list["TrustClaimEvidence"]] = relationship(back_populates="evidence")
+
+
+class TrustClaimEvidence(Base):
+    __tablename__ = "trust_claim_evidence"
+    __table_args__ = (UniqueConstraint("claim_id", "evidence_id", name="uq_trust_claim_evidence"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    claim_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trust_claims.id", ondelete="CASCADE"), nullable=False, index=True)
+    evidence_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trust_evidence.id", ondelete="RESTRICT"), nullable=False, index=True)
+    assessment_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    attached_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    claim: Mapped[TrustClaim] = relationship(back_populates="evidence_links")
+    evidence: Mapped[TrustEvidence] = relationship(back_populates="claim_links")
+
+
+class TrustVerification(Base):
+    __tablename__ = "trust_verifications"
+    __table_args__ = (
+        CheckConstraint("verification_status IN ('UNVERIFIED', 'PENDING', 'VERIFIED', 'REJECTED', 'EXPIRED')", name="ck_trust_verification_status"),
+        Index("ix_trust_verifications_claim_verified", "claim_id", "verified_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    claim_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trust_claims.id", ondelete="CASCADE"), nullable=False, index=True)
+    verification_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    verification_method: Mapped[str] = mapped_column(String(80), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    evidence_snapshot: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+    verification_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    verified_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    claim: Mapped[TrustClaim] = relationship(back_populates="verifications")
+
+
+class TrustAuditEvent(Base):
+    __tablename__ = "trust_audit_events"
+    __table_args__ = (Index("ix_trust_audit_events_claim_created", "claim_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    claim_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trust_claims.id", ondelete="CASCADE"), nullable=False, index=True)
+    evidence_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("trust_evidence.id", ondelete="SET NULL"), nullable=True, index=True)
+    verification_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("trust_verifications.id", ondelete="SET NULL"), nullable=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    previous_state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    current_state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    claim: Mapped[TrustClaim] = relationship(back_populates="audit_events")
 
 
 class RefreshToken(Base):

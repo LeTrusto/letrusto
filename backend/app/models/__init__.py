@@ -16,6 +16,11 @@ from app.models.entities import (
     ProductSpecification,
     ProductTag,
     Review,
+    TrustAuditEvent,
+    TrustClaim,
+    TrustClaimEvidence,
+    TrustEvidence,
+    TrustVerification,
 )
 
 __all__ = [
@@ -36,4 +41,9 @@ __all__ = [
     "ProductSpecification",
     "ProductTag",
     "Review",
+    "TrustAuditEvent",
+    "TrustClaim",
+    "TrustClaimEvidence",
+    "TrustEvidence",
+    "TrustVerification",
 ]

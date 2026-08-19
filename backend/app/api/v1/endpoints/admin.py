@@ -40,8 +40,78 @@ from app.schemas.admin_analytics import AnalyticsPeriod, AnalyticsSummary, Inven
 from app.services.admin_analytics_service import AdminAnalyticsService
 from app.schemas.marketing import AttributionCreate, AttributionDTO, MarketingCACResponse, MarketingSpendCreate, MarketingSpendDTO
 from app.services.marketing_service import MarketingService
+from app.schemas.trust import (
+    TrustAuditEventDTO,
+    TrustClaimCreate,
+    TrustClaimDetailDTO,
+    TrustClaimEvidenceCreate,
+    TrustClaimEvidenceDTO,
+    TrustClaimDTO,
+    TrustClaimUpdate,
+    TrustEvidenceCreate,
+    TrustEvidenceDTO,
+    TrustEvidenceUpdate,
+    TrustVerificationCreate,
+    TrustVerificationDTO,
+)
+from app.services.trust_service import TrustService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.post("/trust/claims", response_model=TrustClaimDTO, status_code=201)
+def create_trust_claim(payload: TrustClaimCreate, admin: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).create_claim(payload, admin)
+
+
+@router.get("/trust/products/{product_id}/claims", response_model=list[TrustClaimDTO])
+def list_product_trust_claims(product_id: UUID, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).list_product_claims(product_id)
+
+
+@router.get("/trust/claims/{claim_id}", response_model=TrustClaimDetailDTO)
+def get_trust_claim(claim_id: UUID, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).get_claim(claim_id)
+
+
+@router.patch("/trust/claims/{claim_id}", response_model=TrustClaimDTO)
+def update_trust_claim(claim_id: UUID, payload: TrustClaimUpdate, admin: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).update_claim(claim_id, payload, admin)
+
+
+@router.post("/trust/evidence", response_model=TrustEvidenceDTO, status_code=201)
+def create_trust_evidence(payload: TrustEvidenceCreate, admin: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).create_evidence(payload, admin)
+
+
+@router.get("/trust/evidence/{evidence_id}", response_model=TrustEvidenceDTO)
+def get_trust_evidence(evidence_id: UUID, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).get_evidence(evidence_id)
+
+
+@router.patch("/trust/evidence/{evidence_id}", response_model=TrustEvidenceDTO)
+def update_trust_evidence(evidence_id: UUID, payload: TrustEvidenceUpdate, admin: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).update_evidence(evidence_id, payload, admin)
+
+
+@router.post("/trust/claims/{claim_id}/evidence", response_model=TrustClaimEvidenceDTO, status_code=201)
+def attach_trust_evidence(claim_id: UUID, payload: TrustClaimEvidenceCreate, admin: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).attach_evidence(claim_id, payload, admin)
+
+
+@router.post("/trust/claims/{claim_id}/verifications", response_model=TrustVerificationDTO, status_code=201)
+def create_trust_verification(claim_id: UUID, payload: TrustVerificationCreate, admin: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).create_verification(claim_id, payload, admin)
+
+
+@router.get("/trust/claims/{claim_id}/verifications", response_model=list[TrustVerificationDTO])
+def list_trust_verifications(claim_id: UUID, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).verification_history(claim_id)
+
+
+@router.get("/trust/claims/{claim_id}/audit", response_model=list[TrustAuditEventDTO])
+def list_trust_audit(claim_id: UUID, _: User = Depends(get_current_admin), db=Depends(get_db)):
+    return TrustService(db).audit_history(claim_id)
 
 @router.post("/marketing/spend", response_model=MarketingSpendDTO, status_code=201)
 def create_marketing_spend(payload: MarketingSpendCreate, _: User = Depends(get_current_admin), db=Depends(get_db)):
