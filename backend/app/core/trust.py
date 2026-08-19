@@ -9,6 +9,17 @@ TRUST_VERIFICATION_METHODS = (
     "SYSTEM_REVIEW",
     "OTHER",
 )
+
+TRUST_VERIFICATION_METHOD_LABELS = {
+    "SUPPLIER_DOCUMENT": "Supplier documentation reviewed",
+    "MANUFACTURER_DOCUMENT": "Manufacturer documentation reviewed",
+    "CERTIFICATION": "Certification reviewed",
+    "TEST_REPORT": "Test report reviewed",
+    "INTERNAL_REVIEW": "LeTrusto internal review",
+    "CUSTOMER_FEEDBACK": "Customer feedback reviewed",
+    "SYSTEM_REVIEW": "LeTrusto system review",
+    "OTHER": "Supporting evidence reviewed",
+}
 TRUST_AUDIT_EVENTS = (
     "CLAIM_CREATED",
     "CLAIM_UPDATED",

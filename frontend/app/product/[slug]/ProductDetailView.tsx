@@ -8,6 +8,7 @@ import { Check, Heart, Loader2, Minus, Plus, Share2, ShoppingBag, Truck, RotateC
 import type { CommerceProduct } from "@/types/commerce";
 import { useCart } from "@/lib/cartContext";
 import CommerceProductCard from "@/components/products/CommerceProductCard";
+import ProductTrustSection from "@/components/products/ProductTrustSection";
 import SchemaOrg from "@/components/SchemaOrg";
 
 function formatPrice(value: number): string {
@@ -235,7 +236,7 @@ export default function ProductDetailView({ product, related }: Props) {
             {/* Description */}
             <div className="mt-6 border-t border-[var(--border)] pt-5">
               <h2 className="text-sm font-bold text-[var(--text-primary)] mb-2">Description</h2>
-              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{product.description}</p>
+              <p className="break-words text-sm text-[var(--text-secondary)] leading-relaxed">{product.description}</p>
             </div>
 
             {/* Specs */}
@@ -252,6 +253,8 @@ export default function ProductDetailView({ product, related }: Props) {
                 </dl>
               </div>
             )}
+
+            <ProductTrustSection productId={product.id} />
           </div>
         </div>
 

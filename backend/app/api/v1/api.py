@@ -22,6 +22,7 @@ from app.api.v1.endpoints import (
     supplier_discovery,
     supplier_validation,
     support,
+    trust,
     users,
 )
 
@@ -33,6 +34,7 @@ api_router.include_router(search.router)
 api_router.include_router(compare.router)
 api_router.include_router(recommendations.router)
 api_router.include_router(products.router)
+api_router.include_router(trust.router)
 api_router.include_router(categories.router)
 api_router.include_router(favorites.router)
 api_router.include_router(auth.router)

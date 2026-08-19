@@ -204,3 +204,84 @@ def test_trust_endpoints_are_admin_only(trust_context):
         assert response.status_code == 201
     finally:
         app.dependency_overrides.clear()
+
+
+def test_public_trust_endpoint_returns_sanitized_current_claims(trust_context):
+    db, admin, _, product = trust_context
+    service = TrustService(db)
+    evidence = service.create_evidence(evidence_payload(product.slug[-8:]), admin)
+
+    verified_claim = service.create_claim(claim_payload(product.id), admin)
+    service.attach_evidence(verified_claim.id, TrustClaimEvidenceCreate(evidence_id=evidence.id), admin)
+    service.create_verification(
+        verified_claim.id,
+        TrustVerificationCreate(verification_status="VERIFIED", verification_method="SUPPLIER_DOCUMENT", evidence_ids=[evidence.id], notes="Private internal note"),
+        admin,
+    )
+    pending_claim = service.create_claim(
+        TrustClaimCreate(product_id=product.id, claim_type="WATERPROOF", claim_value="Yes"), admin,
+    )
+    service.create_verification(
+        pending_claim.id,
+        TrustVerificationCreate(verification_status="PENDING", verification_method="INTERNAL_REVIEW"),
+        admin,
+    )
+    rejected_claim = service.create_claim(
+        TrustClaimCreate(product_id=product.id, claim_type="REJECTED_CLAIM", claim_value="Do not show"), admin,
+    )
+    service.create_verification(
+        rejected_claim.id,
+        TrustVerificationCreate(verification_status="REJECTED", verification_method="INTERNAL_REVIEW", notes="Private rejection reason"),
+        admin,
+    )
+
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        response = TestClient(app).get(f"/api/v1/products/{product.slug}/trust")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["product_id"] == product.slug
+        assert {claim["status"] for claim in payload["claims"]} == {"VERIFIED", "PENDING"}
+        verified = next(claim for claim in payload["claims"] if claim["status"] == "VERIFIED")
+        assert verified["verification_method"] == "Supplier documentation reviewed"
+        assert verified["evidence_summary"][0]["title"] == evidence.title
+        assert "notes" not in verified
+        assert "verification_metadata" not in verified
+        assert "verified_by_user_id" not in verified
+        assert "reference_url" not in verified["evidence_summary"][0]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_public_trust_endpoint_handles_expiry_empty_and_missing_product(trust_context):
+    db, admin, _, product = trust_context
+    service = TrustService(db)
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        empty = TestClient(app).get(f"/api/v1/products/{product.slug}/trust")
+        assert empty.status_code == 200
+        assert empty.json() == {"product_id": product.slug, "claims": []}
+    finally:
+        app.dependency_overrides.clear()
+
+    evidence = service.create_evidence(evidence_payload(product.slug[-8:]), admin)
+    claim = service.create_claim(claim_payload(product.id), admin)
+    service.attach_evidence(claim.id, TrustClaimEvidenceCreate(evidence_id=evidence.id), admin)
+    service.create_verification(
+        claim.id,
+        TrustVerificationCreate(
+            verification_status="VERIFIED", verification_method="TEST_REPORT", evidence_ids=[evidence.id],
+            expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+        ),
+        admin,
+    )
+
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        client = TestClient(app)
+        expired = client.get(f"/api/v1/products/{product.slug}/trust")
+        assert expired.status_code == 200
+        assert expired.json()["claims"][0]["status"] == "EXPIRED"
+        assert client.get(f"/api/v1/products/{uuid4()}/trust").status_code == 404
+    finally:
+        app.dependency_overrides.clear()
