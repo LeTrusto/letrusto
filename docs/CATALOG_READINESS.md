@@ -63,7 +63,7 @@ The gate is read-only until all checks pass; it never mutates existing records.
 - tax treatment
 - tax rate
 
-Tax defaults to `NOT_CONFIGURED`. No GST rate is invented. A pricing policy cannot validate until tax treatment and rate are explicitly configured. CAC remains separate commercial-review data.
+Tax defaults to `UNREGISTERED_NO_GSTIN`. This means only that the business currently has no GSTIN configured. It does not mean legally exempt, zero-rated, or tax-free. No GST rate is invented and no GST amount is added or collected by the pricing system. CAC remains separate commercial-review data.
 
 The existing launch pricing calculator remains compatible with existing tests and records; no current product prices were changed by this phase.
 

@@ -60,7 +60,7 @@ app.add_middleware(
 
 app.add_middleware(
     RateLimitMiddleware,
-    default_limit=settings.RATE_LIMIT_DEFAULT,
+    default_limit=0 if settings.APP_ENV == "development" else settings.RATE_LIMIT_DEFAULT,
     auth_limit=settings.RATE_LIMIT_AUTH,
 )
 

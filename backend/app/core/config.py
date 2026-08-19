@@ -60,7 +60,8 @@ class Settings(BaseSettings):
     RTO_RESERVE_PCT: Decimal = Decimal("4.00")
     TARGET_CONTRIBUTION_MARGIN_PCT: Decimal = Decimal("20.00")
     TARGET_CAC_INR: Decimal = Decimal("150.00")
-    CATALOG_TAX_TREATMENT: str = "NOT_CONFIGURED"
+    # Business configuration only; this does not assert legal GST exemption.
+    CATALOG_TAX_TREATMENT: str = "UNREGISTERED_NO_GSTIN"
     CATALOG_TAX_RATE_PCT: Decimal | None = None
 
     # Cashfree Payments. Keep sandbox as the only default; production must be explicit.

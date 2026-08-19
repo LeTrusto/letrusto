@@ -508,6 +508,15 @@ async def sync_catalog_product_inventory(
     return await service.sync_inventory(product_id)
 
 
+@router.post("/products/{product_id}/revalidate-supplier", response_model=AdminProductDTO)
+async def revalidate_catalog_product_supplier(
+    product_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> AdminProductDTO:
+    return await service.revalidate_supplier(product_id)
+
+
 @router.post("/products/{product_id}/market-evidence", response_model=MarketEvidenceDTO)
 def create_catalog_product_market_evidence(
     product_id: UUID,

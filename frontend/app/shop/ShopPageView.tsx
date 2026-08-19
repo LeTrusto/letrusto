@@ -87,14 +87,14 @@ export default function ShopPageView() {
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="min-w-0">
           <h1 className="lt-heading-2">
             {selectedCategory ? CATEGORY_MAP[selectedCategory] : "All Products"}
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">{loading ? "Loading catalog..." : `${filtered.length} products`}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex max-w-full shrink-0 items-center gap-3">
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
             className="lt-btn lt-btn-sm lt-btn-secondary md:hidden relative"

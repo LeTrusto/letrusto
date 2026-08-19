@@ -104,6 +104,22 @@ class TestNormalizer:
         assert "price" in normalized.missing_fields
         assert normalized.cost_inr is None
 
+    def test_normalize_derives_missing_product_fields_from_real_variants(self) -> None:
+        raw = _make_raw(
+            price_usd=None,
+            weight=None,
+            variants=[
+                RawVariant(supplier_variant_id="v1", supplier_variant_sku="s1", price_usd=2.0, weight_grams=40.0),
+                RawVariant(supplier_variant_id="v2", supplier_variant_sku="s2", price_usd=1.5, weight_grams=60.0),
+            ],
+        )
+        normalized = normalize_product(raw, derive_variant_fields=True)
+
+        assert normalized.cost_usd == 1.5
+        assert normalized.weight_grams == 60.0
+        assert "price" not in normalized.missing_fields
+        assert "weight" not in normalized.missing_fields
+
     def test_normalize_missing_images(self) -> None:
         raw = _make_raw(images=[])
         normalized = normalize_product(raw)

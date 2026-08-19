@@ -56,6 +56,13 @@ def test_category_mapping_is_deterministic_and_unknown_requires_review():
     assert resolve_cj_category("", "").mapping_version == "v1"
 
 
+def test_reviewed_product_override_resolves_contradictory_cj_category():
+    result = resolve_cj_category("87CF251F-8D11-4DE0-A154-9694D9858EB3", "Home > Storage", "2503140216061603100")
+    assert result.category_slug == "hair-style"
+    assert result.status == "OVERRIDE"
+    assert result.source == "ADMIN_PRODUCT_OVERRIDE"
+
+
 def test_brand_rules_require_review_for_missing_or_new_brand():
     assert resolve_brand(explicit_brand="Generic").status == "GENERIC"
     assert resolve_brand(explicit_brand="New Brand").status == "BRAND_REVIEW_REQUIRED"

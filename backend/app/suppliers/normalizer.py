@@ -79,22 +79,32 @@ def normalize_product(
     raw: RawSupplierProduct,
     *,
     usd_to_inr: float = DEFAULT_USD_TO_INR,
+    derive_variant_fields: bool = False,
 ) -> NormalizedProduct:
     missing: list[str] = []
+    source_variants = raw.variants or []
+    derived_price_usd = raw.price_usd
+    if derive_variant_fields and derived_price_usd is None:
+        variant_prices = [variant.price_usd for variant in source_variants if variant.price_usd is not None]
+        derived_price_usd = min(variant_prices) if variant_prices else None
+    derived_weight_grams = raw.weight_grams
+    if derive_variant_fields and derived_weight_grams is None:
+        variant_weights = [variant.weight_grams for variant in source_variants if variant.weight_grams is not None]
+        derived_weight_grams = max(variant_weights) if variant_weights else None
     if not raw.title:
         missing.append("title")
-    if raw.price_usd is None:
+    if derived_price_usd is None:
         missing.append("price")
     if not raw.images:
         missing.append("images")
-    if raw.weight_grams is None:
+    if derived_weight_grams is None:
         missing.append("weight")
     if raw.inventory_total is None:
         missing.append("inventory")
     if not raw.category_name:
         missing.append("category")
 
-    cost_inr = round(raw.price_usd * usd_to_inr, 2) if raw.price_usd is not None else None
+    cost_inr = round(derived_price_usd * usd_to_inr, 2) if derived_price_usd is not None else None
 
     variants = [_normalize_variant(v, usd_to_inr=usd_to_inr) for v in raw.variants]
 
@@ -111,9 +121,9 @@ def normalize_product(
         video_urls=raw.video_urls,
         category=raw.category_name,
         supplier_category_id=raw.category_id,
-        cost_usd=raw.price_usd,
+        cost_usd=derived_price_usd,
         cost_inr=cost_inr,
-        weight_grams=raw.weight_grams,
+        weight_grams=derived_weight_grams,
         packing_weight_grams=raw.packing_weight_grams,
         variants=variants,
         total_inventory=raw.inventory_total,

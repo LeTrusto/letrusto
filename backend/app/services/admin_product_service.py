@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.catalog_readiness import resolve_cj_category
-from app.models.entities import Category
+from app.models.entities import Brand, Category
 from app.services.catalog_readiness_service import CatalogReadinessService
 from app.models.entities import Product, ProductImage, ProductMarketEvidence, ProductVariant, SupplierCandidate, User
 from app.schemas.admin_products import (
@@ -91,7 +91,11 @@ class AdminProductService:
         economics = calculate_economics(normalized, shipping_cost_usd=shipping_usd, config=config)
         product_score = score_product(normalized, economics=economics, shipping=shipping)
         validated_at = datetime.now(timezone.utc)
-        category_resolution = resolve_cj_category(normalized.supplier_category_id, normalized.category)
+        category_resolution = resolve_cj_category(
+            normalized.supplier_category_id,
+            normalized.category,
+            normalized.supplier_product_id,
+        )
         category = None
         if category_resolution.category_slug:
             category = self.db.scalar(select(Category).where(Category.slug == category_resolution.category_slug))
@@ -101,7 +105,7 @@ class AdminProductService:
             description=normalized.description or normalized.title, status="DRAFT", supplier=normalized.supplier_id,
             supplier_product_id=normalized.supplier_product_id,
             category_id=category.id if category else None,
-            supplier_cost=Decimal(str(normalized.cost_inr)) if normalized.cost_inr is not None else None,
+            supplier_cost=Decimal(str(raw.price_usd * config.usd_to_inr)) if raw.price_usd is not None else None,
             shipping_cost=Decimal(str(economics.shipping_cost_inr.amount_inr)) if economics.shipping_cost_inr.amount_inr is not None else None,
             selling_price=Decimal(str(economics.selling_price_inr)) if economics.selling_price_inr is not None else None,
             currency="INR", total_inventory=raw.total_inventory, cj_inventory=normalized.total_inventory,
@@ -169,7 +173,7 @@ class AdminProductService:
             raise NotFoundError("Supplier product not found")
 
         config = EconomicsConfig()
-        normalized = normalize_product(raw, usd_to_inr=config.usd_to_inr)
+        normalized = normalize_product(raw, usd_to_inr=config.usd_to_inr, derive_variant_fields=True)
         shipping = None
         shipping_identifier = (
             normalized.variants[0].supplier_variant_id
@@ -484,17 +488,19 @@ class AdminProductService:
                 raise NotFoundError("Category not found")
             product.category_id = payload.category_id
         if payload.brand_id is not None:
-            from app.models.entities import Brand
             if self.db.get(Brand, payload.brand_id) is None:
                 raise NotFoundError("Brand not found")
             product.brand_id = payload.brand_id
         if payload.description is not None:
             product.description = payload.description.strip()
         if product.supplier:
-            if payload.status != "DRAFT" or product.status != "DRAFT":
-                raise BadRequestError(
-                    "Supplier-backed catalog status must use activate or pause actions"
-                )
+            if payload.status != product.status:
+                if payload.status != "DRAFT" or product.status != "DRAFT":
+                    raise BadRequestError(
+                        "Supplier-backed catalog status must use activate or pause actions"
+                    )
+                product.status = payload.status
+            self.db.commit()
             return self._dto(product)
         product.status = payload.status
         self.db.commit()
@@ -834,6 +840,52 @@ class AdminProductService:
             else next((snapshot.verification_status for _, snapshot in snapshots if snapshot.verification_status), None)
         )
         product.last_supplier_sync_at = datetime.now(timezone.utc)
+        self.db.commit()
+        return self._dto(self._get(product.id))
+
+    async def revalidate_supplier(self, product_id: UUID) -> AdminProductDTO:
+        product = self._get(product_id)
+        if product.supplier != "cj" or not product.supplier_product_id:
+            raise BadRequestError("Supplier revalidation requires a CJ-backed product")
+        adapter = build_supplier_adapter(product.supplier)
+        if not await adapter.authenticate():
+            raise BadRequestError("Supplier authentication failed")
+        raw = await adapter.get_product(product.supplier_product_id, strict=True)
+        if raw is None:
+            raise NotFoundError("Supplier product not found")
+        config = EconomicsConfig()
+        normalized = normalize_product(raw, usd_to_inr=config.usd_to_inr)
+        shipping = None
+        if normalized.variants:
+            shipping = await adapter.calculate_shipping(
+                normalized.variants[0].supplier_variant_id,
+                "IN",
+                origin_country=normalized.warehouse_country or "CN",
+            )
+        shipping_usd = shipping.options[0].cost_usd if shipping and shipping.options else None
+        economics = calculate_economics(normalized, shipping_cost_usd=shipping_usd, config=config)
+        result = score_product(normalized, economics=economics, shipping=shipping)
+        validated_at = datetime.now(timezone.utc)
+        product.supplier_validation_status = result.verdict.value
+        product.supplier_validation_score = result.score
+        product.supplier_validation_notes = result.notes
+        product.supplier_validated_at = validated_at
+        product.supplier_validation_details = {
+            "calculation_origin": "REVALIDATION",
+            "source_price_usd": normalized.cost_usd,
+            "source_weight_grams": normalized.weight_grams,
+            "missing_fields": normalized.missing_fields,
+            "shipping_validation": shipping.validation.value if shipping else None,
+            "shipping_cost_usd": shipping_usd,
+            "score_breakdown": result.breakdown.__dict__,
+        }
+        candidate = self.db.scalar(select(SupplierCandidate).where(
+            SupplierCandidate.supplier == product.supplier,
+            SupplierCandidate.supplier_product_id == product.supplier_product_id,
+        ))
+        if candidate is not None:
+            candidate.supplier_validation_status = result.verdict.value
+            candidate.supplier_validation_score = result.score
         self.db.commit()
         return self._dto(self._get(product.id))
 

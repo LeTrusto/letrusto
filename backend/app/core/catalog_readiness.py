@@ -19,10 +19,19 @@ LETRUSTO_TAXONOMY = {
 }
 
 # Intentionally starts empty: CJ category IDs must be reviewed before mapping.
-CJ_CATEGORY_ID_MAP: dict[str, str] = {}
-CJ_CATEGORY_PATH_MAP: dict[str, str] = {}
+CJ_CATEGORY_ID_MAP: dict[str, str] = {
+    "2502140903111619100": "hair-style",
+}
+CJ_CATEGORY_PATH_MAP: dict[str, str] = {
+    "health, beauty & hair > hair & accessories > headband & hair band & hairpin": "hair-style",
+}
+# Explicit admin-reviewed override for CJ's contradictory category metadata.
+CJ_PRODUCT_CATEGORY_OVERRIDES: dict[str, str] = {
+    "2503140216061603100": "hair-style",
+}
 CATEGORY_MAPPING_VERSION = "v1"
 ALLOWED_IMAGE_HOSTS = frozenset({"cf.cjdropshipping.com", "oss-cf.cjdropshipping.com"})
+UNREGISTERED_NO_GSTIN = "UNREGISTERED_NO_GSTIN"
 
 
 @dataclass(frozen=True)
@@ -33,7 +42,13 @@ class CategoryResolution:
     mapping_version: str = CATEGORY_MAPPING_VERSION
 
 
-def resolve_cj_category(category_id: str | None, category_path: str | None) -> CategoryResolution:
+def resolve_cj_category(
+    category_id: str | None,
+    category_path: str | None,
+    supplier_product_id: str | None = None,
+) -> CategoryResolution:
+    if supplier_product_id and supplier_product_id in CJ_PRODUCT_CATEGORY_OVERRIDES:
+        return CategoryResolution(CJ_PRODUCT_CATEGORY_OVERRIDES[supplier_product_id], "OVERRIDE", "ADMIN_PRODUCT_OVERRIDE")
     if category_id and category_id in CJ_CATEGORY_ID_MAP:
         return CategoryResolution(CJ_CATEGORY_ID_MAP[category_id], "MAPPED", "CJ_CATEGORY_ID")
     normalized_path = " > ".join(part.strip().lower() for part in (category_path or "").split(">") if part.strip())
@@ -76,7 +91,10 @@ class CatalogPricingPolicy:
             raise ValueError("Pricing percentages must be between zero and 100")
         if self.tax_treatment == "NOT_CONFIGURED":
             raise ValueError("Tax treatment is not configured")
-        if self.tax_rate_pct is None or self.tax_rate_pct < 0:
+        if self.tax_treatment == UNREGISTERED_NO_GSTIN:
+            if self.tax_rate_pct is not None:
+                raise ValueError("UNREGISTERED_NO_GSTIN must not configure a tax rate")
+        elif self.tax_rate_pct is None or self.tax_rate_pct < 0:
             raise ValueError("Tax rate is required for the configured tax treatment")
         if sum(percentages) >= Decimal("100"):
             raise ValueError("Payment fee, RTO reserve, and target margin must total less than 100%")

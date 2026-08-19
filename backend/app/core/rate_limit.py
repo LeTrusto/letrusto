@@ -22,6 +22,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_ip = request.client.host if request.client else "unknown"
         path = request.url.path
 
+        if self.default_limit <= 0:
+            return await call_next(request)
+
         is_auth_path = path.endswith("/auth/register") or path.endswith("/auth/login")
         limit = self.auth_limit if is_auth_path else self.default_limit
 
