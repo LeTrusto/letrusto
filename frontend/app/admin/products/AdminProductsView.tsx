@@ -4,8 +4,9 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Calculator, Check, CirclePause, ClipboardCheck, ExternalLink, Play, Trash2, X } from "lucide-react";
+import { API_BASE_URL } from "@/services/api";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
+const API_BASE = API_BASE_URL;
 
 type Variant = {
   id: string;
