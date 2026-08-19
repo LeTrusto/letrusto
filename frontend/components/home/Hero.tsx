@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="bg-white">
+    <section className="bg-[#f7f8ee]">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-20 text-center">
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-[var(--text-primary)] leading-[1.1]">
           TRENDING FINDS.<br />

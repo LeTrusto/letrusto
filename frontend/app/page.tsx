@@ -39,7 +39,7 @@ export default function Home() {
   const bundles = getBundleProducts();
 
   return (
-    <main>
+    <main className="bg-[#f8f7ea]">
       <SchemaOrg
         type="WebPage"
         data={{

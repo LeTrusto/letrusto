@@ -7,12 +7,19 @@ type Props = {
 };
 
 export default function BrandMark({ compact = false, footer = false }: Props) {
+  const cropClass = footer
+    ? "h-[218px] w-[420px]"
+    : "h-[180px] w-[460px]";
+  const imageClass = footer
+    ? "absolute left-0 top-[-43px] h-auto w-[420px] max-w-none"
+    : "absolute left-0 top-[-48px] h-auto w-[460px] max-w-none";
+
   return (
     <Link href="/" aria-label="LeTrusto home" className="inline-flex shrink-0 items-center">
       {compact ? (
-        <Image src="/letrusto-icon.svg" alt="LeTrusto" width={38} height={40} priority unoptimized className="h-10 w-auto" />
+        <Image src="/letrusto-icon.svg" alt="LeTrusto" width={44} height={46} priority unoptimized className="h-12 w-auto" />
       ) : (
-        <span className={footer ? "rounded-lg bg-[#fcfaf8] p-2" : ""}>
+        <span className={`${cropClass} relative block overflow-hidden rounded-lg ${footer ? "bg-[#fcfaf8] p-0 shadow-[0_3px_16px_rgba(0,0,0,0.16)]" : ""}`}>
           <Image
             src="/LeTrusto%20Brand%20Logo.png"
             alt="LeTrusto - Discover. Choose. Trust."
@@ -20,7 +27,7 @@ export default function BrandMark({ compact = false, footer = false }: Props) {
             height={887}
             priority
             unoptimized
-            className={footer ? "h-auto w-48 sm:w-52" : "h-auto w-40 xl:w-44"}
+            className={imageClass}
           />
         </span>
       )}
