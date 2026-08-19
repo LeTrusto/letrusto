@@ -8,11 +8,11 @@ type Props = {
 
 export default function BrandMark({ compact = false, footer = false }: Props) {
   const cropClass = footer
-    ? "h-[218px] w-[420px]"
-    : "h-[180px] w-[460px]";
+    ? "h-[118px] w-[320px]"
+    : "h-[120px] w-[360px]";
   const imageClass = footer
-    ? "absolute left-0 top-[-43px] h-auto w-[420px] max-w-none"
-    : "absolute left-0 top-[-48px] h-auto w-[460px] max-w-none";
+    ? "absolute left-0 top-[-23px] h-auto w-[320px] max-w-none"
+    : "absolute left-0 top-[-28px] h-auto w-[360px] max-w-none";
 
   return (
     <Link href="/" aria-label="LeTrusto home" className="inline-flex shrink-0 items-center">
