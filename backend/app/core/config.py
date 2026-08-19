@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     RTO_RESERVE_PCT: Decimal = Decimal("4.00")
     TARGET_CONTRIBUTION_MARGIN_PCT: Decimal = Decimal("20.00")
     TARGET_CAC_INR: Decimal = Decimal("150.00")
+    CATALOG_TAX_TREATMENT: str = "NOT_CONFIGURED"
+    CATALOG_TAX_RATE_PCT: Decimal | None = None
 
     # Cashfree Payments. Keep sandbox as the only default; production must be explicit.
     CASHFREE_ENV: str = "sandbox"

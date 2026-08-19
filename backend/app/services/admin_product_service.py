@@ -11,6 +11,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.catalog_readiness import resolve_cj_category
+from app.models.entities import Category
+from app.services.catalog_readiness_service import CatalogReadinessService
 from app.models.entities import Product, ProductImage, ProductMarketEvidence, ProductVariant, SupplierCandidate, User
 from app.schemas.admin_products import (
     AdminProductDTO,
@@ -88,11 +91,16 @@ class AdminProductService:
         economics = calculate_economics(normalized, shipping_cost_usd=shipping_usd, config=config)
         product_score = score_product(normalized, economics=economics, shipping=shipping)
         validated_at = datetime.now(timezone.utc)
+        category_resolution = resolve_cj_category(normalized.supplier_category_id, normalized.category)
+        category = None
+        if category_resolution.category_slug:
+            category = self.db.scalar(select(Category).where(Category.slug == category_resolution.category_slug))
 
         product = Product(
             id=uuid4(), slug=self._unique_slug(normalized.title, normalized.supplier_product_id), name=normalized.title,
             description=normalized.description or normalized.title, status="DRAFT", supplier=normalized.supplier_id,
             supplier_product_id=normalized.supplier_product_id,
+            category_id=category.id if category else None,
             supplier_cost=Decimal(str(normalized.cost_inr)) if normalized.cost_inr is not None else None,
             shipping_cost=Decimal(str(economics.shipping_cost_inr.amount_inr)) if economics.shipping_cost_inr.amount_inr is not None else None,
             selling_price=Decimal(str(economics.selling_price_inr)) if economics.selling_price_inr is not None else None,
@@ -471,6 +479,17 @@ class AdminProductService:
 
     def update_status(self, product_id: UUID, payload: ProductStatusUpdate) -> AdminProductDTO:
         product = self._get(product_id)
+        if payload.category_id is not None:
+            if self.db.get(Category, payload.category_id) is None:
+                raise NotFoundError("Category not found")
+            product.category_id = payload.category_id
+        if payload.brand_id is not None:
+            from app.models.entities import Brand
+            if self.db.get(Brand, payload.brand_id) is None:
+                raise NotFoundError("Brand not found")
+            product.brand_id = payload.brand_id
+        if payload.description is not None:
+            product.description = payload.description.strip()
         if product.supplier:
             if payload.status != "DRAFT" or product.status != "DRAFT":
                 raise BadRequestError(
@@ -640,6 +659,9 @@ class AdminProductService:
             raise BadRequestError(f"Cannot activate product from catalog status {product.status}")
         if product.commercial_status != "APPROVED":
             raise BadRequestError("Product must have commercial status APPROVED before activation")
+        readiness = CatalogReadinessService.validate_activation(product)
+        if not readiness.ready:
+            raise BadRequestError(f"Catalog readiness failed: {', '.join(readiness.blocking_reasons)}")
         product.status = "ACTIVE"
         self.db.commit()
         return self._dto(self._get(product.id))
@@ -1041,6 +1063,7 @@ class AdminProductService:
         return AdminProductDTO(
             id=product.id, slug=product.slug, name=product.name, description=product.description, status=product.status,
             supplier=product.supplier, supplier_product_id=product.supplier_product_id, supplier_source_url=product.supplier_source_url,
+            category_id=product.category_id, brand_id=product.brand_id,
             supplier_cost=product.supplier_cost, shipping_cost=product.shipping_cost, selling_price=product.selling_price,
             currency=product.currency, total_inventory=product.total_inventory, cj_inventory=product.cj_inventory,
             factory_inventory=product.factory_inventory, verified_warehouse=product.verified_warehouse,

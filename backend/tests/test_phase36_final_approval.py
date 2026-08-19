@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
@@ -36,7 +37,7 @@ def approval_context():
     )
     db.add_all([admin, product])
     db.flush()
-    image = ProductImage(product_id=product.id, url="https://example.com/phase36.jpg", position=1)
+    image = ProductImage(product_id=product.id, url="https://cf.cjdropshipping.com/quick/product/phase36.jpg", position=1)
     variant = ProductVariant(
         product_id=product.id, supplier_variant_id="phase36-variant", supplier_variant_sku="phase36-sku",
         name="Default", attributes="Default", supplier_cost=Decimal("91.02"),
@@ -68,6 +69,14 @@ def immutable_state(product, variant):
         variant.supplier_cost, variant.supplier_cost_usd, variant.selling_price,
         variant.total_inventory, variant.cj_inventory, variant.factory_inventory,
     )
+
+
+def make_activation_ready(db, product):
+    product.category_id = 25
+    product.brand_id = 1
+    product.supplier_validation_status = "PASS"
+    product.last_supplier_sync_at = datetime.now(timezone.utc)
+    db.commit()
 
 
 def test_admin_can_approve_review_without_activation(approval_context):
@@ -200,8 +209,9 @@ def test_rejected_product_cannot_activate(approval_context):
 
 
 def test_approved_draft_activates(approval_context):
-    _, service, _, admin, product, _ = approval_context
+    db, service, _, admin, product, _ = approval_context
     service.approve(product.id, admin)
+    make_activation_ready(db, product)
     result = service.activate(product.id)
     assert result.status == "ACTIVE" and result.commercial_status == "APPROVED"
 
@@ -226,9 +236,10 @@ def test_draft_product_cannot_pause(approval_context):
 
 
 def test_paused_approved_product_reactivates(approval_context):
-    _, service, _, _, product, _ = approval_context
+    db, service, _, _, product, _ = approval_context
     product.status, product.commercial_status = "PAUSED", "APPROVED"
     service.db.commit()
+    make_activation_ready(db, product)
     assert service.activate(product.id).status == "ACTIVE"
 
 
@@ -317,8 +328,9 @@ def test_repeated_approval_is_idempotent_but_rechecks_blockers(approval_context)
 
 
 def test_activate_and_pause_are_idempotent(approval_context):
-    _, service, _, admin, product, _ = approval_context
+    db, service, _, admin, product, _ = approval_context
     service.approve(product.id, admin)
+    make_activation_ready(db, product)
     assert service.activate(product.id).status == "ACTIVE"
     assert service.activate(product.id).status == "ACTIVE"
     assert service.pause(product.id).status == "PAUSED"

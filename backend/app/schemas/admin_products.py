@@ -204,6 +204,9 @@ class BulkApprovedProductImportResponse(BaseModel):
 
 class ProductStatusUpdate(BaseModel):
     status: CatalogStatus
+    category_id: int | None = None
+    brand_id: int | None = None
+    description: str | None = Field(default=None, min_length=1, max_length=10000)
 
 
 class ProductRejectionRequest(BaseModel):
@@ -332,6 +335,8 @@ class AdminProductDTO(BaseModel):
     status: str
     supplier: str | None
     supplier_product_id: str | None
+    category_id: int | None
+    brand_id: int | None
     supplier_source_url: str | None
     supplier_cost: Decimal | None
     shipping_cost: Decimal | None
