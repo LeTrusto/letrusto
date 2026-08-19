@@ -53,7 +53,7 @@ export default function HomeDealsSpotlightSection({
                 <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">{deal.price}</span>
               </div>
               <p className="mt-2 text-xs font-semibold text-violet-700">AI Score {deal.aiScore}</p>
-              <Link href={`/products/${deal.id}`} className="mt-3 inline-flex text-sm font-semibold text-slate-700 hover:text-violet-700">
+              <Link href={`/product/${deal.id}`} className="mt-3 inline-flex text-sm font-semibold text-slate-700 hover:text-violet-700">
                 Explore deal
               </Link>
             </article>

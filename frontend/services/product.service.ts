@@ -1,398 +1,180 @@
-import { products, categoryLabels, categoryPluralLabels, productSpotlightBadges } from "@/lib/products";
-import { filterProducts } from "@/lib/filterProducts";
-import { sortProducts } from "@/lib/sortProducts";
-import {
-	buildCompareHref,
-	discoverProducts,
-	getRelatedProducts,
-	recommendProducts,
-	resolveCompareProducts,
-} from "@/lib/recommendations";
 import type {
-	PaginatedProductsResponse,
-	Product,
-	ProductAiScoreFilter,
-	ProductFilterState,
-	ProductPriceFilter,
-	ProductQueryOptions,
-	ProductRatingFilter,
-	ProductSortOption,
+  PaginatedProductsResponse,
+  Product,
+  ProductAiScoreFilter,
+  ProductFilterState,
+  ProductPriceFilter,
+  ProductQueryOptions,
+  ProductRatingFilter,
+  ProductSortOption,
 } from "@/types/products";
-
-import { apiRequest, buildQueryString, withApiFallback } from "@/services/api";
-import type { CommerceProduct, CommerceCategory } from "@/types/commerce";
-
-const DEFAULT_PAGE_SIZE = 12;
+import { apiRequest, buildQueryString } from "@/services/api";
+import type { CommerceCategory, CommerceProduct } from "@/types/commerce";
 
 const CATEGORY_ALIASES: Record<string, string> = {
-	smartphones: "phone",
-	phone: "phone",
-	"laptops-ultrabooks": "laptop",
-	"tablets-ipads": "tablet",
-	"smartwatches-bands": "smartwatch",
-	"digital-cameras": "camera",
-	"televisions-oleds": "television",
+  smartphones: "phone",
+  phone: "phone",
+  "laptops-ultrabooks": "laptop",
+  "tablets-ipads": "tablet",
+  "smartwatches-bands": "smartwatch",
+  "digital-cameras": "camera",
+  "televisions-oleds": "television",
 };
 
 function toNumber(value: unknown): number {
-	if (typeof value === "number" && Number.isFinite(value)) {
-		return value;
-	}
-
-	if (typeof value === "string") {
-		const parsed = Number(value);
-		if (Number.isFinite(parsed)) {
-			return parsed;
-		}
-	}
-
-	return 0;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
 }
 
 function normalizeProduct(product: Product): Product {
-	return {
-		...product,
-		priceValue: toNumber(product.priceValue),
-		rating: toNumber(product.rating),
-		aiScore: toNumber(product.aiScore),
-		priceHistory: product.priceHistory.map((point) => ({
-			...point,
-			price: toNumber(point.price),
-		})),
-		reviews: product.reviews.map((review) => ({
-			...review,
-			rating: toNumber(review.rating),
-		})),
-	};
-}
-
-function clampPage(value: number) {
-	if (!Number.isFinite(value) || value < 1) {
-		return 1;
-	}
-
-	return Math.floor(value);
+  return {
+    ...product,
+    priceValue: toNumber(product.priceValue),
+    rating: toNumber(product.rating),
+    aiScore: toNumber(product.aiScore),
+    priceHistory: product.priceHistory.map((point) => ({ ...point, price: toNumber(point.price) })),
+    reviews: product.reviews.map((review) => ({ ...review, rating: toNumber(review.rating) })),
+  };
 }
 
 function normalizeCategoryValue(value: ProductQueryOptions["category"]) {
-	if (!value || value === "all") {
-		return value;
-	}
-
-	const raw = String(value).trim().toLowerCase();
-	return (CATEGORY_ALIASES[raw] ?? raw) as ProductFilterState["category"];
+  if (!value || value === "all") return value;
+  const raw = String(value).trim().toLowerCase();
+  return (CATEGORY_ALIASES[raw] ?? raw) as ProductFilterState["category"];
 }
 
 function normalizeQueryOptions(options: ProductQueryOptions): ProductQueryOptions {
-	return {
-		...options,
-		category: normalizeCategoryValue(options.category),
-	};
-}
-
-function normalizeFilters(options: ProductQueryOptions): ProductFilterState {
-	const normalizedCategory = normalizeCategoryValue(options.category);
-
-	return {
-		category: normalizedCategory ?? "all",
-		price: options.price ?? "all",
-		rating: options.rating ?? "all",
-		aiScore: options.aiScore ?? "all",
-	};
-}
-
-function applyAdvancedFilters(productsToFilter: Product[], options: ProductQueryOptions) {
-	const normalizedBrand = options.brand?.toLowerCase().trim();
-
-	return productsToFilter.filter((product) => {
-		// Partial brand match (consistent with backend ILIKE)
-		if (normalizedBrand && !product.brand.toLowerCase().includes(normalizedBrand)) {
-			return false;
-		}
-
-		if (options.minPrice !== undefined && product.priceValue < options.minPrice) {
-			return false;
-		}
-
-		if (options.maxPrice !== undefined && product.priceValue > options.maxPrice) {
-			return false;
-		}
-
-		if (options.minRating !== undefined && product.rating < options.minRating) {
-			return false;
-		}
-
-		if (options.minAiScore !== undefined && product.aiScore < options.minAiScore) {
-			return false;
-		}
-
-		return true;
-	});
-}
-
-function buildLocalSearchResponse(options: ProductQueryOptions): PaginatedProductsResponse {
-	const query = (options.q ?? "").trim();
-	const filters = normalizeFilters(options);
-	const sortBy = options.sortBy ?? "relevance";
-
-	const discovered = discoverProducts(query);
-	const filtered = filterProducts(discovered, filters);
-	const advancedFiltered = applyAdvancedFilters(filtered, options);
-	const sorted = sortProducts(advancedFiltered, sortBy, query);
-
-	const page = clampPage(options.page ?? 1);
-	const pageSize = Math.max(1, Math.floor(options.pageSize ?? DEFAULT_PAGE_SIZE));
-	const totalItems = sorted.length;
-	const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-	const safePage = Math.min(page, totalPages);
-	const start = (safePage - 1) * pageSize;
-	const end = start + pageSize;
-
-	return {
-		items: sorted.slice(start, end),
-		pagination: {
-			page: safePage,
-			pageSize,
-			totalItems,
-			totalPages,
-			hasNextPage: safePage < totalPages,
-			hasPreviousPage: safePage > 1,
-		},
-	};
+  return { ...options, category: normalizeCategoryValue(options.category) };
 }
 
 export async function getAllProducts() {
-	return withApiFallback(
-		() => apiRequest<Product[]>("/products").then((catalog) => catalog.map(normalizeProduct)),
-		() => products
-	);
+  const catalog = await apiRequest<Product[]>("/products");
+  return catalog.map(normalizeProduct);
 }
 
 export async function getPublicProducts() {
-	const catalog = await apiRequest<Product[]>("/products");
-	return catalog.map(normalizeProduct);
+  return getAllProducts();
 }
 
 export async function getProductById(productId: string) {
-	return withApiFallback(
-		() => apiRequest<Product>(`/products/${productId}`).then((product) => normalizeProduct(product)),
-		() => products.find((product) => product.id === productId) ?? null
-	);
+  try {
+    return normalizeProduct(await apiRequest<Product>(`/products/${encodeURIComponent(productId)}`));
+  } catch {
+    return null;
+  }
 }
 
 export async function getPublicProduct(productId: string) {
-	const product = await apiRequest<Product>(`/products/${productId}`);
-	return normalizeProduct(product);
+  return normalizeProduct(await apiRequest<Product>(`/products/${encodeURIComponent(productId)}`));
 }
 
-const COMMERCE_CATEGORIES = new Set<CommerceCategory>([
-	"jewellery", "hair-style", "beauty-tools", "accessories", "gifts",
-]);
+const COMMERCE_CATEGORIES = new Set<CommerceCategory>(["jewellery", "hair-style", "beauty-tools", "accessories", "gifts"]);
 
 function categoryLabel(slug: string) {
-	return slug.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+  return slug.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
 }
 
 export function toCommerceProduct(product: Product): CommerceProduct {
-	const variants = product.variants ?? [];
-	const category = COMMERCE_CATEGORIES.has(product.category as CommerceCategory)
-		? product.category as CommerceCategory
-		: product.parentCategory && COMMERCE_CATEGORIES.has(product.parentCategory as CommerceCategory)
-			? product.parentCategory as CommerceCategory
-			: product.category;
+  const variants = product.variants ?? [];
+  const category = COMMERCE_CATEGORIES.has(product.category as CommerceCategory)
+    ? product.category as CommerceCategory
+    : product.parentCategory && COMMERCE_CATEGORIES.has(product.parentCategory as CommerceCategory)
+      ? product.parentCategory as CommerceCategory
+      : product.category;
 
-	return {
-		id: product.id,
-		slug: product.id,
-		name: product.name,
-		description: product.description,
-		price: product.priceValue,
-		currency: "INR",
-		images: product.images.length > 0 ? product.images : ["/images/products/placeholder.svg"],
-		category,
-		categoryLabel: categoryLabel(product.category),
-		catalogVariants: variants.map((variant) => ({
-			id: variant.id,
-			label: variant.label,
-			price: variant.priceValue,
-			available: variant.available,
-			inventory: variant.inventory,
-		})),
-		availability: variants.some((variant) => variant.available) ? "in-stock" : "out-of-stock",
-		tags: product.tags,
-		specs: product.specs,
-		estimatedDelivery: "Delivery calculated at checkout",
-		returnInfo: "Returns subject to product policy",
-	};
+  return {
+    id: product.id,
+    slug: product.id,
+    name: product.name,
+    description: product.description,
+    price: product.priceValue,
+    currency: "INR",
+    images: product.images.length > 0 ? product.images : ["/images/products/placeholder.svg"],
+    category,
+    categoryLabel: categoryLabel(product.category),
+    catalogVariants: variants.map((variant) => ({ id: variant.id, label: variant.label, price: variant.priceValue, available: variant.available, inventory: variant.inventory })),
+    availability: variants.some((variant) => variant.available) ? "in-stock" : "out-of-stock",
+    tags: product.tags,
+    specs: product.specs,
+    estimatedDelivery: "Delivery calculated at checkout",
+    returnInfo: "Returns subject to product policy",
+  };
 }
 
 export async function getProductsByIds(productIds: string[]) {
-	const idSet = new Set(productIds);
-
-	return withApiFallback(
-		() =>
-			apiRequest<Product[]>(`/products${buildQueryString({ ids: productIds.join(",") })}`).then((catalog) =>
-				catalog.map(normalizeProduct)
-			),
-		() => products.filter((product) => idSet.has(product.id))
-	);
+  const catalog = await apiRequest<Product[]>(`/products${buildQueryString({ ids: productIds.join(",") })}`);
+  return catalog.map(normalizeProduct);
 }
 
 export async function getProductSearch(options: ProductQueryOptions): Promise<PaginatedProductsResponse> {
-	const normalizedOptions = normalizeQueryOptions(options);
-
-	return withApiFallback(
-		() =>
-			apiRequest<PaginatedProductsResponse>(
-				`/products/search${buildQueryString({
-					q: normalizedOptions.q,
-					sort: normalizedOptions.sortBy,
-					category: normalizedOptions.category,
-					subcategory: normalizedOptions.subcategory,
-					series: normalizedOptions.series,
-					price: normalizedOptions.price,
-					rating: normalizedOptions.rating,
-					aiScore: normalizedOptions.aiScore,
-					brand: normalizedOptions.brand,
-					minPrice: normalizedOptions.minPrice,
-					maxPrice: normalizedOptions.maxPrice,
-					minRating: normalizedOptions.minRating,
-					minAiScore: normalizedOptions.minAiScore,
-					page: normalizedOptions.page,
-					pageSize: normalizedOptions.pageSize,
-				})}`
-			).then((response) => ({
-				...response,
-				items: response.items.map(normalizeProduct),
-			})),
-		() => buildLocalSearchResponse(normalizedOptions)
-	);
+  const normalized = normalizeQueryOptions(options);
+  const response = await apiRequest<PaginatedProductsResponse>(`/products/search${buildQueryString({
+    q: normalized.q,
+    sort: normalized.sortBy,
+    category: normalized.category,
+    subcategory: normalized.subcategory,
+    series: normalized.series,
+    price: normalized.price,
+    rating: normalized.rating,
+    aiScore: normalized.aiScore,
+    brand: normalized.brand,
+    minPrice: normalized.minPrice,
+    maxPrice: normalized.maxPrice,
+    minRating: normalized.minRating,
+    minAiScore: normalized.minAiScore,
+    page: normalized.page,
+    pageSize: normalized.pageSize,
+  })}`);
+  return { ...response, items: response.items.map(normalizeProduct) };
 }
 
 export async function getAiRecommendations(query: string, limit = 4) {
-	const safeLimit = Math.max(1, limit);
-	const normalizedQuery = query.trim();
-
-	if (!normalizedQuery) {
-		return recommendProducts("", safeLimit);
-	}
-
-	return withApiFallback(
-		() =>
-			apiRequest<Product[]>(
-				`/products/recommendations${buildQueryString({ q: normalizedQuery, limit: safeLimit })}`
-			).then((recommendations) => recommendations.map(normalizeProduct)),
-		() => recommendProducts(query, safeLimit)
-	);
+  const recommendations = await apiRequest<Product[]>(`/products/recommendations${buildQueryString({ q: query.trim(), limit: Math.max(1, limit) })}`);
+  return recommendations.map(normalizeProduct);
 }
 
 export async function getRelatedProductsByProductId(productId: string, limit = 4) {
-	const safeLimit = Math.max(1, limit);
-
-	return withApiFallback(
-		() =>
-			apiRequest<Product[]>(
-				`/products/${productId}/similar${buildQueryString({ limit: safeLimit })}`
-			).then((relatedProducts) => relatedProducts.map(normalizeProduct)),
-		() => {
-			const source = products.find((product) => product.id === productId);
-
-			if (!source) {
-				return [];
-			}
-
-			const byIds = source.similarProductIds
-				.slice(0, safeLimit)
-				.map((id) => products.find((product) => product.id === id))
-				.filter((product): product is Product => Boolean(product));
-
-			return byIds.length > 0 ? byIds : getRelatedProducts(productId, safeLimit);
-		}
-	);
+  const related = await apiRequest<Product[]>(`/products/${encodeURIComponent(productId)}/similar${buildQueryString({ limit: Math.max(1, limit) })}`);
+  return related.map(normalizeProduct);
 }
 
 export async function getCompareProducts(firstId?: string, secondId?: string) {
-	return withApiFallback(
-		() =>
-			apiRequest<{ firstProduct: Product; secondProduct: Product }>(
-				`/products/compare${buildQueryString({ first: firstId, second: secondId })}`
-			).then((response) => ({
-				firstProduct: normalizeProduct(response.firstProduct),
-				secondProduct: normalizeProduct(response.secondProduct),
-			})),
-		() => resolveCompareProducts(firstId, secondId)
-	);
+  const response = await apiRequest<{ firstProduct: Product; secondProduct: Product }>(`/products/compare${buildQueryString({ first: firstId, second: secondId })}`);
+  return { firstProduct: normalizeProduct(response.firstProduct), secondProduct: normalizeProduct(response.secondProduct) };
 }
 
 export async function getSearchSuggestions(limit = 24) {
-	const safeLimit = Math.max(1, limit);
-
-	return withApiFallback(
-		() => apiRequest<string[]>(`/products/suggestions${buildQueryString({ limit: safeLimit })}`),
-		() => products.slice(0, safeLimit).map((product) => product.name)
-	);
+  return apiRequest<string[]>(`/products/suggestions${buildQueryString({ limit: Math.max(1, limit) })}`);
 }
 
 export async function getHomeCollections() {
-	return withApiFallback(
-		() =>
-			apiRequest<{
-				featured: Product[];
-				newArrivals: Product[];
-				topAiPicks: Product[];
-				trending: Product[];
-			}>("/products/collections/home").then((collections) => ({
-				featured: collections.featured.map(normalizeProduct),
-				newArrivals: collections.newArrivals.map(normalizeProduct),
-				topAiPicks: collections.topAiPicks.map(normalizeProduct),
-				trending: collections.trending.map(normalizeProduct),
-			})),
-		() => {
-			const featured = products.slice(0, 4);
-			const newArrivals = [...products].sort((left, right) => right.aiScore - left.aiScore).slice(4, 8);
-			const topAiPicks = [...products].sort((left, right) => right.aiScore - left.aiScore).slice(0, 4);
-			const trending = products.slice(0, 8);
-
-			return {
-				featured,
-				newArrivals,
-				topAiPicks,
-				trending,
-			};
-		}
-	);
+  const collections = await apiRequest<{ featured: Product[]; newArrivals: Product[]; topAiPicks: Product[]; trending: Product[] }>("/products/collections/home");
+  return {
+    featured: collections.featured.map(normalizeProduct),
+    newArrivals: collections.newArrivals.map(normalizeProduct),
+    topAiPicks: collections.topAiPicks.map(normalizeProduct),
+    trending: collections.trending.map(normalizeProduct),
+  };
 }
 
 export async function getCatalogMetadata() {
-	return withApiFallback(
-		() =>
-			apiRequest<{
-				categoryLabels: Record<string, string>;
-				categoryPluralLabels: Record<string, string>;
-				productSpotlightBadges: Record<string, string>;
-				brands: string[];
-			}>("/products/metadata"),
-		() => ({
-			categoryLabels: categoryLabels as Record<string, string>,
-			categoryPluralLabels: categoryPluralLabels as Record<string, string>,
-			productSpotlightBadges,
-			brands: Array.from(new Set(products.map((product) => product.brand))).sort((left, right) =>
-				left.localeCompare(right)
-			),
-		})
-	);
+  return apiRequest<{ categoryLabels: Record<string, string>; categoryPluralLabels: Record<string, string>; productSpotlightBadges: Record<string, string>; brands: string[] }>("/products/metadata");
 }
 
 export function getCompareHref(productId: string, compareWithId?: string) {
-	return buildCompareHref(productId, compareWithId);
+  return `/compare?first=${encodeURIComponent(productId)}${compareWithId ? `&second=${encodeURIComponent(compareWithId)}` : ""}`;
 }
 
 export type {
-	Product,
-	ProductAiScoreFilter,
-	ProductFilterState,
-	ProductPriceFilter,
-	ProductQueryOptions,
-	ProductRatingFilter,
-	ProductSortOption,
+  Product,
+  ProductAiScoreFilter,
+  ProductFilterState,
+  ProductPriceFilter,
+  ProductQueryOptions,
+  ProductRatingFilter,
+  ProductSortOption,
 };

@@ -8,7 +8,6 @@ import { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
 import { useFavorites } from "@/hooks/useFavorites";
-import { categoryLabels } from "@/lib/products";
 import { getCompareHref } from "@/services/product.service";
 import type { Product } from "@/types/products";
 
@@ -146,7 +145,7 @@ function ProductCard({
         {/* Category + AI score */}
         <div className="mb-2.5 flex items-center justify-between gap-2">
           <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700">
-            {categoryLabels[product.category] ?? product.category}
+            {product.category}
           </span>
           <AiScoreBadge score={product.aiScore} />
         </div>
@@ -188,7 +187,7 @@ function ProductCard({
         {/* Actions */}
         <div className="mt-4 flex gap-2">
           <Link
-            href={`/products/${product.id}`}
+            href={`/product/${product.id}`}
             className="flex flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-600 py-2.5 text-sm font-bold text-white transition hover:scale-[1.02]"
           >
             View Details

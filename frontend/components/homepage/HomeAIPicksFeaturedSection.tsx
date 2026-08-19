@@ -51,7 +51,7 @@ export default function HomeAIPicksFeaturedSection({
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-semibold text-emerald-200">AI Score {lead.aiScore}</span>
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">{lead.price}</span>
-            <Link href={`/products/${lead.id}`} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-violet-700 transition hover:bg-violet-50">
+            <Link href={`/product/${lead.id}`} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-violet-700 transition hover:bg-violet-50">
               View details
             </Link>
           </div>
