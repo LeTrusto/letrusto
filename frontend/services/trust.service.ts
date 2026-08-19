@@ -17,9 +17,24 @@ export type PublicTrustClaim = {
   evidence_summary: PublicTrustEvidenceSummary[];
 };
 
+export type PublicTrustScoreDimension = {
+  points: number;
+  maximum: number;
+  ratio: number;
+};
+
+export type PublicTrustScore = {
+  score: number;
+  label: string;
+  data_sufficiency: "NONE" | "LIMITED" | "ADEQUATE" | "STRONG";
+  dimensions: Record<string, PublicTrustScoreDimension>;
+  reason_codes: string[];
+};
+
 export type PublicTrustResponse = {
   product_id: string;
   claims: PublicTrustClaim[];
+  trust_score: PublicTrustScore;
 };
 
 export function getPublicProductTrust(productId: string) {

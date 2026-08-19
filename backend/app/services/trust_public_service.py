@@ -7,6 +7,7 @@ from app.core.exceptions import NotFoundError
 from app.core.trust import TRUST_VERIFICATION_METHOD_LABELS
 from app.models.entities import Product, TrustClaim, TrustClaimEvidence
 from app.schemas.trust_public import PublicTrustClaimDTO, PublicTrustEvidenceSummary, PublicTrustResponse
+from app.services.trust_score_service import TrustScoreService
 
 
 class PublicTrustService:
@@ -61,4 +62,22 @@ class PublicTrustService:
                 evidence_summary=evidence_summary,
             ))
 
-        return PublicTrustResponse(product_id=product.slug, claims=claims)
+        score = TrustScoreService(self.db).calculate_claims(product.trust_claims)
+        return PublicTrustResponse(
+            product_id=product.slug,
+            claims=claims,
+            trust_score={
+                "score": score.score,
+                "label": score.label,
+                "data_sufficiency": score.data_sufficiency,
+                "dimensions": {
+                    name: {
+                        "points": float(dimension.points),
+                        "maximum": float(dimension.maximum),
+                        "ratio": float(dimension.ratio),
+                    }
+                    for name, dimension in score.dimensions.items()
+                },
+                "reason_codes": list(score.reason_codes),
+            },
+        )

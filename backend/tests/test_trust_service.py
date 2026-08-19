@@ -242,6 +242,10 @@ def test_public_trust_endpoint_returns_sanitized_current_claims(trust_context):
         payload = response.json()
         assert payload["product_id"] == product.slug
         assert {claim["status"] for claim in payload["claims"]} == {"VERIFIED", "PENDING"}
+        assert payload["trust_score"]["score"] == 71
+        assert payload["trust_score"]["data_sufficiency"] == "LIMITED"
+        assert payload["trust_score"]["dimensions"]["evidence_coverage"]["maximum"] == 30.0
+        assert "policy_version" not in payload["trust_score"]
         verified = next(claim for claim in payload["claims"] if claim["status"] == "VERIFIED")
         assert verified["verification_method"] == "Supplier documentation reviewed"
         assert verified["evidence_summary"][0]["title"] == evidence.title
@@ -260,7 +264,12 @@ def test_public_trust_endpoint_handles_expiry_empty_and_missing_product(trust_co
     try:
         empty = TestClient(app).get(f"/api/v1/products/{product.slug}/trust")
         assert empty.status_code == 200
-        assert empty.json() == {"product_id": product.slug, "claims": []}
+        empty_payload = empty.json()
+        assert empty_payload["product_id"] == product.slug
+        assert empty_payload["claims"] == []
+        assert empty_payload["trust_score"]["score"] == 0
+        assert empty_payload["trust_score"]["data_sufficiency"] == "NONE"
+        assert empty_payload["trust_score"]["label"] == "Insufficient evidence"
     finally:
         app.dependency_overrides.clear()
 

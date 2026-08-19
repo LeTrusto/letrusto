@@ -18,6 +18,21 @@ class PublicTrustClaimDTO(BaseModel):
     evidence_summary: list[PublicTrustEvidenceSummary]
 
 
+class PublicTrustScoreDimensionDTO(BaseModel):
+    points: float
+    maximum: float
+    ratio: float
+
+
+class PublicTrustScoreDTO(BaseModel):
+    score: int
+    label: str
+    data_sufficiency: str
+    dimensions: dict[str, PublicTrustScoreDimensionDTO]
+    reason_codes: list[str]
+
+
 class PublicTrustResponse(BaseModel):
     product_id: str
     claims: list[PublicTrustClaimDTO]
+    trust_score: PublicTrustScoreDTO

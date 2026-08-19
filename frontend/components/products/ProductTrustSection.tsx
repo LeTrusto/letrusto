@@ -2,7 +2,7 @@
 
 import { AlertCircle, CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getPublicProductTrust, type PublicTrustClaim, type PublicTrustResponse, type PublicTrustStatus } from "@/services/trust.service";
+import { getPublicProductTrust, type PublicTrustClaim, type PublicTrustResponse, type PublicTrustScore, type PublicTrustStatus } from "@/services/trust.service";
 
 function claimLabel(value: string) {
   return value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (character) => character.toUpperCase());
@@ -30,6 +30,48 @@ function StatusIcon({ status }: { status: PublicTrustStatus }) {
   if (status === "PENDING") return <Clock3 size={18} className="text-amber-700" aria-hidden="true" />;
   if (status === "EXPIRED") return <AlertCircle size={18} className="text-slate-500" aria-hidden="true" />;
   return <ShieldCheck size={18} className="text-[var(--text-muted)]" aria-hidden="true" />;
+}
+
+const reasonText: Record<string, string> = {
+  NO_TRUST_DATA: "There is not enough verified Trust information yet.",
+  PARTIAL_EVIDENCE_COVERAGE: "Some applicable claims do not currently have verified supporting evidence.",
+  STRONG_EVIDENCE_COVERAGE: "Most applicable claims currently have verified supporting evidence.",
+  STRONG_SUPPORTING_EVIDENCE: "The supporting evidence includes strong evidence types.",
+  LIMITED_SUPPORTING_EVIDENCE: "The current supporting evidence is limited in strength.",
+  RECENT_VERIFICATION: "The current verifications are relatively recent.",
+  AGING_VERIFICATION: "Some current verifications are becoming older.",
+  EXPIRED_VERIFICATION: "At least one verification has expired and does not add current score support.",
+  MULTIPLE_VERIFIED_CLAIMS: "More than one current verified claim contributes to this score.",
+};
+
+const dimensionLabels: Record<string, string> = {
+  evidence_coverage: "Evidence coverage",
+  evidence_strength: "Evidence strength",
+  verification_freshness: "Verification freshness",
+  verification_quality: "Verification quality",
+};
+
+function TrustScoreSummary({ score }: { score: PublicTrustScore }) {
+  const explanations = score.reason_codes.map((code) => reasonText[code]).filter(Boolean);
+  return (
+    <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">LeTrusto Trust</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">{score.score} <span className="text-sm font-medium text-[var(--text-muted)]">/ 100</span></p>
+        </div>
+        <p className="text-sm font-semibold text-[var(--text-secondary)]">{score.label}</p>
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-[var(--text-secondary)]">This score reflects the strength and freshness of the product information LeTrusto has verified.</p>
+      <details className="mt-3 border-t border-[var(--border)] pt-3">
+        <summary className="cursor-pointer text-xs font-semibold text-[var(--text-primary)]">Why this score?</summary>
+        <div className="mt-3 space-y-3 text-xs text-[var(--text-secondary)]">
+          {Object.entries(score.dimensions).map(([key, dimension]) => <div key={key} className="flex items-center justify-between gap-4"><span>{dimensionLabels[key] ?? key}</span><strong className="text-[var(--text-primary)]">{dimension.points.toFixed(1)} / {dimension.maximum.toFixed(0)}</strong></div>)}
+          {explanations.length > 0 && <ul className="list-disc space-y-1 border-t border-[var(--border)] pt-3 pl-4">{explanations.map((explanation) => <li key={explanation}>{explanation}</li>)}</ul>}
+        </div>
+      </details>
+    </div>
+  );
 }
 
 function TrustClaim({ claim }: { claim: PublicTrustClaim }) {
@@ -84,7 +126,7 @@ export default function ProductTrustSection({ productId }: { productId: string }
 
   if (loading) return <section aria-label="Trust information" className="mt-5 border-t border-[var(--border)] pt-5"><div className="h-4 w-48 animate-pulse rounded bg-[var(--surface-muted)]" /><div className="mt-3 h-16 animate-pulse rounded-lg bg-[var(--surface-muted)]" /></section>;
   if (failed) return <p className="mt-5 border-t border-[var(--border)] pt-5 text-xs text-[var(--text-muted)]">Trust information is currently unavailable.</p>;
-  if (!trust || trust.claims.length === 0) return null;
+  if (!trust) return null;
 
   return (
     <section aria-labelledby="product-trust-heading" className="mt-6 border-t border-[var(--border)] pt-5">
@@ -95,8 +137,9 @@ export default function ProductTrustSection({ productId }: { productId: string }
           <p className="mt-1 text-xs text-[var(--text-muted)]">See exactly what LeTrusto has verified and what remains a supplier claim.</p>
         </div>
       </div>
+      <TrustScoreSummary score={trust.trust_score} />
       <div className="mt-4 space-y-3">
-        {trust.claims.map((claim) => <TrustClaim key={`${claim.claim_type}-${claim.claim_value}`} claim={claim} />)}
+        {trust.claims.length > 0 ? trust.claims.map((claim) => <TrustClaim key={`${claim.claim_type}-${claim.claim_value}`} claim={claim} />) : <p className="text-xs text-[var(--text-muted)]">No verified Trust claims are available for this product yet.</p>}
       </div>
     </section>
   );
