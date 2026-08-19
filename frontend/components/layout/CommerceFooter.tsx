@@ -30,7 +30,7 @@ export default function CommerceFooter() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div>
-            <BrandMark />
+            <BrandMark footer />
             <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
               Trending finds. Everyday prices.<br />
               Curated beauty, jewellery &amp; style.
