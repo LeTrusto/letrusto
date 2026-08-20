@@ -18,6 +18,25 @@ def test_production_rejects_default_jwt_secret(monkeypatch):
         get_settings.cache_clear()
 
 
+def test_production_allows_unconfigured_razorpay(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")
+    monkeypatch.setenv("JWT_SECRET_KEY", "12345678901234567890123456789012")
+    monkeypatch.setenv("CASHFREE_ENV", "production")
+    monkeypatch.setenv("RAZORPAY_ENV", "sandbox")
+    monkeypatch.delenv("RAZORPAY_KEY_ID", raising=False)
+    monkeypatch.delenv("RAZORPAY_KEY_SECRET", raising=False)
+    monkeypatch.delenv("RAZORPAY_WEBHOOK_SECRET", raising=False)
+    get_settings.cache_clear()
+    try:
+        settings = get_settings()
+        assert settings.RAZORPAY_KEY_ID == ""
+        assert settings.RAZORPAY_KEY_SECRET == ""
+        assert settings.RAZORPAY_WEBHOOK_SECRET == ""
+    finally:
+        get_settings.cache_clear()
+
+
 def test_credentialed_cors_allows_only_configured_origins():
     client = TestClient(app)
     allowed = client.options(
