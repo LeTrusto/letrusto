@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 _BASE_URL = "https://developers.cjdropshipping.com/api2.0/v1"
 _DEFAULT_TOKEN_TTL_SECONDS = 900
 _TOKEN_REFRESH_SKEW_SECONDS = 30
+_CJ_REQUEST_INTERVAL_SECONDS = 2.0
 _cached_access_token = ""
 _cached_token_expires_at = 0.0
 _request_lock = asyncio.Lock()
@@ -76,7 +77,7 @@ class CJAdapter:
     async def _throttle_requests(self) -> None:
         global _last_request_at
         async with _request_lock:
-            delay = 1.05 - (time.monotonic() - _last_request_at)
+            delay = _CJ_REQUEST_INTERVAL_SECONDS - (time.monotonic() - _last_request_at)
             if delay > 0:
                 await asyncio.sleep(delay)
             _last_request_at = time.monotonic()
