@@ -13,6 +13,21 @@ class PaymentSessionDTO(BaseModel):
     currency: str
 
 
+class RazorpayOrderDTO(BaseModel):
+    order_id: UUID
+    provider: str
+    key_id: str
+    razorpay_order_id: str
+    amount: int
+    currency: str
+
+
+class RazorpayPaymentVerification(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+
 class PaymentStatusDTO(BaseModel):
     order_id: UUID
     payment_status: str

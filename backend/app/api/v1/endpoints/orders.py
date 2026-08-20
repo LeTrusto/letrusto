@@ -2,14 +2,15 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request
 
-from app.api.deps import get_cancellation_service, get_cashfree_service, get_current_admin, get_current_user, get_order_service
+from app.api.deps import get_cancellation_service, get_cashfree_service, get_current_admin, get_current_user, get_order_service, get_razorpay_service
 from app.models.entities import User
 from app.schemas.cancellation import AdminCancelRequest, CancelOrderRequest, CancellationStatusDTO, RefundDTO
 from app.schemas.orders import CartDTO, CartItemRequest, CreateOrderRequest, OrderDTO
 from app.services.order_service import OrderService
-from app.schemas.payments import PaymentSessionDTO, PaymentStatusDTO
+from app.schemas.payments import PaymentSessionDTO, PaymentStatusDTO, RazorpayOrderDTO, RazorpayPaymentVerification
 from app.services.cancellation_service import CancellationService
 from app.services.cashfree_service import CashfreeService
+from app.services.razorpay_service import RazorpayService
 
 router = APIRouter(tags=["orders"])
 
@@ -47,6 +48,22 @@ def create_order(payload: CreateOrderRequest, current_user: User = Depends(get_c
 @router.get("/orders/{order_id}", response_model=OrderDTO)
 def get_order(order_id: UUID, current_user: User = Depends(get_current_user), service: OrderService = Depends(get_order_service)) -> OrderDTO:
     return service.get_order(current_user, order_id)
+
+
+@router.post("/orders/{order_id}/razorpay-order", response_model=RazorpayOrderDTO)
+def create_razorpay_order(order_id: UUID, current_user: User = Depends(get_current_user), service: RazorpayService = Depends(get_razorpay_service)) -> RazorpayOrderDTO:
+    return service.create_order(current_user, order_id)
+
+
+@router.post("/orders/{order_id}/razorpay/verify", response_model=PaymentStatusDTO)
+async def verify_razorpay_payment(order_id: UUID, payload: RazorpayPaymentVerification, current_user: User = Depends(get_current_user), service: RazorpayService = Depends(get_razorpay_service)) -> PaymentStatusDTO:
+    return await service.verify_payment(current_user, order_id, payload)
+
+
+@router.post("/payments/razorpay/webhook", status_code=200)
+async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = Header(default=None), service: RazorpayService = Depends(get_razorpay_service)) -> dict[str, str]:
+    await service.process_webhook(await request.body(), x_razorpay_signature)
+    return {"status": "ok"}
 
 
 @router.post("/orders/{order_id}/cashfree-session", response_model=PaymentSessionDTO)

@@ -2,16 +2,30 @@
 
 import Link from "next/link";
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, LockKeyhole } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/lib/cartContext";
-import { createCashfreeSession, createOrder } from "@/services/order.service";
-import type { Order, PaymentSession } from "@/types/orders";
+import { buildRazorpayCheckoutOptions, callbackMatchesOrder, isBackendPaymentSuccess, RAZORPAY_CHECKOUT_SCRIPT_URL, type RazorpayCheckoutOptions, type RazorpayPaymentFailure, type RazorpayResult } from "@/lib/razorpayCheckout";
+import { createOrder, createRazorpayOrder, verifyRazorpayPayment } from "@/services/order.service";
+import type { Order, RazorpayOrder } from "@/types/orders";
 import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
 function money(value: number) { return `₹${value.toLocaleString("en-IN")}`; }
+
+type RazorpayCheckout = {
+  open: () => void;
+  on?: (event: "payment.failed", handler: (response: RazorpayPaymentFailure) => void) => void;
+};
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => RazorpayCheckout;
+  }
+}
+
+type PaymentState = "idle" | "creating" | "opening" | "verifying" | "success" | "failed" | "cancelled";
 
 export default function CheckoutPage() {
   const { accessToken, isLoading, isAuthenticated, user } = useAuth();
@@ -20,9 +34,12 @@ export default function CheckoutPage() {
   const [form, setForm] = useState({ name: user?.full_name ?? "", email: user?.email ?? "", phone: "", address: "", city: "", state: "", postal_code: "", country: "IN" });
   const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
-  const [openingPayment, setOpeningPayment] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
-  const [paymentSession, setPaymentSession] = useState<PaymentSession | null>(null);
+  const [razorpayOrder, setRazorpayOrder] = useState<RazorpayOrder | null>(null);
+  const [paymentState, setPaymentState] = useState<PaymentState>("idle");
+  const [razorpayReady, setRazorpayReady] = useState(false);
+  const idempotencyKey = useRef<string | null>(null);
+  const paymentCallbackHandled = useRef(false);
 
   useEffect(() => {
     void getPublicProducts().then((catalog) => {
@@ -31,7 +48,7 @@ export default function CheckoutPage() {
         return [product.id, product];
       })));
     }).catch(() => {});
-  });
+  }, []);
 
   if (isLoading) return <main className="max-w-2xl mx-auto px-4 py-20 text-center">Loading checkout...</main>;
   if (!isAuthenticated) return <main className="max-w-2xl mx-auto px-4 py-20 text-center"><h1 className="lt-heading-2">Sign in to checkout</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Your cart is ready. Sign in to create a pending-payment order.</p><Link href="/login?redirect=/checkout" className="lt-btn lt-btn-primary mt-6 inline-flex">Sign In</Link></main>;
@@ -40,8 +57,9 @@ export default function CheckoutPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!accessToken || working || createdOrder) return;
-    setWorking(true); setError("");
+    setWorking(true); setError(""); setPaymentState("creating");
     try {
+      idempotencyKey.current ??= `checkout-${crypto.randomUUID()}`;
       const order = await createOrder(accessToken, {
         items: items.map((item) => ({
           product_id: item.productId,
@@ -50,32 +68,76 @@ export default function CheckoutPage() {
         })),
         customer: { name: form.name, email: form.email, phone: form.phone },
         shipping_address: { address: form.address, city: form.city, state: form.state, postal_code: form.postal_code, country: form.country },
-        idempotency_key: `checkout-${crypto.randomUUID()}`,
+        idempotency_key: idempotencyKey.current,
       });
       setCreatedOrder(order);
-      try {
-        const session = await createCashfreeSession(accessToken, order.id);
-        setPaymentSession(session);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Cashfree payment session unavailable");
-      }
+      await prepareRazorpayOrder(order.id);
     } catch (err) { setError(err instanceof Error ? err.message : "Unable to create order"); }
     finally { setWorking(false); }
   }
 
-  const update = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, [field]: event.target.value }));
-  async function openCashfree() {
-    if (!paymentSession || openingPayment) return;
-    setOpeningPayment(true);
-    setError("");
-    const cashfree = (window as Window & { Cashfree?: (options: { mode: "sandbox" | "production" }) => { checkout: (options: { paymentSessionId: string; redirectTarget: string }) => Promise<unknown> } }).Cashfree;
-    if (!cashfree) { setError("Payment checkout is unavailable. Please try again later."); setOpeningPayment(false); return; }
-    try { await cashfree({ mode: "sandbox" }).checkout({ paymentSessionId: paymentSession.payment_session_id, redirectTarget: "_self" }); } catch { setError("Unable to open payment checkout. Please try again."); setOpeningPayment(false); }
+  async function prepareRazorpayOrder(orderId: string) {
+    if (!accessToken) return;
+    setPaymentState("creating"); setError("");
+    try {
+      const payment = await createRazorpayOrder(accessToken, orderId);
+      if (payment.provider !== "RAZORPAY" || payment.currency !== "INR" || payment.amount <= 0) throw new Error("The payment amount could not be confirmed.");
+      setRazorpayOrder(payment);
+      setPaymentState("idle");
+    } catch (err) {
+      setPaymentState("failed");
+      setError(err instanceof Error ? err.message : "Unable to prepare payment");
+    }
   }
 
-  if (createdOrder) return <main className="mx-auto max-w-2xl px-4 py-16 text-center md:py-20"><div className="lt-card p-6 md:p-8"><CheckCircle2 className="mx-auto text-[var(--lt-success)]" size={38} /><p className="lt-label mt-4">Order created</p><h1 className="lt-heading-2 mt-2">Ready for payment</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Order {createdOrder.order_number} is pending payment. Your order is confirmed only after the payment provider verifies it.</p>{paymentSession ? <button type="button" disabled={openingPayment} onClick={() => { void openCashfree(); }} className="lt-btn lt-btn-primary mt-6 w-full">{openingPayment ? <><Loader2 size={16} className="animate-spin" /> Opening payment...</> : "Continue to secure payment"}</button> : <p role="alert" className="mt-6 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error || "Payment checkout is unavailable for this order."}</p>}<Link href={`/orders/${createdOrder.id}`} className="lt-btn lt-btn-ghost mt-3 inline-flex">View order details</Link></div></main>;
+  const update = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, [field]: event.target.value }));
+  function openRazorpay() {
+    if (!razorpayOrder || paymentState === "opening" || paymentState === "verifying") return;
+    setError("");
+    if (!razorpayReady || !window.Razorpay) { setPaymentState("failed"); setError("Payment checkout is unavailable. Please try again later."); return; }
+    paymentCallbackHandled.current = false;
+    setPaymentState("opening");
+    const verify = async (response: RazorpayResult) => {
+      if (paymentCallbackHandled.current) return;
+      paymentCallbackHandled.current = true;
+      setPaymentState("verifying");
+      try {
+        if (!accessToken || !callbackMatchesOrder(response, razorpayOrder)) throw new Error("Payment verification failed.");
+        const result = await verifyRazorpayPayment(accessToken, razorpayOrder.order_id, response);
+        if (!isBackendPaymentSuccess(result.payment_status)) throw new Error("Payment verification failed.");
+        setPaymentState("success");
+      } catch (err) {
+        setPaymentState("failed");
+        setError(err instanceof Error ? err.message : "Payment verification failed.");
+      }
+    };
+    try {
+      const options = buildRazorpayCheckoutOptions(
+        razorpayOrder,
+        createdOrder?.order_number ?? "",
+        { name: form.name, email: form.email, contact: form.phone },
+        (response) => { void verify(response); },
+        () => { if (!paymentCallbackHandled.current) { setPaymentState("cancelled"); setError("Payment was cancelled."); } },
+      );
+      const checkout = new window.Razorpay(options);
+      checkout.on?.("payment.failed", (response) => {
+        if (paymentCallbackHandled.current) return;
+        paymentCallbackHandled.current = true;
+        setPaymentState("failed");
+        setError(response.error?.description || "Payment failed. Please try again.");
+      });
+      checkout.open();
+    } catch {
+      setPaymentState("failed");
+      setError("Unable to open payment checkout. Please try again.");
+    }
+  }
 
-  return <><Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="afterInteractive" /><main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
+  const razorpayScript = <Script src={RAZORPAY_CHECKOUT_SCRIPT_URL} strategy="afterInteractive" onLoad={() => setRazorpayReady(true)} onError={() => setError("Payment checkout is unavailable. Please try again later.")} />;
+
+  if (createdOrder) return <>{razorpayScript}<main className="mx-auto max-w-2xl px-4 py-16 text-center md:py-20"><div className="lt-card p-6 md:p-8"><CheckCircle2 className="mx-auto text-[var(--lt-success)]" size={38} /><p className="lt-label mt-4">{paymentState === "success" ? "Payment successful" : "Order created"}</p><h1 className="lt-heading-2 mt-2">{paymentState === "success" ? "Thank you for your order" : "Ready for payment"}</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Order {createdOrder.order_number} · {createdOrder.currency} {createdOrder.total.toLocaleString("en-IN")}<br />Your order is confirmed only after the payment provider verifies it.</p>{paymentState === "success" ? <p className="mt-6 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">Payment verified by LeTrusto. Fulfillment will continue from your order record.</p> : razorpayOrder ? <button type="button" disabled={paymentState === "opening" || paymentState === "verifying"} onClick={openRazorpay} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "opening" ? <><Loader2 size={16} className="animate-spin" /> Opening Razorpay...</> : paymentState === "verifying" ? <><Loader2 size={16} className="animate-spin" /> Verifying payment...</> : "Continue to secure payment"}</button> : <button type="button" disabled={paymentState === "creating"} onClick={() => { void prepareRazorpayOrder(createdOrder.id); }} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "creating" ? <><Loader2 size={16} className="animate-spin" /> Creating payment...</> : "Retry payment setup"}</button>}{error && <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}<Link href={`/orders/${createdOrder.id}`} className="lt-btn lt-btn-ghost mt-3 inline-flex">View order details</Link></div></main></>;
+
+  return <>{razorpayScript}<main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
     <header><p className="lt-label">Secure checkout</p><h1 className="lt-heading-2 mt-1">Checkout</h1><p className="mt-2 text-sm text-[var(--text-muted)]">Review your details before continuing to payment.</p></header>
     <form onSubmit={(event) => { void submit(event); }} className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
       <section className="space-y-6">

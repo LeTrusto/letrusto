@@ -84,3 +84,20 @@ export type PaymentSession = {
   amount: number;
   currency: string;
 };
+
+export type RazorpayOrder = {
+  order_id: string;
+  provider: "RAZORPAY";
+  key_id: string;
+  razorpay_order_id: string;
+  amount: number;
+  currency: "INR";
+};
+
+export type PaymentStatus = {
+  order_id: string;
+  payment_status: string;
+  order_status: string;
+  fulfillment_status: string;
+  provider_reference?: string | null;
+};

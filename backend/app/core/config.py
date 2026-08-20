@@ -73,6 +73,12 @@ class Settings(BaseSettings):
     CASHFREE_RETURN_URL: str = "http://localhost:3000/orders/{order_id}"
     CASHFREE_NOTIFY_URL: str = "http://localhost:8000/api/v1/payments/cashfree/webhook"
 
+    # Razorpay Payments. Keep sandbox as the default; production must be explicit.
+    RAZORPAY_ENV: str = "sandbox"
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
+    RAZORPAY_WEBHOOK_SECRET: str = ""
+
     # Rate limiting (requests per minute per IP)
     RATE_LIMIT_AUTH: int = 10
     RATE_LIMIT_DEFAULT: int = 120
@@ -103,4 +109,10 @@ def get_settings() -> Settings:
         raise ValueError("CASHFREE_ENV must be sandbox or production")
     if s.APP_ENV == "production" and s.CASHFREE_ENV != "production":
         raise RuntimeError("Production app requires CASHFREE_ENV=production")
+    if s.RAZORPAY_ENV not in {"sandbox", "production"}:
+        raise ValueError("RAZORPAY_ENV must be sandbox or production")
+    if s.APP_ENV == "production" and (
+        not s.RAZORPAY_KEY_ID or not s.RAZORPAY_KEY_SECRET or not s.RAZORPAY_WEBHOOK_SECRET
+    ):
+        raise RuntimeError("Production app requires RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, and RAZORPAY_WEBHOOK_SECRET when Razorpay is configured.")
     return s

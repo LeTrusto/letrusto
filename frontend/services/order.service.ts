@@ -1,5 +1,5 @@
 import { buildApiUrl } from "@/services/api";
-import type { CancellationStatus, CreateOrderPayload, Order, OrderList, PaymentSession } from "@/types/orders";
+import type { CancellationStatus, CreateOrderPayload, Order, OrderList, PaymentSession, PaymentStatus, RazorpayOrder } from "@/types/orders";
 
 async function orderRequest<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(buildApiUrl(path), {
@@ -39,4 +39,15 @@ export function createCashfreeSession(token: string, orderId: string) {
 
 export function verifyCashfreePayment(token: string, orderId: string) {
   return orderRequest<{ payment_status: string; order_status: string; fulfillment_status: string }>(`/orders/${orderId}/payment-status`, token);
+}
+
+export function createRazorpayOrder(token: string, orderId: string) {
+  return orderRequest<RazorpayOrder>(`/orders/${orderId}/razorpay-order`, token, { method: "POST" });
+}
+
+export function verifyRazorpayPayment(token: string, orderId: string, payload: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
+  return orderRequest<PaymentStatus>(`/orders/${orderId}/razorpay/verify`, token, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
