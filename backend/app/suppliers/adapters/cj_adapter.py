@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import datetime, timezone
@@ -28,6 +29,8 @@ _DEFAULT_TOKEN_TTL_SECONDS = 900
 _TOKEN_REFRESH_SKEW_SECONDS = 30
 _cached_access_token = ""
 _cached_token_expires_at = 0.0
+_request_lock = asyncio.Lock()
+_last_request_at = 0.0
 
 
 class CJAdapter:
@@ -49,9 +52,11 @@ class CJAdapter:
     async def _get(self, path: str, params: dict[str, Any] | None = None) -> dict:
         transport = httpx.AsyncHTTPTransport(retries=1)
         async with httpx.AsyncClient(timeout=30, transport=transport) as client:
+            await self._throttle_requests()
             resp = await client.get(f"{_BASE_URL}{path}", headers=self._headers(), params=params)
             if resp.status_code == 401 and path != "/authentication/getAccessToken":
                 await self.authenticate(force=True)
+                await self._throttle_requests()
                 resp = await client.get(f"{_BASE_URL}{path}", headers=self._headers(), params=params)
             resp.raise_for_status()
             return resp.json()
@@ -59,12 +64,22 @@ class CJAdapter:
     async def _post(self, path: str, json_body: dict | None = None) -> dict:
         transport = httpx.AsyncHTTPTransport(retries=1)
         async with httpx.AsyncClient(timeout=30, transport=transport) as client:
+            await self._throttle_requests()
             resp = await client.post(f"{_BASE_URL}{path}", headers=self._headers(), json=json_body or {})
             if resp.status_code == 401 and path != "/authentication/getAccessToken":
                 await self.authenticate(force=True)
+                await self._throttle_requests()
                 resp = await client.post(f"{_BASE_URL}{path}", headers=self._headers(), json=json_body or {})
             resp.raise_for_status()
             return resp.json()
+
+    async def _throttle_requests(self) -> None:
+        global _last_request_at
+        async with _request_lock:
+            delay = 1.05 - (time.monotonic() - _last_request_at)
+            if delay > 0:
+                await asyncio.sleep(delay)
+            _last_request_at = time.monotonic()
 
     # ── authentication ───────────────────────────────────
 
