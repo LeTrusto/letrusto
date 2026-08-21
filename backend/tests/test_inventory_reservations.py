@@ -104,9 +104,10 @@ def test_factory_inventory_never_increases_availability():
     db = SessionLocal()
     user, other, product, _ = fixture(db, inventory=0, factory_inventory=999)
     try:
+        reservations_before = db.query(InventoryReservation).count()
         with pytest.raises(BadRequestError, match="out of stock"):
             OrderService(db).create_order(user, payload(product.slug, "factory-only"))
-        assert db.query(InventoryReservation).count() == 0
+        assert db.query(InventoryReservation).count() == reservations_before
     finally:
         cleanup(db, user, other, product)
 

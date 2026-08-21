@@ -289,6 +289,45 @@ class ProductVariant(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     product: Mapped[Product] = relationship(back_populates="variants")
+    warehouse_inventory: Mapped[list["SupplierVariantInventory"]] = relationship(
+        back_populates="variant", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class SupplierVariantInventory(Base):
+    __tablename__ = "supplier_variant_inventory"
+    __table_args__ = (
+        UniqueConstraint(
+            "supplier",
+            "supplier_variant_id",
+            "warehouse_identity",
+            name="uq_supplier_variant_inventory_identity",
+        ),
+        Index("ix_supplier_variant_inventory_variant_country", "variant_id", "warehouse_country"),
+        Index("ix_supplier_variant_inventory_product_variant", "product_id", "supplier_variant_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    variant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=False
+    )
+    supplier: Mapped[str] = mapped_column(String(40), nullable=False, default="cj")
+    supplier_product_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    supplier_variant_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    warehouse_identity: Mapped[str] = mapped_column(String(180), nullable=False)
+    warehouse_country: Mapped[str] = mapped_column(String(20), nullable=False)
+    storage_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    warehouse_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    total_inventory: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cj_sellable_inventory: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    factory_inventory: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    verification_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    last_synced_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    variant: Mapped[ProductVariant] = relationship(back_populates="warehouse_inventory")
 
 
 class ProductMarketEvidence(Base):

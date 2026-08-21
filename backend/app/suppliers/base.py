@@ -20,6 +20,18 @@ class InventorySnapshot:
     cj_inventory: int
     factory_inventory: int
     verification_status: str | None = None
+    warehouses: list["WarehouseInventorySnapshot"] = field(default_factory=list)
+
+
+@dataclass
+class WarehouseInventorySnapshot:
+    warehouse_country: str
+    storage_id: str | None
+    warehouse_name: str | None
+    total_inventory: int
+    cj_inventory: int
+    factory_inventory: int
+    verification_status: str | None = None
 
 
 @dataclass
@@ -70,6 +82,7 @@ class RawVariant:
     inventory_verification: str | None = None
     warehouse_country: str = ""
     barcode: str = ""
+    warehouses: list[WarehouseInventorySnapshot] = field(default_factory=list)
 
 
 @dataclass
@@ -79,6 +92,8 @@ class ShippingOption:
     cost_usd: float
     estimated_days: str
     trackable: bool = True
+    storage_id: str | None = None
+    provider_metadata: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass
@@ -89,6 +104,7 @@ class ShippingResult:
     origin_country: str = ""
     destination_country: str = ""
     error: str = ""
+    error_details: object | None = None
 
 
 @dataclass
@@ -97,6 +113,7 @@ class SupplierOrderResult:
     supplier_order_id: str | None = None
     status: str = "FAILED"
     error: str = ""
+    error_details: object | None = None
 
 
 @dataclass

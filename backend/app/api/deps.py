@@ -27,6 +27,7 @@ from app.services.order_service import OrderService
 from app.services.cashfree_service import CashfreeService
 from app.services.razorpay_service import RazorpayService
 from app.services.fulfillment_service import FulfillmentService
+from app.services.fulfillment_preflight_service import FulfillmentPreflightService
 from app.services.product_service import ProductService
 from app.services.support_service import SupportService
 from app.services.user_service import UserService
@@ -61,6 +62,10 @@ def get_cancellation_service(db: Session = Depends(get_db)) -> "CancellationServ
 
 def get_fulfillment_service(db: Session = Depends(get_db)) -> FulfillmentService:
     return FulfillmentService(db)
+
+
+def get_fulfillment_preflight_service(db: Session = Depends(get_db)) -> FulfillmentPreflightService:
+    return FulfillmentPreflightService(db)
 
 
 def get_favorite_service(db: Session = Depends(get_db)) -> FavoriteService:

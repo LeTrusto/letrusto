@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
@@ -20,6 +21,7 @@ from app.suppliers.base import (
     SupplierTrackingResult,
     ShippingValidation,
     SupplierCategory,
+    WarehouseInventorySnapshot,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,87 @@ _cached_access_token = ""
 _cached_token_expires_at = 0.0
 _request_lock = asyncio.Lock()
 _last_request_at = 0.0
+
+CJ_ORDER_ENDPOINTS = {
+    "V2": "/shopping/order/createOrderV2",
+    "V3": "/shopping/order/createOrderV3",
+}
+
+
+@dataclass(frozen=True)
+class CJOrderProduct:
+    vid: str
+    quantity: int
+
+
+@dataclass(frozen=True)
+class CJOrderRequest:
+    order_number: str
+    shipping_customer_name: str
+    shipping_phone: str
+    shipping_address: str
+    shipping_city: str
+    shipping_province: str
+    shipping_zip: str
+    shipping_country: str
+    shipping_country_code: str
+    from_country_code: str
+    logistic_name: str
+    products: tuple[CJOrderProduct, ...]
+
+
+@dataclass(frozen=True)
+class CJErrorDetails:
+    http_status: int | None
+    cj_code: int | str | None
+    cj_message: str
+    request_id: str | None
+    endpoint: str
+    timestamp: str
+    operation: str
+
+
+class CJAPIError(httpx.HTTPError):
+    def __init__(self, details: CJErrorDetails) -> None:
+        self.details = details
+        super().__init__(self._message())
+
+    def _message(self) -> str:
+        status = f"HTTP {self.details.http_status}" if self.details.http_status else "CJ error"
+        code = f" code={self.details.cj_code}" if self.details.cj_code is not None else ""
+        request_id = f" request_id={self.details.request_id}" if self.details.request_id else ""
+        return f"{status}{code}: {self.details.cj_message}{request_id}"
+
+
+def build_cj_order_payload(request: CJOrderRequest) -> dict[str, object]:
+    required = {
+        "orderNumber": request.order_number,
+        "shippingCustomerName": request.shipping_customer_name,
+        "shippingPhone": request.shipping_phone,
+        "shippingAddress": request.shipping_address,
+        "shippingCity": request.shipping_city,
+        "shippingProvince": request.shipping_province,
+        "shippingZip": request.shipping_zip,
+        "shippingCountry": request.shipping_country,
+        "shippingCountryCode": request.shipping_country_code,
+        "fromCountryCode": request.from_country_code,
+        "logisticName": request.logistic_name,
+    }
+    missing = [name for name, value in required.items() if not str(value).strip()]
+    if missing:
+        raise ValueError(f"CJ order request is missing: {', '.join(missing)}")
+    if not request.products:
+        raise ValueError("CJ order request is missing: products")
+
+    products: list[dict[str, object]] = []
+    for index, product in enumerate(request.products):
+        if not product.vid.strip():
+            raise ValueError(f"CJ order product {index} is missing: vid")
+        if isinstance(product.quantity, bool) or not isinstance(product.quantity, int) or product.quantity <= 0:
+            raise ValueError(f"CJ order product {index} has invalid quantity")
+        products.append({"vid": product.vid, "quantity": product.quantity})
+
+    return {**required, "products": products}
 
 
 class CJAdapter:
@@ -50,6 +133,28 @@ class CJAdapter:
             h["CJ-Access-Token"] = _cached_access_token
         return h
 
+    @staticmethod
+    def _raise_for_cj_error(resp: httpx.Response, path: str, operation: str) -> None:
+        if resp.status_code < 400:
+            return
+        body: dict[str, Any] = {}
+        try:
+            parsed = resp.json()
+            if isinstance(parsed, dict):
+                body = parsed
+        except (ValueError, TypeError):
+            pass
+        details = CJErrorDetails(
+            http_status=resp.status_code,
+            cj_code=body.get("code"),
+            cj_message=str(body.get("message") or resp.reason_phrase or "CJ request failed"),
+            request_id=body.get("requestId") or body.get("request_id"),
+            endpoint=path,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            operation=operation,
+        )
+        raise CJAPIError(details)
+
     async def _get(self, path: str, params: dict[str, Any] | None = None) -> dict:
         transport = httpx.AsyncHTTPTransport(retries=1)
         async with httpx.AsyncClient(timeout=30, transport=transport) as client:
@@ -59,7 +164,7 @@ class CJAdapter:
                 await self.authenticate(force=True)
                 await self._throttle_requests()
                 resp = await client.get(f"{_BASE_URL}{path}", headers=self._headers(), params=params)
-            resp.raise_for_status()
+            self._raise_for_cj_error(resp, path, "GET")
             return resp.json()
 
     async def _post(self, path: str, json_body: dict | None = None) -> dict:
@@ -71,7 +176,7 @@ class CJAdapter:
                 await self.authenticate(force=True)
                 await self._throttle_requests()
                 resp = await client.post(f"{_BASE_URL}{path}", headers=self._headers(), json=json_body or {})
-            resp.raise_for_status()
+            self._raise_for_cj_error(resp, path, "POST")
             return resp.json()
 
     async def _throttle_requests(self) -> None:
@@ -187,8 +292,11 @@ class CJAdapter:
     async def get_product(self, product_id: str, *, strict: bool = False) -> RawSupplierProduct | None:
         try:
             data = await self._get("/product/query", {"pid": product_id})
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code != 404:
+        except (CJAPIError, httpx.HTTPStatusError) as exc:
+            status_code = (
+                exc.details.http_status if isinstance(exc, CJAPIError) else exc.response.status_code
+            )
+            if status_code != 404:
                 raise
             data = {"result": False, "data": None}
         if not data.get("result") or not data.get("data"):
@@ -258,15 +366,32 @@ class CJAdapter:
         factory_inventory = 0
         has_inventory = False
         warehouse = "CN"
+        warehouses: list[WarehouseInventorySnapshot] = []
         for inv in v.get("inventories") or []:
             has_inventory = True
             inv_total = _safe_int(inv.get("totalInventory")) or 0
             inv_cj = _safe_int(inv.get("cjInventory"))
+            sellable = inv_cj if inv_cj is not None else inv_total
+            country = str(inv.get("countryCode") or inv.get("warehouseCountry") or "CN")
+            storage_id = _first_string(inv, "storageId", "warehouseId", "storageCode")
+            warehouse_name = _first_string(inv, "storageName", "warehouseName", "name", "storage")
+            status = _inventory_verification(inv.get("verifiedWarehouse"))
+            warehouses.append(
+                WarehouseInventorySnapshot(
+                    warehouse_country=country,
+                    storage_id=storage_id,
+                    warehouse_name=warehouse_name,
+                    total_inventory=inv_total,
+                    cj_inventory=sellable,
+                    factory_inventory=_safe_int(inv.get("factoryInventory")) or 0,
+                    verification_status=status,
+                )
+            )
             total_inventory += inv_total
-            cj_inventory += inv_cj if inv_cj is not None else inv_total
+            cj_inventory += sellable
             factory_inventory += _safe_int(inv.get("factoryInventory")) or 0
-            if (inv_cj if inv_cj is not None else inv_total) > 0:
-                warehouse = inv.get("countryCode", "CN")
+            if sellable > 0:
+                warehouse = country
 
         return RawVariant(
             supplier_variant_id=v.get("vid", ""),
@@ -288,6 +413,7 @@ class CJAdapter:
             ),
             warehouse_country=warehouse,
             barcode=v.get("barcode", ""),
+            warehouses=warehouses,
         )
 
     # ── variants ─────────────────────────────────────────
@@ -311,15 +437,33 @@ class CJAdapter:
         cj_inventory = 0
         factory_inventory = 0
         verification_status: str | None = None
+        warehouses: list[WarehouseInventorySnapshot] = []
         for entry in entries or []:
             if strict and any(
                 type(entry.get(field)) is not int
                 for field in ("totalInventoryNum", "cjInventoryNum", "factoryInventoryNum")
             ):
                 return None
-            total += _safe_int(entry.get("totalInventoryNum")) or 0
-            cj_inventory += _safe_int(entry.get("cjInventoryNum")) or 0
-            factory_inventory += _safe_int(entry.get("factoryInventoryNum")) or 0
+            entry_total = _safe_int(entry.get("totalInventoryNum")) or 0
+            entry_cj = _safe_int(entry.get("cjInventoryNum")) or 0
+            entry_factory = _safe_int(entry.get("factoryInventoryNum")) or 0
+            country = str(entry.get("countryCode") or entry.get("warehouseCountry") or "CN")
+            storage_id = _first_string(entry, "storageId", "warehouseId", "storageCode")
+            warehouse_name = _first_string(entry, "storageName", "warehouseName", "storage")
+            warehouses.append(
+                WarehouseInventorySnapshot(
+                    warehouse_country=country,
+                    storage_id=storage_id,
+                    warehouse_name=warehouse_name,
+                    total_inventory=entry_total,
+                    cj_inventory=entry_cj,
+                    factory_inventory=entry_factory,
+                    verification_status=_inventory_verification(entry.get("verifiedWarehouse")),
+                )
+            )
+            total += entry_total
+            cj_inventory += entry_cj
+            factory_inventory += entry_factory
             status = _inventory_verification(entry.get("verifiedWarehouse"))
             if status == "verified":
                 verification_status = status
@@ -330,6 +474,7 @@ class CJAdapter:
             cj_inventory=cj_inventory,
             factory_inventory=factory_inventory,
             verification_status=verification_status,
+            warehouses=warehouses,
         )
 
     # ── shipping ─────────────────────────────────────────
@@ -359,6 +504,15 @@ class CJAdapter:
                 destination_country=destination_country,
                 error=f"HTTP {exc.response.status_code}",
             )
+        except CJAPIError as exc:
+            return ShippingResult(
+                can_ship=False,
+                validation=ShippingValidation.UNKNOWN,
+                origin_country=origin_country,
+                destination_country=destination_country,
+                error=exc.details.cj_message,
+                error_details=exc.details,
+            )
 
         if not data.get("result") or not data.get("data"):
             return ShippingResult(
@@ -375,6 +529,12 @@ class CJAdapter:
                 method=opt.get("logisticName", ""),
                 cost_usd=_safe_float(opt.get("logisticPrice")) or 0.0,
                 estimated_days=opt.get("logisticAging", "UNKNOWN"),
+                storage_id=opt.get("storageId"),
+                provider_metadata={
+                    key: opt[key]
+                    for key in ("channelId", "optionId", "logisticsModel")
+                    if opt.get(key) is not None
+                },
             )
             for opt in data["data"]
         ]
@@ -387,14 +547,34 @@ class CJAdapter:
             destination_country=destination_country,
         )
 
-    async def create_order(self, payload: dict) -> SupplierOrderResult:
-        """Submit a validated order through CJ's existing authenticated API client."""
+    async def create_order(
+        self, request: CJOrderRequest, *, version: Literal["V2", "V3"] = "V3"
+    ) -> SupplierOrderResult:
+        """Create an order using the verified current CJ V2/V3 contract.
+
+        Payment is intentionally not selected here. The caller must implement and
+        explicitly authorize the supplier-side payment flow before using this API.
+        """
         try:
-            data = await self._post("/shopping/order/createOrder", payload)
-        except httpx.HTTPError as exc:
-            return SupplierOrderResult(accepted=False, error=f"CJ order request failed: {exc}")
+            path = CJ_ORDER_ENDPOINTS[version]
+        except KeyError as exc:
+            raise ValueError(f"Unsupported CJ order API version: {version}") from exc
+        data = await self._post(path, build_cj_order_payload(request))
         if not data.get("result"):
-            return SupplierOrderResult(accepted=False, error=data.get("message", "CJ rejected order"))
+            details = CJErrorDetails(
+                http_status=None,
+                cj_code=data.get("code"),
+                cj_message=str(data.get("message", "CJ rejected order")),
+                request_id=data.get("requestId"),
+                endpoint=path,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                operation="POST",
+            )
+            return SupplierOrderResult(
+                accepted=False,
+                error=details.cj_message,
+                error_details=details,
+            )
         body = data.get("data") or {}
         supplier_order_id = body.get("orderId") or body.get("orderNum") or body.get("orderNumber")
         if not supplier_order_id:
@@ -435,6 +615,14 @@ def _inventory_verification(value: Any) -> str | None:
         return "verified"
     if value in (2, "2", False):
         return "unverified"
+    return None
+
+
+def _first_string(payload: dict[str, Any], *keys: str) -> str | None:
+    for key in keys:
+        value = payload.get(key)
+        if value is not None and str(value).strip():
+            return str(value)
     return None
 
 

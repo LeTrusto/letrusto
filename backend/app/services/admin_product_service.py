@@ -14,7 +14,15 @@ from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.catalog_readiness import resolve_cj_category
 from app.models.entities import Brand, Category
 from app.services.catalog_readiness_service import CatalogReadinessService
-from app.models.entities import Product, ProductImage, ProductMarketEvidence, ProductVariant, SupplierCandidate, User
+from app.models.entities import (
+    Product,
+    ProductImage,
+    ProductMarketEvidence,
+    ProductVariant,
+    SupplierCandidate,
+    SupplierVariantInventory,
+    User,
+)
 from app.schemas.admin_products import (
     AdminProductDTO,
     AdminProductListResponse,
@@ -831,6 +839,7 @@ class AdminProductService:
             variant.cj_inventory = snapshot.cj_inventory
             variant.factory_inventory = snapshot.factory_inventory
             variant.verified_warehouse = snapshot.verification_status
+            self._sync_variant_warehouse_inventory(product, variant, snapshot)
 
         product.total_inventory = sum(snapshot.total_inventory for _, snapshot in snapshots)
         product.cj_inventory = sum(snapshot.cj_inventory for _, snapshot in snapshots)
@@ -842,6 +851,47 @@ class AdminProductService:
         product.last_supplier_sync_at = datetime.now(timezone.utc)
         self.db.commit()
         return self._dto(self._get(product.id))
+
+    def _sync_variant_warehouse_inventory(self, product, variant, snapshot) -> None:
+        if not snapshot.warehouses:
+            return
+        identities = set()
+        for warehouse in snapshot.warehouses:
+            identity = warehouse.storage_id or f"{warehouse.warehouse_country}:{warehouse.warehouse_name or ''}"
+            identities.add(identity)
+            record = self.db.scalar(
+                select(SupplierVariantInventory).where(
+                    SupplierVariantInventory.supplier == product.supplier,
+                    SupplierVariantInventory.supplier_variant_id == variant.supplier_variant_id,
+                    SupplierVariantInventory.warehouse_identity == identity,
+                )
+            )
+            if record is None:
+                record = SupplierVariantInventory(
+                    product_id=product.id,
+                    variant_id=variant.id,
+                    supplier=product.supplier or "",
+                    supplier_product_id=product.supplier_product_id or "",
+                    supplier_variant_id=variant.supplier_variant_id,
+                    warehouse_identity=identity,
+                )
+                self.db.add(record)
+            record.product_id = product.id
+            record.variant_id = variant.id
+            record.supplier_product_id = product.supplier_product_id or ""
+            record.warehouse_country = warehouse.warehouse_country
+            record.storage_id = warehouse.storage_id
+            record.warehouse_name = warehouse.warehouse_name
+            record.total_inventory = warehouse.total_inventory
+            record.cj_sellable_inventory = warehouse.cj_inventory
+            record.factory_inventory = warehouse.factory_inventory
+            record.verification_status = warehouse.verification_status
+            record.last_synced_at = datetime.now(timezone.utc)
+
+        self.db.query(SupplierVariantInventory).filter(
+            SupplierVariantInventory.variant_id == variant.id,
+            SupplierVariantInventory.warehouse_identity.not_in(identities),
+        ).delete(synchronize_session=False)
 
     async def revalidate_supplier(self, product_id: UUID) -> AdminProductDTO:
         product = self._get(product_id)

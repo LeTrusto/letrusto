@@ -6,10 +6,12 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from uuid import UUID
 from pydantic import BaseModel
 
-from app.api.deps import get_current_admin
+from app.api.deps import get_current_admin, get_fulfillment_preflight_service
 from app.models.entities import User
+from app.services.fulfillment_preflight_service import FulfillmentPreflightResult, FulfillmentPreflightService
 from app.suppliers.base import ShippingValidation
 from app.suppliers.economics import EconomicsConfig, calculate_economics
 from app.suppliers.factory import build_supplier_adapter
@@ -71,6 +73,46 @@ class SupplierHealthDTO(BaseModel):
     supplier: str
     authenticated: bool
     error: str | None = None
+
+
+class FulfillmentPreflightDTO(BaseModel):
+    fulfillable: bool
+    vid: str
+    product_id: UUID
+    variant_id: UUID
+    origin_country: str | None = None
+    warehouse_id: str | None = None
+    warehouse_name: str | None = None
+    sellable_inventory: int
+    requested_quantity: int
+    logistic_name: str | None = None
+    shipping_cost: float | None = None
+    delivery_estimate: str | None = None
+    reason: str | None = None
+    error_classification: str | None = None
+    checked_at: str
+
+
+@router.get("/preflight/{product_id}/{variant_id}", response_model=FulfillmentPreflightDTO)
+async def fulfillment_preflight(
+    product_id: UUID,
+    variant_id: UUID,
+    quantity: int = Query(1, ge=1),
+    destination: str = Query("IN", min_length=2, max_length=2),
+    logistics_name: str | None = Query(None),
+    storage_id: str | None = Query(None),
+    _: User = Depends(get_current_admin),
+    service: FulfillmentPreflightService = Depends(get_fulfillment_preflight_service),
+) -> FulfillmentPreflightDTO:
+    result = await service.check(
+        product_id=product_id,
+        variant_id=variant_id,
+        quantity=quantity,
+        destination_country=destination.upper(),
+        logistics_name=logistics_name,
+        storage_id=storage_id,
+    )
+    return _preflight_dto(result)
 
 
 @router.get("/health", response_model=SupplierHealthDTO)
@@ -236,4 +278,24 @@ def _empty_summary(supplier: str, reason: str) -> ValidationSummaryDTO:
         missing_data_fields={},
         shipping_validation_status=reason,
         products=[],
+    )
+
+
+def _preflight_dto(result: FulfillmentPreflightResult) -> FulfillmentPreflightDTO:
+    return FulfillmentPreflightDTO(
+        fulfillable=result.status == "FULFILLABLE",
+        vid=result.supplier_variant_id,
+        product_id=result.product_id,
+        variant_id=result.variant_id,
+        origin_country=result.origin_country,
+        warehouse_id=result.storage_id,
+        warehouse_name=result.warehouse_name,
+        sellable_inventory=result.sellable_inventory,
+        requested_quantity=result.requested_quantity,
+        logistic_name=result.logistics_name,
+        shipping_cost=result.shipping_cost_usd,
+        delivery_estimate=result.delivery_estimate,
+        reason=result.reason,
+        error_classification=result.error_classification,
+        checked_at=result.checked_at.isoformat(),
     )

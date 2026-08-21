@@ -20,7 +20,11 @@ class FakeCJ:
 
     async def create_order(self, payload):
         self.calls.append(payload)
-        return SupplierOrderResult(accepted=True, supplier_order_id="CJ-ORDER-1", status="SUBMITTED")
+        return SupplierOrderResult(
+            accepted=True,
+            supplier_order_id=f"CJ-ORDER-{payload['products'][0]['pid']}",
+            status="SUBMITTED",
+        )
 
     async def get_tracking(self, supplier_order_id):
         return SupplierTrackingResult(supported=True, supplier_status="shipped", tracking_number="TRACK-1", carrier="Test Carrier", shipped_at="2026-08-18T10:00:00Z")
@@ -71,8 +75,8 @@ def test_paid_order_maps_stored_cj_ids_and_is_idempotent(monkeypatch):
         service = FulfillmentService(db)
         first = asyncio.run(service.submit(order.id))
         second = asyncio.run(service.submit(order.id))
-        assert first.supplier_order_id == "CJ-ORDER-1"
-        assert second.supplier_order_id == "CJ-ORDER-1"
+        assert first.supplier_order_id == f"CJ-ORDER-{product.supplier_product_id}"
+        assert second.supplier_order_id == f"CJ-ORDER-{product.supplier_product_id}"
         assert len(fake.calls) == 1
         assert fake.calls[0]["products"][0]["pid"] == product.supplier_product_id
         assert fake.calls[0]["products"][0]["vid"] == product.variants[0].supplier_variant_id
@@ -97,7 +101,7 @@ def test_tracking_sync_maps_status_persists_tracking_and_preserves_delivered(mon
     monkeypatch.setattr("app.services.fulfillment_service.build_supplier_adapter", lambda _: fake)
     monkeypatch.setattr("app.services.fulfillment_service.get_settings", lambda: SimpleNamespace(CJ_API_KEY="configured"))
     try:
-        order.supplier_order_id = "CJ-ORDER-1"; order.fulfillment_status = "PROCESSING"; db.commit()
+        order.supplier_order_id = f"CJ-ORDER-{product.supplier_product_id}"; order.fulfillment_status = "PROCESSING"; db.commit()
         synced = asyncio.run(FulfillmentService(db).sync_tracking(order.id))
         assert synced.fulfillment_status == "SHIPPED"
         assert synced.tracking_number == "TRACK-1"
@@ -118,7 +122,7 @@ def test_unknown_tracking_status_does_not_downgrade_or_erase_tracking(monkeypatc
     monkeypatch.setattr("app.services.fulfillment_service.build_supplier_adapter", lambda _: fake)
     monkeypatch.setattr("app.services.fulfillment_service.get_settings", lambda: SimpleNamespace(CJ_API_KEY="configured"))
     try:
-        order.supplier_order_id = "CJ-ORDER-1"; order.fulfillment_status = "SHIPPED"; order.tracking_number = "KEEP-1"; db.commit()
+        order.supplier_order_id = f"CJ-ORDER-{product.supplier_product_id}"; order.fulfillment_status = "SHIPPED"; order.tracking_number = "KEEP-1"; db.commit()
         result = asyncio.run(FulfillmentService(db).sync_tracking(order.id))
         assert result.fulfillment_status == "SHIPPED"
         assert result.tracking_number == "KEEP-1"
