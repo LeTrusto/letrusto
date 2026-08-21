@@ -56,6 +56,7 @@ type Product = {
   factory_inventory: number | null;
   verified_warehouse: string | null;
   images: string[];
+  reference_data: Record<string, unknown>;
   variants: Variant[];
 };
 
@@ -83,6 +84,7 @@ type SupplierCandidate = {
   supplier_sku: string | null;
   name: string;
   approval_status: "REVIEW" | "APPROVED" | "REJECTED" | "IMPORTED";
+  readiness_status: "DISCOVERED" | "VALIDATED" | "REJECTED" | "REVIEW";
   supplier_validation_status: "PASS" | "REVIEW" | "REJECT" | null;
   supplier_validation_score: number | null;
   commercial_status: "REVIEW" | "APPROVED" | "REJECTED";
@@ -91,6 +93,12 @@ type SupplierCandidate = {
   discovery_max_selling_price_inr: number | null;
   snapshot_status: "AVAILABLE" | "LEGACY_SNAPSHOT_UNAVAILABLE";
   main_image: string | null;
+  images: string[];
+  warehouses: Array<{ supplier_variant_id?: string; warehouse_country?: string; storage_id?: string | null; warehouse_name?: string | null; total_inventory?: number; cj_inventory?: number; factory_inventory?: number; verification_status?: string | null }>;
+  logistics: { available?: boolean; validation?: string | null; origin_country?: string | null; destination_country?: string | null; selected?: { carrier?: string; method?: string; cost_usd?: number; estimated_days?: string } | null };
+  freight: { available?: boolean; cost_usd?: number | null; cost_inr?: number | string | null; delivery_estimate?: string | null };
+  commercial_result: { minimum_price_inr?: number | string | null; maximum_price_inr?: number | string | null; target_margin_percent?: number | string | null; cac_viable?: boolean | null; failure_reasons?: string[] };
+  failure_reasons: string[];
   validation_issues: string[];
   target_margin_percent: number | null;
   target_cac_inr: number | null;
@@ -584,10 +592,15 @@ export default function AdminProductsView() {
                     <details className="mt-1 text-xs font-normal text-[var(--text-muted)]">
                       <summary className="cursor-pointer">Validation, pricing and variants</summary>
                       <div className="mt-2 max-w-[42rem] space-y-2 whitespace-normal">
+                        <p className="font-semibold">Readiness: {candidate.readiness_status}</p>
                         <p className="font-semibold">{candidate.snapshot_status === "AVAILABLE" ? "Variant snapshot available" : "Variant snapshot unavailable because this candidate predates snapshot capture"}</p>
                         {candidate.snapshot_status === "AVAILABLE" && candidate.main_image && <Image src={candidate.main_image} alt="" width={48} height={48} className="h-12 w-12 object-cover rounded" />}
                         <p>Price range: {candidate.discovery_min_selling_price_inr == null ? "-" : formatInr(candidate.discovery_min_selling_price_inr)} to {candidate.discovery_max_selling_price_inr == null ? "-" : formatInr(candidate.discovery_max_selling_price_inr)} · Target margin {candidate.target_margin_percent ?? "-"}% · CAC {candidate.cac_viable == null ? "NOT REVIEWED" : candidate.cac_viable ? "VIABLE" : "NOT VIABLE"}</p>
-                        {candidate.snapshot_status === "AVAILABLE" && <p>Inventory: {candidate.variants.reduce((sum, variant) => sum + (variant.cj_inventory ?? 0), 0)} CJ · {candidate.variants.reduce((sum, variant) => sum + (variant.factory_inventory ?? 0), 0)} factory</p>}
+                        {candidate.snapshot_status === "AVAILABLE" && <p>Inventory: {candidate.variants.reduce((sum, variant) => sum + (variant.cj_inventory ?? 0), 0)} CJ sellable · {candidate.variants.reduce((sum, variant) => sum + (variant.factory_inventory ?? 0), 0)} factory</p>}
+                        <p>India freight: {candidate.freight.available ? "AVAILABLE" : "UNAVAILABLE"} · {candidate.freight.cost_inr == null ? "-" : formatInr(Number(candidate.freight.cost_inr))} · {candidate.freight.delivery_estimate ?? "No delivery estimate"}</p>
+                        <p>Logistics: {candidate.logistics.selected ? `${candidate.logistics.selected.carrier ?? "Carrier"} / ${candidate.logistics.selected.method ?? "Method"}` : "No selected route"} · Warehouse: {candidate.warehouses.length || "-"}</p>
+                        {candidate.warehouses.length > 0 && <p>Warehouses: {candidate.warehouses.map((warehouse) => `${warehouse.warehouse_name ?? warehouse.storage_id ?? "Unknown"} (${warehouse.cj_inventory ?? 0} sellable)`).join(", ")}</p>}
+                        <p>Proposed price: {candidate.commercial_result.minimum_price_inr == null ? "-" : `${formatInr(Number(candidate.commercial_result.minimum_price_inr))} to ${formatInr(Number(candidate.commercial_result.maximum_price_inr ?? candidate.commercial_result.minimum_price_inr))}`} · Margin {candidate.commercial_result.target_margin_percent ?? candidate.target_margin_percent ?? "-"}%</p>
                         {candidate.validation_issues.length > 0 && <p>Validation issues: {candidate.validation_issues.join(", ")}</p>}
                         {candidate.snapshot_status === "AVAILABLE" && <div className="overflow-x-auto">
                           <table className="w-full text-xs"><thead><tr className="text-left"><th className="pr-2">Variant</th><th className="pr-2">Cost</th><th className="pr-2">Weight</th><th>CJ / factory</th></tr></thead><tbody>{candidate.variants.map((variant) => <tr key={variant.supplier_variant_id}><td className="pr-2">{variant.supplier_variant_id} · {variant.supplier_variant_sku}</td><td className="pr-2">{variant.supplier_cost_usd == null ? "-" : `$${variant.supplier_cost_usd}`} / {variant.supplier_cost_inr == null ? "-" : formatInr(variant.supplier_cost_inr)}</td><td className="pr-2">{variant.weight_grams == null ? "-" : `${variant.weight_grams}g`}</td><td>{variant.cj_inventory ?? 0} / {variant.factory_inventory ?? 0}</td></tr>)}</tbody></table>
@@ -602,12 +615,12 @@ export default function AdminProductsView() {
                     </details>
                   </td>
                   <td className="pr-3"><span className="block">{candidate.supplier_product_id}</span><span className="text-xs text-[var(--text-muted)]">{candidate.supplier_sku ?? "No SKU"}</span></td>
-                  <td className="pr-3">{candidate.supplier_validation_status ?? "-"} {candidate.supplier_validation_score ?? "-"}</td>
+                  <td className="pr-3">{candidate.readiness_status}<span className="block text-xs text-[var(--text-muted)]">{candidate.supplier_validation_status ?? "-"} {candidate.supplier_validation_score ?? "-"}</span></td>
                   <td className="pr-3">{candidate.commercial_status}</td>
                   <td className="pr-3">{candidate.market_status} ({candidate.market_evidence_count})</td>
                   <td className="pr-3">{candidate.approval_status}</td>
                   <td><div className="flex gap-2">
-                    {(candidate.approval_status === "REVIEW" || candidate.approval_status === "REJECTED") && <button type="button" disabled={candidateWorking} onClick={() => void decideCandidate(candidate, "approve")} className="lt-btn lt-btn-primary p-2" title="Approve candidate" aria-label={`Approve ${candidate.name}`}><Check size={16} aria-hidden="true" /></button>}
+                    {(candidate.approval_status === "REVIEW" || candidate.approval_status === "REJECTED") && candidate.readiness_status !== "REJECTED" && <button type="button" disabled={candidateWorking} onClick={() => void decideCandidate(candidate, "approve")} className="lt-btn lt-btn-primary p-2" title="Approve candidate" aria-label={`Approve ${candidate.name}`}><Check size={16} aria-hidden="true" /></button>}
                     {candidate.approval_status !== "IMPORTED" && candidate.approval_status !== "REJECTED" && <button type="button" disabled={candidateWorking} onClick={() => { setRejectingCandidateId(candidate.id); setCandidateRejectionReason(""); }} className="lt-btn lt-btn-secondary p-2" title="Reject candidate" aria-label={`Reject ${candidate.name}`}><X size={16} aria-hidden="true" /></button>}
                   </div></td>
                 </tr>

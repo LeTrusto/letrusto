@@ -15,6 +15,7 @@ from app.main import app
 from app.models.entities import Product, SupplierCandidate, User
 from app.schemas.admin_products import BulkApprovedProductImportRequest, SupplierCandidateCreate
 from app.services.admin_product_service import AdminProductService
+from app.services.supplier_candidate_readiness_service import SupplierCandidateReadinessService
 from app.suppliers.base import RawSupplierProduct, RawVariant, ShippingOption, ShippingResult, ShippingValidation
 
 
@@ -124,6 +125,51 @@ def create_candidate(service, requested_id="REQUEST-SKU"):
 
 def approve_candidate(service, candidate_id, admin):
     return service.approve_supplier_candidate(candidate_id, admin)
+
+
+@pytest.mark.parametrize(
+    ("current", "target"),
+    [
+        ("DISCOVERED", "VALIDATED"),
+        ("DISCOVERED", "REVIEW"),
+        ("DISCOVERED", "REJECTED"),
+        ("REVIEW", "VALIDATED"),
+        ("REVIEW", "REJECTED"),
+    ],
+)
+def test_readiness_state_machine_allows_required_transitions(current, target):
+    assert SupplierCandidateReadinessService.transition(current, target) == target
+
+
+@pytest.mark.parametrize(
+    ("current", "target"),
+    [
+        ("VALIDATED", "DISCOVERED"),
+        ("VALIDATED", "REVIEW"),
+        ("VALIDATED", "REJECTED"),
+        ("REVIEW", "DISCOVERED"),
+        ("REJECTED", "DISCOVERED"),
+        ("REJECTED", "REVIEW"),
+        ("REJECTED", "VALIDATED"),
+        ("UNKNOWN", "REVIEW"),
+    ],
+)
+def test_readiness_state_machine_rejects_invalid_transitions(current, target):
+    with pytest.raises(BadRequestError, match="readiness"):
+        SupplierCandidateReadinessService.transition(current, target)
+
+
+def test_rejected_readiness_cannot_bypass_state_machine_or_approval(candidate_context):
+    db, service, _, admin, _, _ = candidate_context
+    candidate = create_candidate(service)
+    stored = db.get(SupplierCandidate, candidate.id)
+    stored.readiness_status = "REJECTED"
+    db.commit()
+
+    with pytest.raises(BadRequestError, match="readiness"):
+        service.transition_supplier_candidate_readiness(candidate.id, "VALIDATED")
+    with pytest.raises(BadRequestError, match="readiness"):
+        service.approve_supplier_candidate(candidate.id, admin)
 
 
 def test_creation_resolves_and_persists_canonical_identity(candidate_context):
@@ -348,6 +394,17 @@ def test_bulk_rejects_unapproved_candidate(candidate_context, approval_status):
     db, service, _, _, _, _ = candidate_context
     candidate = create_candidate(service)
     db.get(SupplierCandidate, candidate.id).approval_status = approval_status
+    db.commit()
+    result = asyncio.run(service.bulk_import_approved(BulkApprovedProductImportRequest(supplier="cj", product_ids=[candidate.supplier_product_id])))
+    assert result.results[0].status == "REJECTED_NOT_APPROVED"
+
+
+def test_bulk_rejects_candidate_with_rejected_readiness_even_if_approved(candidate_context):
+    db, service, _, _, _, _ = candidate_context
+    candidate = create_candidate(service)
+    stored = db.get(SupplierCandidate, candidate.id)
+    stored.approval_status = "APPROVED"
+    stored.readiness_status = "REJECTED"
     db.commit()
     result = asyncio.run(service.bulk_import_approved(BulkApprovedProductImportRequest(supplier="cj", product_ids=[candidate.supplier_product_id])))
     assert result.results[0].status == "REJECTED_NOT_APPROVED"

@@ -24,8 +24,11 @@ from app.schemas.admin_products import (
     ProductRejectionRequest,
     ProductStatusUpdate,
     SupplierCandidateCreate,
+    SupplierCandidateDiscoveryRequest,
+    SupplierCandidateDiscoveryResponse,
     SupplierCandidateDTO,
     SupplierCandidateListResponse,
+    SupplierCandidateReadinessTransitionRequest,
     SupplierCandidateRejectionRequest,
     VariantPriceCalculationResponse,
 )
@@ -350,6 +353,15 @@ async def create_supplier_candidate(
     return await service.create_supplier_candidate(payload)
 
 
+@router.post("/supplier-candidates/discover", response_model=SupplierCandidateDiscoveryResponse)
+async def discover_supplier_candidates(
+    payload: SupplierCandidateDiscoveryRequest,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> SupplierCandidateDiscoveryResponse:
+    return await service.discover_supplier_candidates(payload)
+
+
 @router.get("/supplier-candidates", response_model=SupplierCandidateListResponse)
 def list_supplier_candidates(
     _: User = Depends(get_current_admin),
@@ -365,6 +377,19 @@ def get_supplier_candidate(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> SupplierCandidateDTO:
     return service.get_supplier_candidate(candidate_id)
+
+
+@router.post(
+    "/supplier-candidates/{candidate_id}/readiness",
+    response_model=SupplierCandidateDTO,
+)
+def transition_supplier_candidate_readiness(
+    candidate_id: UUID,
+    payload: SupplierCandidateReadinessTransitionRequest,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> SupplierCandidateDTO:
+    return service.transition_supplier_candidate_readiness(candidate_id, payload.target)
 
 
 @router.post("/supplier-candidates/{candidate_id}/market-evidence", response_model=MarketEvidenceDTO)

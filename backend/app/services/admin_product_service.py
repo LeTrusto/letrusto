@@ -41,6 +41,9 @@ from app.schemas.admin_products import (
     ProductRejectionRequest,
     ProductStatusUpdate,
     SupplierCandidateCreate,
+    SupplierCandidateDiscoveryItem,
+    SupplierCandidateDiscoveryRequest,
+    SupplierCandidateDiscoveryResponse,
     SupplierCandidateDTO,
     SupplierCandidateListResponse,
     VariantPriceCalculation,
@@ -49,6 +52,7 @@ from app.schemas.admin_products import (
 from app.services.commercial_review_service import evaluate_commercial_product
 from app.services.launch_pricing_policy import LaunchPricingPolicy, load_launch_pricing_policy
 from app.services.pricing_engine import calculate_launch_variant_price, calculate_margin_price
+from app.services.supplier_candidate_readiness_service import SupplierCandidateReadinessService
 from app.suppliers.economics import EconomicsConfig, calculate_economics
 from app.suppliers.base import InventorySnapshot
 from app.suppliers.factory import build_supplier_adapter
@@ -212,18 +216,43 @@ class AdminProductService:
                 origin_country=normalized.warehouse_country or "CN",
             )
         shipping_usd = shipping.options[0].cost_usd if shipping and shipping.options else None
+        failure_reasons: list[str] = []
+        if not normalized.variants:
+            failure_reasons.append("MISSING_VID")
+        variant_ids = [variant.supplier_variant_id.strip() for variant in normalized.variants]
+        if any(not variant_id for variant_id in variant_ids):
+            failure_reasons.append("MISSING_VID")
+        if len(set(variant_ids)) != len(variant_ids):
+            failure_reasons.append("INVALID_PRODUCT_VARIANT_RELATIONSHIP")
+        sellable_inventory = sum((variant.cj_inventory or 0) for variant in normalized.variants)
+        if sellable_inventory <= 0:
+            failure_reasons.append("NO_SELLABLE_INVENTORY")
+        if not shipping or not shipping.can_ship:
+            failure_reasons.append("NO_INDIA_SHIPPING_ROUTE")
+        selected_shipping = shipping.options[0] if shipping and shipping.options else None
+        if not selected_shipping or not selected_shipping.carrier.strip() or not selected_shipping.method.strip():
+            failure_reasons.append("MISSING_LOGISTICS")
+        if selected_shipping and selected_shipping.cost_usd < 0:
+            failure_reasons.append("INVALID_FREIGHT_COST")
+
         economics = calculate_economics(normalized, shipping_cost_usd=shipping_usd, config=config)
         product_score = score_product(normalized, economics=economics, shipping=shipping)
+        if product_score.verdict.value == "REJECT":
+            failure_reasons.extend(product_score.notes)
         shipping_cost_inr = Decimal(str(shipping_usd * config.usd_to_inr)) if shipping_usd is not None else Decimal("0")
         variant_snapshot = []
         for variant in normalized.variants:
             price = None
-            if variant.cost_usd is not None:
+            try:
+                if variant.cost_usd is None:
+                    raise ValueError("MISSING_VARIANT_COST")
                 price = calculate_launch_variant_price(
                     supplier_cost_usd=Decimal(str(variant.cost_usd)),
                     shipping_cost_inr=shipping_cost_inr,
                     policy=self.launch_pricing_policy,
                 )
+            except (ValueError, TypeError) as exc:
+                failure_reasons.append(str(exc) or "PRICING_FAILURE")
             variant_snapshot.append({
                 "supplier_variant_id": variant.supplier_variant_id,
                 "supplier_variant_sku": variant.supplier_variant_sku,
@@ -238,8 +267,29 @@ class AdminProductService:
                 "selling_price_inr": str(price.selling_price_inr) if price else None,
                 "target_margin_status": price.target_margin_status if price else None,
                 "cac_target_status": price.cac_target_status if price else None,
+                "vid": variant.supplier_variant_id,
+                "sku": variant.supplier_variant_sku,
+                "warehouses": [warehouse.__dict__ for warehouse in variant.warehouses],
             })
         selling_prices = [Decimal(item["selling_price_inr"]) for item in variant_snapshot if item["selling_price_inr"]]
+        failure_reasons = list(dict.fromkeys(failure_reasons))
+        requested_readiness = "REJECTED" if failure_reasons else (
+            "VALIDATED" if product_score.verdict.value == "PASS" else "REVIEW"
+        )
+        readiness_status = SupplierCandidateReadinessService.initial_state(requested_readiness)
+        logistics = {
+            "available": bool(shipping and shipping.options),
+            "validation": getattr(shipping.validation, "value", shipping.validation) if shipping else None,
+            "origin_country": shipping.origin_country if shipping else None,
+            "destination_country": shipping.destination_country if shipping else payload.destination,
+            "selected": shipping.options[0].__dict__ if shipping and shipping.options else None,
+            "options": [option.__dict__ for option in shipping.options] if shipping else [],
+        }
+        warehouses = [
+            {**warehouse.__dict__, "supplier_variant_id": variant.supplier_variant_id}
+            for variant in normalized.variants
+            for warehouse in variant.warehouses
+        ]
 
         existing = self.db.scalar(
             select(SupplierCandidate).where(
@@ -256,6 +306,7 @@ class AdminProductService:
             supplier_sku=raw.supplier_sku or None,
             name=raw.title,
             approval_status="REVIEW",
+            readiness_status=readiness_status,
             supplier_validation_status=product_score.verdict.value,
             supplier_validation_score=product_score.score,
             commercial_status="REVIEW",
@@ -266,7 +317,23 @@ class AdminProductService:
             data_snapshot={
                 "main_image": normalized.images[0] if normalized.images else None,
                 "images": normalized.images,
-                "validation_issues": product_score.notes,
+                "reference_data": raw.raw_payload or {},
+                "warehouses": warehouses,
+                "logistics": logistics,
+                "freight": {
+                    "available": bool(shipping and shipping.options),
+                    "cost_usd": shipping_usd,
+                    "cost_inr": str(shipping_cost_inr) if shipping_usd is not None else None,
+                    "delivery_estimate": shipping.options[0].estimated_days if shipping and shipping.options else None,
+                },
+                "commercial_result": {
+                    "minimum_price_inr": str(min(selling_prices)) if selling_prices else None,
+                    "maximum_price_inr": str(max(selling_prices)) if selling_prices else None,
+                    "target_margin_percent": str(self.launch_pricing_policy.target_contribution_margin_pct),
+                    "cac_viable": all(item["cac_target_status"] == "CAC_TARGET_SUPPORTED" for item in variant_snapshot if item["cac_target_status"]),
+                    "failure_reasons": failure_reasons,
+                },
+                "validation_issues": list(dict.fromkeys(product_score.notes + failure_reasons)),
                 "target_margin_percent": str(self.launch_pricing_policy.target_contribution_margin_pct),
                 "target_cac_inr": str(self.launch_pricing_policy.target_cac_inr),
                 "cac_viable": all(item["cac_target_status"] == "CAC_TARGET_SUPPORTED" for item in variant_snapshot if item["cac_target_status"]),
@@ -290,6 +357,65 @@ class AdminProductService:
         self.db.refresh(candidate)
         return self._candidate_dto(candidate)
 
+    async def discover_supplier_candidates(
+        self, payload: SupplierCandidateDiscoveryRequest
+    ) -> SupplierCandidateDiscoveryResponse:
+        adapter = build_supplier_adapter(payload.supplier)
+        if not await adapter.authenticate():
+            raise BadRequestError("Supplier authentication failed")
+        search_results = await adapter.search_products(payload.keyword, page_size=payload.page_size)
+        results: list[SupplierCandidateDiscoveryItem] = []
+        seen_ids: set[str] = set()
+        for search_item in search_results:
+            product_id = search_item.supplier_product_id.strip()
+            if not product_id or product_id in seen_ids:
+                continue
+            seen_ids.add(product_id)
+            try:
+                existing = self.db.scalar(
+                    select(SupplierCandidate).where(
+                        SupplierCandidate.supplier == payload.supplier,
+                        SupplierCandidate.supplier_product_id == product_id,
+                    )
+                )
+                if existing:
+                    results.append(SupplierCandidateDiscoveryItem(
+                        supplier_product_id=product_id,
+                        title=search_item.title,
+                        status="ALREADY_STAGED",
+                        candidate=self._candidate_dto(existing),
+                    ))
+                    continue
+                candidate = await self.create_supplier_candidate(SupplierCandidateCreate(
+                    supplier=payload.supplier,
+                    supplier_product_id=product_id,
+                    destination=payload.destination,
+                ))
+                results.append(SupplierCandidateDiscoveryItem(
+                    supplier_product_id=product_id,
+                    title=search_item.title,
+                    status="STAGED",
+                    candidate=candidate,
+                ))
+            except Exception as exc:
+                self.db.rollback()
+                results.append(SupplierCandidateDiscoveryItem(
+                    supplier_product_id=product_id,
+                    title=search_item.title,
+                    status="FAILED",
+                    message=str(exc) or "Supplier candidate discovery failed",
+                ))
+        return SupplierCandidateDiscoveryResponse(
+            supplier=payload.supplier,
+            keyword=payload.keyword,
+            destination=payload.destination,
+            requested_count=len(search_results),
+            staged_count=sum(item.status == "STAGED" for item in results),
+            already_staged_count=sum(item.status == "ALREADY_STAGED" for item in results),
+            failed_count=sum(item.status == "FAILED" for item in results),
+            results=results,
+        )
+
     def list_supplier_candidates(self) -> SupplierCandidateListResponse:
         candidates = list(
             self.db.scalars(
@@ -309,6 +435,8 @@ class AdminProductService:
         candidate = self._get_candidate(candidate_id)
         if candidate.approval_status == "IMPORTED":
             raise BadRequestError("Imported supplier candidate cannot be approved again")
+        if candidate.readiness_status == "REJECTED":
+            raise BadRequestError("Deterministic readiness gates rejected this supplier candidate")
         if candidate.supplier_validation_status == "REJECT":
             raise BadRequestError("Supplier candidate rejected by supplier validation cannot be approved")
         if candidate.approval_status != "APPROVED":
@@ -321,6 +449,17 @@ class AdminProductService:
             candidate.rejection_reason = None
             self.db.commit()
             self.db.refresh(candidate)
+        return self._candidate_dto(candidate)
+
+    def transition_supplier_candidate_readiness(
+        self, candidate_id: UUID, target: str
+    ) -> SupplierCandidateDTO:
+        candidate = self._get_candidate(candidate_id)
+        candidate.readiness_status = SupplierCandidateReadinessService.transition(
+            candidate.readiness_status, target  # type: ignore[arg-type]
+        )
+        self.db.commit()
+        self.db.refresh(candidate)
         return self._candidate_dto(candidate)
 
     def reject_supplier_candidate(
@@ -399,7 +538,11 @@ class AdminProductService:
                 raise BadRequestError("Supplier SKU matches multiple candidates")
             candidate = sku_matches[0] if sku_matches else None
 
-        if candidate is None or candidate.approval_status in {"REVIEW", "REJECTED"}:
+        if (
+            candidate is None
+            or candidate.approval_status in {"REVIEW", "REJECTED"}
+            or candidate.readiness_status == "REJECTED"
+        ):
             return BulkApprovedProductImportItem(
                 requested_id=requested_id,
                 status="REJECTED_NOT_APPROVED",
@@ -982,6 +1125,7 @@ class AdminProductService:
             supplier_sku=candidate.supplier_sku,
             name=candidate.name,
             approval_status=candidate.approval_status,
+            readiness_status=candidate.readiness_status or "REVIEW",
             supplier_validation_status=candidate.supplier_validation_status,
             supplier_validation_score=candidate.supplier_validation_score,
             commercial_status=candidate.commercial_status,
@@ -991,6 +1135,13 @@ class AdminProductService:
             snapshot_status=candidate.snapshot_status,
             main_image=snapshot.get("main_image"),
             variants=snapshot.get("variants", []),
+            images=snapshot.get("images", []),
+            reference_data=snapshot.get("reference_data", {}),
+            warehouses=snapshot.get("warehouses", []),
+            logistics=snapshot.get("logistics", {}),
+            freight=snapshot.get("freight", {}),
+            commercial_result=snapshot.get("commercial_result", {}),
+            failure_reasons=snapshot.get("commercial_result", {}).get("failure_reasons", []),
             validation_issues=snapshot.get("validation_issues", []),
             target_margin_percent=snapshot.get("target_margin_percent"),
             target_cac_inr=snapshot.get("target_cac_inr"),

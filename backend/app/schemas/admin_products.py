@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from datetime import datetime
@@ -77,6 +77,7 @@ class ProductImportRequest(BaseModel):
 
 CandidateApprovalStatus = Literal["REVIEW", "APPROVED", "REJECTED", "IMPORTED"]
 CandidateSnapshotStatus = Literal["AVAILABLE", "LEGACY_SNAPSHOT_UNAVAILABLE"]
+CandidateReadinessStatus = Literal["DISCOVERED", "VALIDATED", "REJECTED", "REVIEW"]
 
 
 class SupplierCandidateVariantDTO(BaseModel):
@@ -109,6 +110,44 @@ class SupplierCandidateCreate(BaseModel):
         return normalized
 
 
+class SupplierCandidateDiscoveryRequest(BaseModel):
+    supplier: Literal["cj"]
+    keyword: str = Field(min_length=1, max_length=160)
+    destination: Literal["IN"] = "IN"
+    page_size: int = Field(default=10, ge=1, le=50)
+
+    @field_validator("keyword")
+    @classmethod
+    def normalize_keyword(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("keyword must not be blank")
+        return normalized
+
+
+class SupplierCandidateReadinessTransitionRequest(BaseModel):
+    target: CandidateReadinessStatus
+
+
+class SupplierCandidateDiscoveryItem(BaseModel):
+    supplier_product_id: str
+    title: str | None
+    status: Literal["STAGED", "ALREADY_STAGED", "FAILED"]
+    candidate: "SupplierCandidateDTO | None" = None
+    message: str | None = None
+
+
+class SupplierCandidateDiscoveryResponse(BaseModel):
+    supplier: Literal["cj"]
+    keyword: str
+    destination: Literal["IN"]
+    requested_count: int
+    staged_count: int
+    already_staged_count: int
+    failed_count: int
+    results: list[SupplierCandidateDiscoveryItem]
+
+
 class SupplierCandidateDTO(BaseModel):
     id: UUID
     supplier: Literal["cj"]
@@ -116,6 +155,7 @@ class SupplierCandidateDTO(BaseModel):
     supplier_sku: str | None
     name: str
     approval_status: CandidateApprovalStatus
+    readiness_status: CandidateReadinessStatus
     supplier_validation_status: SupplierValidationStatus | None
     supplier_validation_score: int | None
     commercial_status: Literal["REVIEW", "APPROVED", "REJECTED"]
@@ -128,6 +168,13 @@ class SupplierCandidateDTO(BaseModel):
     snapshot_status: CandidateSnapshotStatus
     main_image: str | None
     variants: list[SupplierCandidateVariantDTO]
+    images: list[str]
+    reference_data: dict[str, Any]
+    warehouses: list[dict[str, Any]]
+    logistics: dict[str, Any]
+    freight: dict[str, Any]
+    commercial_result: dict[str, Any]
+    failure_reasons: list[str]
     validation_issues: list[str]
     target_margin_percent: Decimal | None
     target_cac_inr: Decimal | None

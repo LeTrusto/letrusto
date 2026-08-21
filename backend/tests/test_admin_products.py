@@ -1,4 +1,5 @@
 import asyncio
+from copy import deepcopy
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -9,7 +10,7 @@ from app.api.deps import get_admin_product_service, get_current_admin
 from app.core.exceptions import BadRequestError
 from app.main import app
 from app.db.session import SessionLocal
-from app.models.entities import Brand, Category, Product, ProductVariant, SupplierVariantInventory
+from app.models.entities import Brand, Category, Product, ProductVariant, SupplierCandidate, SupplierVariantInventory
 from app.services.admin_product_service import AdminProductService
 from app.suppliers.base import (
     RawSupplierProduct,
@@ -68,6 +69,194 @@ class FakeAdapter:
             origin_country="CN",
             destination_country="IN",
         )
+
+
+class BatchFakeAdapter(FakeAdapter):
+    async def search_products(self, keyword: str, *, page_size: int = 20, **kwargs):
+        results = []
+        for index in range(min(page_size, 2)):
+            product = await self.get_product(f"phase31-discovered-{index}")
+            results.append(product)
+        return results
+
+
+class ConfigurableDiscoveryAdapter(BatchFakeAdapter):
+    def __init__(self, count: int = 1, *, failure_id: str | None = None, no_inventory: bool = False, no_freight: bool = False, invalid_vid: bool = False, multiple_warehouses: bool = False, multiple_variants: bool = False) -> None:
+        self.count = count
+        self.failure_id = failure_id
+        self.no_inventory = no_inventory
+        self.no_freight = no_freight
+        self.invalid_vid = invalid_vid
+        self.multiple_warehouses = multiple_warehouses
+        self.multiple_variants = multiple_variants
+
+    async def search_products(self, keyword: str, *, page_size: int = 20, **kwargs):
+        results = []
+        for index in range(min(page_size, self.count)):
+            product = await FakeAdapter.get_product(self, f"phase1-{index:02d}")
+            product.supplier_product_id = f"phase1-{index:02d}"
+            results.append(product)
+        return results
+
+    async def get_product(self, product_id: str, *, strict: bool = False):
+        if product_id == self.failure_id:
+            raise RuntimeError("detail unavailable")
+        product = await FakeAdapter.get_product(self, product_id)
+        product.supplier_product_id = product_id
+        if self.no_inventory:
+            product.cj_inventory = 0
+            product.inventory_total = 0
+            for variant in product.variants:
+                variant.cj_inventory = 0
+        if self.invalid_vid:
+            product.variants[0].supplier_variant_id = ""
+        if self.multiple_warehouses:
+            product.variants[0].warehouses.append(
+                WarehouseInventorySnapshot("IN", "in-1", "India Warehouse", 40, 40, 0, "verified")
+            )
+        if self.multiple_variants:
+            product.variants.append(deepcopy(product.variants[0]))
+            product.variants[1].supplier_variant_id = "VID-SECONDARY"
+            product.variants[1].supplier_variant_sku = "SKU-SECONDARY"
+        return product
+
+    async def calculate_shipping(self, *args, **kwargs) -> ShippingResult:
+        if self.no_freight:
+            return ShippingResult(
+                can_ship=False,
+                validation=ShippingValidation.NOT_AVAILABLE,
+                options=[],
+                origin_country="CN",
+                destination_country="IN",
+                error="No route",
+            )
+        return await FakeAdapter.calculate_shipping(self, *args, **kwargs)
+
+
+def run_candidate_discovery(monkeypatch, adapter, *, page_size=1, keyword="phase 1"):
+    import app.services.admin_product_service as module
+    from app.schemas.admin_products import SupplierCandidateDiscoveryRequest
+
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: adapter)
+    db = SessionLocal()
+    service = AdminProductService(db)
+    result = asyncio.run(service.discover_supplier_candidates(SupplierCandidateDiscoveryRequest(
+        supplier="cj", keyword=keyword, page_size=page_size,
+    )))
+    return db, result
+
+
+def cleanup_discovery_rows(db, product_ids):
+    db.query(SupplierCandidate).filter(SupplierCandidate.supplier_product_id.in_(product_ids)).delete(synchronize_session=False)
+    db.query(Product).filter(Product.supplier_product_id.in_(product_ids)).delete(synchronize_session=False)
+    db.commit()
+    db.close()
+
+
+def test_phase1_one_product_duplicate_discovery_and_no_import_or_activation(monkeypatch):
+    adapter = ConfigurableDiscoveryAdapter()
+    db, first = run_candidate_discovery(monkeypatch, adapter)
+    try:
+        assert (first.staged_count, first.failed_count) == (1, 0)
+        assert first.results[0].candidate.readiness_status in {"VALIDATED", "REVIEW"}
+        assert first.results[0].candidate.approval_status == "REVIEW"
+        assert db.query(Product).filter(Product.supplier_product_id == "phase1-00").count() == 0
+        _, second = run_candidate_discovery(monkeypatch, adapter)
+        assert second.already_staged_count == 1
+    finally:
+        cleanup_discovery_rows(db, {"phase1-00"})
+
+
+def test_phase1_fifty_product_batch_is_bounded_and_deduplicated(monkeypatch):
+    db, result = run_candidate_discovery(monkeypatch, ConfigurableDiscoveryAdapter(count=50), page_size=50)
+    try:
+        assert result.requested_count == result.staged_count == 50
+        assert db.query(SupplierCandidate).filter(SupplierCandidate.supplier_product_id.like("phase1-%")).count() == 50
+    finally:
+        cleanup_discovery_rows(db, {f"phase1-{index:02d}" for index in range(50)})
+
+
+def test_phase1_partial_failure_is_reported_without_aborting_batch(monkeypatch):
+    db, result = run_candidate_discovery(monkeypatch, ConfigurableDiscoveryAdapter(count=3, failure_id="phase1-01"), page_size=3)
+    try:
+        assert result.staged_count == 2
+        assert result.failed_count == 1
+        assert next(item for item in result.results if item.supplier_product_id == "phase1-01").status == "FAILED"
+    finally:
+        cleanup_discovery_rows(db, {"phase1-00", "phase1-01", "phase1-02"})
+
+
+@pytest.mark.parametrize("option", ["no_inventory", "no_freight", "invalid_vid"])
+def test_phase1_deterministic_fulfillment_gates_reject_candidates(monkeypatch, option):
+    db, result = run_candidate_discovery(monkeypatch, ConfigurableDiscoveryAdapter(**{option: True}))
+    try:
+        candidate = result.results[0].candidate
+        assert candidate is not None
+        assert candidate.readiness_status == "REJECTED"
+        assert candidate.approval_status == "REVIEW"
+        assert candidate.commercial_result["failure_reasons"]
+    finally:
+        cleanup_discovery_rows(db, {"phase1-00"})
+
+
+def test_phase1_snapshot_preserves_multiple_warehouses_and_variants(monkeypatch):
+    db, result = run_candidate_discovery(monkeypatch, ConfigurableDiscoveryAdapter(multiple_warehouses=True, multiple_variants=True))
+    try:
+        candidate = result.results[0].candidate
+        assert candidate is not None
+        assert len(candidate.variants) == 2
+        assert len(candidate.warehouses) == 4
+        assert candidate.freight["available"] is True
+        assert candidate.logistics["selected"]["method"] == "Test"
+    finally:
+        cleanup_discovery_rows(db, {"phase1-00"})
+
+
+def test_phase1_pricing_failure_is_rejected_and_recorded(monkeypatch):
+    import app.services.admin_product_service as module
+
+    def fail_pricing(*args, **kwargs):
+        raise ValueError("pricing policy failure")
+
+    monkeypatch.setattr(module, "calculate_launch_variant_price", fail_pricing)
+    db, result = run_candidate_discovery(monkeypatch, ConfigurableDiscoveryAdapter())
+    try:
+        candidate = result.results[0].candidate
+        assert candidate is not None
+        assert candidate.readiness_status == "REJECTED"
+        assert "pricing policy failure" in candidate.commercial_result["failure_reasons"]
+    finally:
+        cleanup_discovery_rows(db, {"phase1-00"})
+
+
+def test_discovery_stages_bounded_candidates_without_importing(monkeypatch):
+    import app.services.admin_product_service as module
+    from app.schemas.admin_products import SupplierCandidateDiscoveryRequest
+
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: BatchFakeAdapter())
+    db = SessionLocal()
+    service = AdminProductService(db)
+    product_ids = {"phase31-discovered-0", "phase31-discovered-1"}
+    try:
+        result = asyncio.run(service.discover_supplier_candidates(SupplierCandidateDiscoveryRequest(
+            supplier="cj", keyword="hair clip", page_size=2,
+        )))
+        assert result.requested_count == 2
+        assert result.staged_count == 2
+        assert result.failed_count == 0
+        assert all(item.status == "STAGED" for item in result.results)
+        candidates = db.query(SupplierCandidate).filter(
+            SupplierCandidate.supplier_product_id.in_(product_ids)
+        ).all()
+        assert len(candidates) == 2
+        assert all(candidate.approval_status == "REVIEW" for candidate in candidates)
+        assert db.query(Product).filter(Product.supplier_product_id.in_(product_ids)).count() == 0
+    finally:
+        db.query(SupplierCandidate).filter(
+            SupplierCandidate.supplier_product_id.in_(product_ids)
+        ).delete(synchronize_session=False)
+        db.commit()
+        db.close()
 
 
 def test_import_is_draft_and_preserves_supplier_data(monkeypatch):

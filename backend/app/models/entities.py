@@ -134,6 +134,7 @@ class SupplierCandidate(Base):
     supplier_sku: Mapped[str | None] = mapped_column(String(160), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(240), nullable=False)
     approval_status: Mapped[str] = mapped_column(String(20), nullable=False, default="REVIEW", index=True)
+    readiness_status: Mapped[str] = mapped_column(String(20), nullable=False, default="DISCOVERED", index=True)
     supplier_validation_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     supplier_validation_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     commercial_status: Mapped[str] = mapped_column(String(20), nullable=False, default="REVIEW")
