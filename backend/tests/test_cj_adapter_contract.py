@@ -319,6 +319,93 @@ def test_parse_variant_preserves_documented_warehouse_identity_and_aggregate_spl
     ]
 
 
+def test_get_product_fallback_propagates_factory_only_warehouse_identity(monkeypatch):
+    product = {
+        "pid": "PRODUCT-FALLBACK",
+        "productSku": "SKU-FALLBACK",
+        "productNameEn": "Factory Only Product",
+        "variants": [{
+            "vid": "VID-FALLBACK",
+            "variantSku": "VARIANT-FALLBACK",
+            "variantNameEn": "Default",
+            "variantSellPrice": 1.25,
+            "inventories": None,
+        }],
+    }
+    inventory = {
+        "result": True,
+        "data": [{
+            "areaId": "1",
+            "areaEn": "China Warehouse",
+            "countryCode": "CN",
+            "totalInventoryNum": 40000,
+            "cjInventoryNum": 0,
+            "factoryInventoryNum": 40000,
+            "verifiedWarehouse": 2,
+        }],
+    }
+
+    async def fake_get(endpoint, params=None):
+        if endpoint == "/product/query":
+            assert params == {"pid": "PRODUCT-FALLBACK"}
+            return {"result": True, "data": product}
+        if endpoint == "/product/stock/queryByVid":
+            assert params == {"vid": "VID-FALLBACK"}
+            return inventory
+        raise AssertionError(endpoint)
+
+    adapter = CJAdapter("test-key")
+    monkeypatch.setattr(adapter, "_get", fake_get)
+
+    result = asyncio.run(adapter.get_product("PRODUCT-FALLBACK"))
+
+    assert result is not None
+    variant = result.variants[0]
+    assert variant.cj_inventory == 0
+    assert variant.factory_inventory == 40000
+    assert [(warehouse.storage_id, warehouse.warehouse_name, warehouse.warehouse_country) for warehouse in variant.warehouses] == [
+        ("1", "China Warehouse", "CN")
+    ]
+
+
+def test_get_product_embedded_inventory_remains_unchanged_without_fallback(monkeypatch):
+    product = {
+        "pid": "PRODUCT-EMBEDDED",
+        "productSku": "SKU-EMBEDDED",
+        "productNameEn": "Embedded Inventory Product",
+        "variants": [{
+            "vid": "VID-EMBEDDED",
+            "variantSku": "VARIANT-EMBEDDED",
+            "variantNameEn": "Default",
+            "variantSellPrice": 1.25,
+            "inventories": [{
+                "areaId": "2",
+                "areaEn": "US Warehouse",
+                "countryCode": "US",
+                "totalInventory": 12,
+                "cjInventory": 12,
+                "factoryInventory": 0,
+            }],
+        }],
+    }
+
+    async def fake_get(endpoint, params=None):
+        assert endpoint == "/product/query"
+        return {"result": True, "data": product}
+
+    adapter = CJAdapter("test-key")
+    monkeypatch.setattr(adapter, "_get", fake_get)
+
+    result = asyncio.run(adapter.get_product("PRODUCT-EMBEDDED"))
+
+    assert result is not None
+    variant = result.variants[0]
+    assert variant.cj_inventory == 12
+    assert [(warehouse.storage_id, warehouse.warehouse_name, warehouse.warehouse_country) for warehouse in variant.warehouses] == [
+        ("2", "US Warehouse", "US")
+    ]
+
+
 def test_http_error_preserves_cj_body_code_message_request_id_and_redacts_credentials():
     response = SimpleNamespace(
         is_success=False,

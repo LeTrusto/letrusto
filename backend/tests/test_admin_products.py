@@ -199,6 +199,20 @@ def test_phase1_deterministic_fulfillment_gates_reject_candidates(monkeypatch, o
         cleanup_discovery_rows(db, {"phase1-00"})
 
 
+def test_phase1_factory_only_candidate_persists_warehouse_and_stays_rejected(monkeypatch):
+    db, result = run_candidate_discovery(monkeypatch, ConfigurableDiscoveryAdapter(no_inventory=True))
+    try:
+        candidate = result.results[0].candidate
+        assert candidate is not None
+        assert candidate.readiness_status == "REJECTED"
+        assert "NO_SELLABLE_INVENTORY" in candidate.failure_reasons
+        assert [(warehouse["storage_id"], warehouse["warehouse_name"], warehouse["warehouse_country"]) for warehouse in candidate.warehouses] == [
+            ("1", "China Warehouse", "CN"),
+        ]
+    finally:
+        cleanup_discovery_rows(db, {"phase1-00"})
+
+
 def test_phase1_snapshot_preserves_multiple_warehouses_and_variants(monkeypatch):
     db, result = run_candidate_discovery(monkeypatch, ConfigurableDiscoveryAdapter(multiple_warehouses=True, multiple_variants=True))
     try:

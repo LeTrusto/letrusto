@@ -341,6 +341,7 @@ class CJAdapter:
                     variant.factory_inventory = snapshot.factory_inventory
                     variant.inventory_verification = snapshot.verification_status
                     variant.inventory = snapshot.cj_inventory
+                    variant.warehouses = snapshot.warehouses
 
         total_inventory = sum(v.total_inventory or 0 for v in variants) if variants else None
         cj_inventory = sum(v.cj_inventory or 0 for v in variants) if variants else None
