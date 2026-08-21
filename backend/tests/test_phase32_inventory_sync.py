@@ -9,9 +9,9 @@ from app.api.deps import get_admin_product_service, get_current_admin
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
 from app.main import app
-from app.models.entities import Product, ProductVariant
+from app.models.entities import Product, ProductVariant, SupplierVariantInventory
 from app.services.admin_product_service import AdminProductService
-from app.suppliers.base import InventorySnapshot, RawSupplierProduct
+from app.suppliers.base import InventorySnapshot, RawSupplierProduct, WarehouseInventorySnapshot
 
 
 class SyncAdapter:
@@ -97,6 +97,63 @@ def test_sync_maps_stored_vids_separates_factory_and_preserves_metadata(monkeypa
         assert result.last_supplier_sync_at >= first_sync
         assert adapter.product_ids == [product.supplier_product_id, product.supplier_product_id]
         assert adapter.product_strict == [True, True]
+    finally:
+        db.query(Product).filter(Product.id == product.id).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+def test_sync_persists_exact_cj_warehouse_identity_without_variant_overwrite(monkeypatch):
+    import app.services.admin_product_service as module
+
+    adapter = SyncAdapter(snapshots={
+        "E821D001-A0D1-41C3-B492-244A482BD63E": InventorySnapshot(
+            53967,
+            4,
+            53963,
+            "verified",
+            [WarehouseInventorySnapshot("CN", "1", "China Warehouse", 53967, 4, 53963, "verified")],
+        ),
+        "VID-OTHER": InventorySnapshot(
+            12,
+            7,
+            5,
+            "unverified",
+            [WarehouseInventorySnapshot("US", "2", "US Warehouse", 12, 7, 5, "unverified")],
+        ),
+    })
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: adapter)
+    db = SessionLocal()
+    product = make_product(db)
+    variants = db.query(ProductVariant).filter(ProductVariant.product_id == product.id).order_by(ProductVariant.position).all()
+    variants[0].supplier_variant_id = "E821D001-A0D1-41C3-B492-244A482BD63E"
+    variants[1].supplier_variant_id = "VID-OTHER"
+    db.commit()
+    try:
+        asyncio.run(AdminProductService(db).sync_inventory(product.id))
+        row = db.query(SupplierVariantInventory).filter(
+            SupplierVariantInventory.variant_id == variants[0].id,
+        ).one()
+        assert row.supplier_variant_id == "E821D001-A0D1-41C3-B492-244A482BD63E"
+        assert row.storage_id == "1"
+        assert row.warehouse_name == "China Warehouse"
+        assert row.warehouse_country == "CN"
+        assert row.cj_sellable_inventory == 4
+        assert row.factory_inventory == 53963
+        assert db.query(SupplierVariantInventory).filter(
+            SupplierVariantInventory.variant_id == variants[1].id,
+        ).one().supplier_variant_id == "VID-OTHER"
+
+        asyncio.run(AdminProductService(db).sync_inventory(product.id))
+        assert db.query(SupplierVariantInventory).filter(
+            SupplierVariantInventory.product_id == product.id,
+        ).count() == 2
+        assert adapter.variant_ids == [
+            "E821D001-A0D1-41C3-B492-244A482BD63E",
+            "VID-OTHER",
+            "E821D001-A0D1-41C3-B492-244A482BD63E",
+            "VID-OTHER",
+        ]
     finally:
         db.query(Product).filter(Product.id == product.id).delete(synchronize_session=False)
         db.commit()

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
-from app.suppliers.base import RawSupplierProduct, RawVariant
+from app.suppliers.base import RawSupplierProduct, RawVariant, WarehouseInventorySnapshot
 
 # USD → INR rate. In production this would come from a config or API.
 DEFAULT_USD_TO_INR = 83.5
@@ -41,6 +41,7 @@ class NormalizedVariant:
     inventory_verification: str | None = None
     warehouse_country: str = ""
     barcode: str = ""
+    warehouses: list[WarehouseInventorySnapshot] = field(default_factory=list)
 
 
 @dataclass
@@ -161,4 +162,5 @@ def _normalize_variant(raw: RawVariant, *, usd_to_inr: float) -> NormalizedVaria
         inventory_verification=raw.inventory_verification,
         warehouse_country=raw.warehouse_country,
         barcode=raw.barcode,
+        warehouses=raw.warehouses,
     )

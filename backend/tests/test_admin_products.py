@@ -9,9 +9,16 @@ from app.api.deps import get_admin_product_service, get_current_admin
 from app.core.exceptions import BadRequestError
 from app.main import app
 from app.db.session import SessionLocal
-from app.models.entities import Brand, Category, Product, ProductVariant
+from app.models.entities import Brand, Category, Product, ProductVariant, SupplierVariantInventory
 from app.services.admin_product_service import AdminProductService
-from app.suppliers.base import RawSupplierProduct, RawVariant, ShippingOption, ShippingResult, ShippingValidation
+from app.suppliers.base import (
+    RawSupplierProduct,
+    RawVariant,
+    ShippingOption,
+    ShippingResult,
+    ShippingValidation,
+    WarehouseInventorySnapshot,
+)
 
 
 class FakeAdapter:
@@ -33,6 +40,7 @@ class FakeAdapter:
             cj_inventory=50,
             factory_inventory=1000,
             inventory_verification="unverified",
+            warehouses=[WarehouseInventorySnapshot("CN", "1", "China Warehouse", 1050, 50, 1000, "unverified")],
         )
         return RawSupplierProduct(
             supplier_id="cj",
@@ -85,6 +93,16 @@ def test_import_is_draft_and_preserves_supplier_data(monkeypatch):
         assert result.variants[0].supplier_cost_usd == Decimal("2.0000")
         assert result.variants[0].cj_inventory == 50
         assert result.variants[0].factory_inventory == 1000
+        warehouse_rows = db.query(SupplierVariantInventory).filter(
+            SupplierVariantInventory.product_id == result.id,
+        ).all()
+        assert len(warehouse_rows) == 1
+        assert warehouse_rows[0].supplier_variant_id == "VID-TEST-001"
+        assert warehouse_rows[0].storage_id == "1"
+        assert warehouse_rows[0].warehouse_name == "China Warehouse"
+        assert warehouse_rows[0].warehouse_country == "CN"
+        assert warehouse_rows[0].cj_sellable_inventory == 50
+        assert warehouse_rows[0].factory_inventory == 1000
     finally:
         db.query(Product).filter(Product.supplier_product_id == product_id).delete(synchronize_session=False)
         db.commit()

@@ -50,6 +50,7 @@ from app.services.commercial_review_service import evaluate_commercial_product
 from app.services.launch_pricing_policy import LaunchPricingPolicy, load_launch_pricing_policy
 from app.services.pricing_engine import calculate_launch_variant_price, calculate_margin_price
 from app.suppliers.economics import EconomicsConfig, calculate_economics
+from app.suppliers.base import InventorySnapshot
 from app.suppliers.factory import build_supplier_adapter
 from app.suppliers.normalizer import normalize_product
 from app.suppliers.scoring import score_product
@@ -154,8 +155,9 @@ class AdminProductService:
         self.db.flush()
         for position, image_url in enumerate(normalized.images, start=1):
             self.db.add(ProductImage(product_id=product.id, url=image_url, position=position))
+        stored_variants = []
         for position, variant in enumerate(normalized.variants, start=1):
-            self.db.add(ProductVariant(
+            stored_variant = ProductVariant(
                 product_id=product.id, supplier_variant_id=variant.supplier_variant_id,
                 supplier_variant_sku=variant.supplier_variant_sku, name=variant.name,
                 attributes=variant.option_key, supplier_cost=Decimal(str(variant.cost_inr)) if variant.cost_inr is not None else None,
@@ -163,7 +165,22 @@ class AdminProductService:
                 total_inventory=variant.total_inventory, cj_inventory=variant.cj_inventory,
                 factory_inventory=variant.factory_inventory, verified_warehouse=variant.inventory_verification,
                 weight_grams=Decimal(str(variant.weight_grams)) if variant.weight_grams is not None else None, position=position,
-            ))
+            )
+            self.db.add(stored_variant)
+            stored_variants.append((stored_variant, variant))
+        self.db.flush()
+        for stored_variant, variant in stored_variants:
+            self._sync_variant_warehouse_inventory(
+                product,
+                stored_variant,
+                InventorySnapshot(
+                    total_inventory=variant.total_inventory or 0,
+                    cj_inventory=variant.cj_inventory or 0,
+                    factory_inventory=variant.factory_inventory or 0,
+                    verification_status=variant.inventory_verification,
+                    warehouses=variant.warehouses,
+                ),
+            )
         if commit:
             self.db.commit()
         else:
@@ -821,7 +838,7 @@ class AdminProductService:
                 raise NotFoundError("Supplier product not found")
 
             snapshots = []
-            for variant in product.variants:
+            for variant in sorted(product.variants, key=lambda item: item.position):
                 snapshot = await adapter.get_inventory(variant.supplier_variant_id, strict=True)
                 if snapshot is None:
                     raise BadRequestError(f"Inventory unavailable for supplier variant {variant.supplier_variant_id}")
