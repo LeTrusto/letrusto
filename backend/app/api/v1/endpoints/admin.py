@@ -389,6 +389,15 @@ async def enrich_supplier_candidate(
     return await service.enrich(candidate_id)
 
 
+@router.post("/supplier-candidates/{candidate_id}/import", response_model=AdminProductDTO)
+async def import_supplier_candidate(
+    candidate_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> AdminProductDTO:
+    return await service.import_supplier_candidate(candidate_id)
+
+
 @router.post(
     "/supplier-candidates/{candidate_id}/readiness",
     response_model=SupplierCandidateDTO,

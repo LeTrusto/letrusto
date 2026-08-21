@@ -12,7 +12,7 @@ from app.api.deps import get_admin_product_service, get_current_admin
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.db.session import SessionLocal
 from app.main import app
-from app.models.entities import Product, SupplierCandidate, User
+from app.models.entities import Product, ProductFeature, ProductSpecification, ProductTag, ProductVariant, SupplierCandidate, SupplierVariantInventory, User
 from app.schemas.admin_products import BulkApprovedProductImportRequest, SupplierCandidateCreate
 from app.services.admin_product_service import AdminProductService
 from app.services.catalog_enrichment_service import CatalogEnrichmentService
@@ -403,6 +403,7 @@ def test_imported_candidate_decision_is_blocked(candidate_context, action):
     ("post", "/api/v1/admin/supplier-candidates"),
     ("get", "/api/v1/admin/supplier-candidates"),
     ("post", f"/api/v1/admin/supplier-candidates/{uuid4()}/approve"),
+    ("post", f"/api/v1/admin/supplier-candidates/{uuid4()}/import"),
     ("post", f"/api/v1/admin/supplier-candidates/{uuid4()}/reject"),
     ("post", "/api/v1/admin/products/bulk-import"),
 ])
@@ -570,3 +571,156 @@ def test_bulk_failure_does_not_undo_prior_success(candidate_context, monkeypatch
     assert db.scalar(select(func.count(Product.id)).where(Product.supplier_product_id == second.supplier_product_id)) == 0
     db.refresh(db.get(SupplierCandidate, second.id))
     assert db.get(SupplierCandidate, second.id).approval_status == "APPROVED"
+
+
+def _approve_for_import(service, candidate, admin):
+    return approve_candidate(service, candidate.id, admin)
+
+
+def test_approved_enriched_candidate_imports_as_draft_with_content_and_deterministic_data(candidate_context):
+    db, service, _, admin, _, _ = candidate_context
+    candidate = create_candidate(service)
+    stored = db.get(SupplierCandidate, candidate.id)
+    variant_id = stored.data_snapshot["variants"][0]["supplier_variant_id"]
+    stored.data_snapshot = {
+        **stored.data_snapshot,
+        "warehouses": [{
+            "supplier_variant_id": variant_id,
+            "warehouse_country": "CN",
+            "storage_id": "1",
+            "warehouse_name": "China Warehouse",
+            "total_inventory": 1000,
+            "cj_inventory": 50,
+            "factory_inventory": 950,
+        }],
+    }
+    db.commit()
+    candidate = _approve_for_import(service, candidate, admin)
+
+    result = asyncio.run(service.import_supplier_candidate(candidate.id))
+    product = db.get(Product, result.id)
+
+    assert result.status == "DRAFT"
+    assert product.commercial_status == "APPROVED"
+    assert product.name.endswith("for Kitchen and Bar Use")
+    assert product.supplier_product_id == candidate.supplier_product_id
+    assert product.selling_price == Decimal("492.94")
+    assert product.cj_inventory == 50
+    assert product.factory_inventory == 1000
+    assert len(product.variants) == 1
+    assert product.variants[0].supplier_variant_id == f"VID-{candidate.supplier_product_id}"
+    assert product.variants[0].supplier_variant_sku == f"VSKU-{candidate.supplier_product_id}"
+    assert db.scalar(select(func.count(ProductFeature.id)).where(ProductFeature.product_id == product.id)) == 3
+    assert db.scalar(select(func.count(ProductSpecification.id)).where(ProductSpecification.product_id == product.id)) == 3
+    assert db.scalar(select(func.count(ProductTag.id)).where(ProductTag.product_id == product.id)) == 3
+    inventory = db.scalars(select(SupplierVariantInventory).where(SupplierVariantInventory.product_id == product.id)).all()
+    assert len(inventory) == 1
+    assert (inventory[0].storage_id, inventory[0].cj_sellable_inventory, inventory[0].factory_inventory) == ("1", 50, 950)
+
+
+def test_candidate_import_never_sets_active_and_records_readiness(candidate_context):
+    db, service, _, admin, _, _ = candidate_context
+    candidate = _approve_for_import(service, create_candidate(service), admin)
+
+    result = asyncio.run(service.import_supplier_candidate(candidate.id))
+
+    assert result.status == "DRAFT"
+    details = db.get(Product, result.id).supplier_validation_details
+    assert details["catalog_readiness"]["ready"] is False
+    assert "BRAND_REVIEW_REQUIRED" in details["catalog_readiness"]["blocking_reasons"]
+
+
+@pytest.mark.parametrize("state", ["REVIEW", "REJECTED"])
+def test_non_approved_candidate_cannot_import(candidate_context, state):
+    db, service, _, _, _, _ = candidate_context
+    candidate = create_candidate(service)
+    db.get(SupplierCandidate, candidate.id).approval_status = state
+    db.commit()
+
+    with pytest.raises(BadRequestError):
+        asyncio.run(service.import_supplier_candidate(candidate.id))
+
+
+def test_failed_enrichment_and_approval_metadata_manipulation_cannot_import(candidate_context):
+    db, service, _, _, _, _ = candidate_context
+    candidate = create_candidate(service)
+    stored = db.get(SupplierCandidate, candidate.id)
+    stored.approval_status = "APPROVED"
+    stored.data_snapshot = {**stored.data_snapshot, "enrichment": {"status": "FAILED"}}
+    db.commit()
+
+    with pytest.raises(BadRequestError, match="enrichment"):
+        asyncio.run(service.import_supplier_candidate(candidate.id))
+
+
+def test_rejected_candidate_cannot_import_after_approval_metadata_manipulation(candidate_context):
+    db, service, _, _, _, _ = candidate_context
+    candidate = create_candidate(service)
+    stored = db.get(SupplierCandidate, candidate.id)
+    stored.approval_status = "REJECTED"
+    stored.readiness_status = "VALIDATED"
+    db.commit()
+
+    with pytest.raises(BadRequestError, match="Rejected"):
+        asyncio.run(service.import_supplier_candidate(candidate.id))
+
+
+def test_missing_vid_and_missing_supplier_data_fail_safely(candidate_context):
+    db, service, _, admin, _, _ = candidate_context
+    candidate = _approve_for_import(service, create_candidate(service), admin)
+    stored = db.get(SupplierCandidate, candidate.id)
+    snapshot = dict(stored.data_snapshot)
+    snapshot["variants"] = [{**snapshot["variants"][0], "supplier_variant_id": ""}]
+    stored.data_snapshot = snapshot
+    db.commit()
+
+    with pytest.raises(BadRequestError, match="VID"):
+        asyncio.run(service.import_supplier_candidate(candidate.id))
+
+
+def test_multiple_variants_preserve_exact_vid_sku_and_warehouse_inventory(candidate_context):
+    db, service, _, admin, _, _ = candidate_context
+    candidate = _approve_for_import(service, create_candidate(service), admin)
+    stored = db.get(SupplierCandidate, candidate.id)
+    first = stored.data_snapshot["variants"][0]
+    second = {**first, "supplier_variant_id": "VID-SECOND", "supplier_variant_sku": "VSKU-SECOND", "cj_inventory": 7, "factory_inventory": 11, "total_inventory": 18}
+    stored.data_snapshot = {**stored.data_snapshot, "variants": [first, second]}
+    db.commit()
+
+    result = asyncio.run(service.import_supplier_candidate(candidate.id))
+    product = db.get(Product, result.id)
+
+    assert [(variant.supplier_variant_id, variant.supplier_variant_sku) for variant in product.variants] == [
+        (f"VID-{candidate.supplier_product_id}", f"VSKU-{candidate.supplier_product_id}"),
+        ("VID-SECOND", "VSKU-SECOND"),
+    ]
+    assert [(variant.cj_inventory, variant.factory_inventory) for variant in product.variants] == [(50, 1000), (7, 11)]
+
+
+def test_repeated_candidate_import_returns_existing_product_without_duplicates(candidate_context):
+    db, service, _, admin, _, _ = candidate_context
+    candidate = _approve_for_import(service, create_candidate(service), admin)
+
+    first = asyncio.run(service.import_supplier_candidate(candidate.id))
+    second = asyncio.run(service.import_supplier_candidate(candidate.id))
+
+    assert second.id == first.id
+    assert db.scalar(select(func.count(Product.id)).where(Product.supplier_product_id == candidate.supplier_product_id)) == 1
+    assert db.scalar(select(func.count(ProductVariant.id)).where(ProductVariant.product_id == first.id)) == 1
+
+
+def test_partial_candidate_import_rolls_back_product_and_variants(candidate_context, monkeypatch):
+    db, service, _, admin, _, _ = candidate_context
+    candidate = _approve_for_import(service, create_candidate(service), admin)
+    original = service._build_candidate_variant
+
+    def fail_after_product(product, item, position, commercial):
+        if position == 1:
+            raise RuntimeError("variant construction failed")
+        return original(product, item, position, commercial)
+
+    monkeypatch.setattr(service, "_build_candidate_variant", fail_after_product)
+    with pytest.raises(RuntimeError, match="variant construction"):
+        asyncio.run(service.import_supplier_candidate(candidate.id))
+
+    assert db.scalar(select(func.count(Product.id)).where(Product.supplier_product_id == candidate.supplier_product_id)) == 0

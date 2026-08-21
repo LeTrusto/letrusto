@@ -16,8 +16,11 @@ from app.models.entities import Brand, Category
 from app.services.catalog_readiness_service import CatalogReadinessService
 from app.models.entities import (
     Product,
+    ProductFeature,
     ProductImage,
     ProductMarketEvidence,
+    ProductSpecification,
+    ProductTag,
     ProductVariant,
     SupplierCandidate,
     SupplierVariantInventory,
@@ -54,7 +57,7 @@ from app.services.launch_pricing_policy import LaunchPricingPolicy, load_launch_
 from app.services.pricing_engine import calculate_launch_variant_price, calculate_margin_price
 from app.services.supplier_candidate_readiness_service import SupplierCandidateReadinessService
 from app.suppliers.economics import EconomicsConfig, calculate_economics
-from app.suppliers.base import InventorySnapshot
+from app.suppliers.base import InventorySnapshot, WarehouseInventorySnapshot
 from app.suppliers.factory import build_supplier_adapter
 from app.suppliers.normalizer import normalize_product
 from app.suppliers.scoring import score_product
@@ -516,6 +519,221 @@ class AdminProductService:
             failed_count=sum(result.status == "FAILED" for result in results),
             results=results,
         )
+
+    async def import_supplier_candidate(self, candidate_id: UUID) -> AdminProductDTO:
+        try:
+            return await self._import_supplier_candidate(candidate_id)
+        except Exception:
+            self.db.rollback()
+            raise
+
+    async def _import_supplier_candidate(self, candidate_id: UUID) -> AdminProductDTO:
+        candidate = self._get_candidate(candidate_id)
+        if candidate.imported_product_id or candidate.approval_status == "IMPORTED":
+            if candidate.imported_product_id:
+                return self._dto(self._get(candidate.imported_product_id))
+            raise BadRequestError("Imported supplier candidate has no catalog product")
+
+        if candidate.approval_status == "REJECTED" or candidate.readiness_status == "REJECTED":
+            raise BadRequestError("Rejected supplier candidate cannot be imported")
+        if candidate.approval_status != "APPROVED":
+            raise BadRequestError("Supplier candidate requires explicit admin approval")
+
+        snapshot = candidate.data_snapshot or {}
+        enrichment = snapshot.get("enrichment") or {}
+        if enrichment.get("status") != "ENRICHED":
+            raise BadRequestError("Successful enrichment is required before import")
+
+        variants = snapshot.get("variants")
+        reference = snapshot.get("reference_data")
+        commercial = snapshot.get("commercial_result")
+        if not isinstance(reference, dict) or not isinstance(variants, list) or not variants:
+            raise BadRequestError("Required supplier product data is missing")
+        if not isinstance(commercial, dict) or commercial.get("minimum_price_inr") is None:
+            raise BadRequestError("Deterministic commercial result is missing")
+
+        prepared_variants = self._prepare_candidate_variants(variants, commercial)
+        existing = self.db.scalar(
+            select(Product).where(
+                Product.supplier == candidate.supplier,
+                Product.supplier_product_id == candidate.supplier_product_id,
+            )
+        )
+        if existing:
+            candidate.imported_product_id = existing.id
+            candidate.approval_status = "IMPORTED"
+            candidate.imported_at = datetime.now(timezone.utc)
+            candidate.import_result = "ALREADY_EXISTS"
+            candidate.import_failure_reason = None
+            self.db.commit()
+            return self._dto(self._get(existing.id))
+
+        product = self._build_candidate_product(candidate, snapshot, enrichment, commercial)
+        self.db.add(product)
+        self.db.flush()
+        self._add_candidate_content(product, enrichment)
+        self._add_candidate_images(product, snapshot.get("images", []))
+        for position, variant_data in enumerate(prepared_variants, start=1):
+            variant = self._build_candidate_variant(product, variant_data, position, commercial)
+            product.variants.append(variant)
+            self.db.flush()
+            self._sync_variant_warehouse_inventory(
+                product,
+                variant,
+                InventorySnapshot(
+                    total_inventory=variant.total_inventory or 0,
+                    cj_inventory=variant.cj_inventory or 0,
+                    factory_inventory=variant.factory_inventory or 0,
+                    verification_status=variant.verified_warehouse,
+                    warehouses=self._candidate_warehouses(snapshot, variant.supplier_variant_id),
+                ),
+            )
+
+        readiness = CatalogReadinessService.validate_activation(product)
+        product.supplier_validation_details = {
+            **(candidate.data_snapshot or {}).get("commercial_result", {}),
+            "catalog_readiness": {
+                "ready": readiness.ready,
+                "blocking_reasons": list(readiness.blocking_reasons),
+            },
+            "enrichment": {
+                "category": enrichment.get("category"),
+                "subcategory": enrichment.get("subcategory"),
+                "attributes": enrichment.get("attributes", {}),
+                "seo_title": enrichment.get("seo_title"),
+                "seo_meta_description": enrichment.get("seo_meta_description"),
+                "search_keywords": enrichment.get("search_keywords", []),
+            },
+        }
+        candidate.imported_product_id = product.id
+        candidate.approval_status = "IMPORTED"
+        candidate.imported_at = datetime.now(timezone.utc)
+        candidate.import_result = "IMPORTED"
+        candidate.import_failure_reason = None
+        self.db.commit()
+        return self._dto(self._get(product.id))
+
+    @staticmethod
+    def _prepare_candidate_variants(
+        variants: list[object], commercial: dict
+    ) -> list[dict]:
+        prepared: list[dict] = []
+        seen_ids: set[str] = set()
+        for item in variants:
+            if not isinstance(item, dict):
+                raise BadRequestError("Invalid supplier variant data")
+            variant_id = str(item.get("supplier_variant_id") or "").strip()
+            variant_sku = str(item.get("supplier_variant_sku") or "").strip()
+            if not variant_id or not variant_sku:
+                raise BadRequestError("Supplier variant VID and SKU are required")
+            if variant_id in seen_ids:
+                raise BadRequestError("Duplicate supplier variant VID")
+            seen_ids.add(variant_id)
+            if item.get("selling_price_inr") is None and commercial.get("minimum_price_inr") is None:
+                raise BadRequestError("Deterministic variant price is missing")
+            prepared.append({**item, "supplier_variant_id": variant_id, "supplier_variant_sku": variant_sku})
+        return prepared
+
+    def _build_candidate_product(
+        self, candidate: SupplierCandidate, snapshot: dict, enrichment: dict, commercial: dict
+    ) -> Product:
+        variants = snapshot["variants"]
+        return Product(
+            id=uuid4(),
+            slug=self._unique_slug(enrichment["title"], candidate.supplier_product_id),
+            name=enrichment["title"],
+            description=enrichment["description"],
+            status="DRAFT",
+            supplier=candidate.supplier,
+            supplier_product_id=candidate.supplier_product_id,
+            supplier_source_url=(snapshot.get("reference_data") or {}).get("product_url"),
+            category_id=self._category_id(enrichment.get("category")),
+            supplier_cost=self._decimal_from_variant(variants[0], "supplier_cost_inr"),
+            shipping_cost=self._decimal_from_freight(snapshot.get("freight", {})),
+            selling_price=Decimal(str(commercial["minimum_price_inr"])),
+            currency="INR",
+            total_inventory=sum(int(item.get("total_inventory") or 0) for item in variants),
+            cj_inventory=sum(int(item.get("cj_inventory") or 0) for item in variants),
+            factory_inventory=sum(int(item.get("factory_inventory") or 0) for item in variants),
+            verified_warehouse="verified" if snapshot.get("warehouses") else None,
+            last_supplier_sync_at=datetime.now(timezone.utc),
+            commercial_status="APPROVED",
+            commercial_reasons=commercial.get("failure_reasons", []),
+            supplier_validation_status=candidate.supplier_validation_status,
+            supplier_validation_score=candidate.supplier_validation_score,
+            supplier_validation_notes=[],
+            supplier_validated_at=datetime.now(timezone.utc),
+            approval_decided_at=candidate.decision_at,
+            approval_decided_by_user_id=candidate.decision_by_user_id,
+            approval_evidence={"source": "SUPPLIER_CANDIDATE_APPROVAL", "candidate_id": str(candidate.id)},
+        )
+
+    def _category_id(self, slug: str | None) -> int | None:
+        if not slug:
+            return None
+        category = self.db.scalar(select(Category).where(Category.slug == slug))
+        return category.id if category else None
+
+    @staticmethod
+    def _decimal_from_variant(variant: dict, key: str) -> Decimal | None:
+        value = variant.get(key)
+        return Decimal(str(value)) if value is not None else None
+
+    @staticmethod
+    def _decimal_from_freight(freight: object) -> Decimal | None:
+        if not isinstance(freight, dict) or freight.get("cost_inr") is None:
+            raise BadRequestError("Freight cost is missing")
+        return Decimal(str(freight["cost_inr"]))
+
+    @staticmethod
+    def _build_candidate_variant(product: Product, item: dict, position: int, commercial: dict) -> ProductVariant:
+        return ProductVariant(
+            product_id=product.id,
+            supplier_variant_id=item["supplier_variant_id"],
+            supplier_variant_sku=item["supplier_variant_sku"],
+            name=str(item.get("name") or ""),
+            attributes=str(item.get("attributes") or ""),
+            supplier_cost=AdminProductService._decimal_from_variant(item, "supplier_cost_inr"),
+            supplier_cost_usd=AdminProductService._decimal_from_variant(item, "supplier_cost_usd"),
+            selling_price=Decimal(str(item.get("selling_price_inr") or commercial["minimum_price_inr"])),
+            total_inventory=int(item.get("total_inventory") or 0),
+            cj_inventory=int(item.get("cj_inventory") or 0),
+            factory_inventory=int(item.get("factory_inventory") or 0),
+            verified_warehouse="verified",
+            weight_grams=AdminProductService._decimal_from_variant(item, "weight_grams"),
+            position=position,
+        )
+
+    @staticmethod
+    def _candidate_warehouses(snapshot: dict, variant_id: str) -> list[WarehouseInventorySnapshot]:
+        return [
+            WarehouseInventorySnapshot(
+                warehouse_country=str(item.get("warehouse_country") or ""),
+                storage_id=item.get("storage_id"),
+                warehouse_name=item.get("warehouse_name"),
+                total_inventory=int(item.get("total_inventory") or 0),
+                cj_inventory=int(item.get("cj_inventory") or 0),
+                factory_inventory=int(item.get("factory_inventory") or 0),
+                verification_status=item.get("verification_status"),
+            )
+            for item in snapshot.get("warehouses", [])
+            if isinstance(item, dict) and item.get("supplier_variant_id") == variant_id
+        ]
+
+    def _add_candidate_content(self, product: Product, enrichment: dict) -> None:
+        for position, feature in enumerate(enrichment.get("key_features", []), start=1):
+            self.db.add(ProductFeature(product_id=product.id, value=feature, position=position))
+        for position, (label, value) in enumerate(enrichment.get("attributes", {}).items(), start=1):
+            self.db.add(ProductSpecification(product_id=product.id, label=str(label), value=str(value), position=position))
+        for keyword in dict.fromkeys(enrichment.get("search_keywords", [])):
+            self.db.add(ProductTag(product_id=product.id, value=keyword))
+
+    def _add_candidate_images(self, product: Product, images: object) -> None:
+        if not isinstance(images, list):
+            return
+        for position, image_url in enumerate(images, start=1):
+            if isinstance(image_url, str) and image_url.strip():
+                product.images.append(ProductImage(url=image_url.strip(), position=position))
 
     async def _import_candidate_item(
         self, db: Session, supplier: str, requested_id: str
