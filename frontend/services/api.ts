@@ -134,6 +134,28 @@ export async function apiRequest<T>(
 	return (await response.json()) as T;
 }
 
+export async function authenticatedApiRequest<T>(
+	accessToken: string,
+	path: string,
+	init?: RequestInit,
+): Promise<T> {
+	const response = await fetch(buildApiUrl(path), {
+		...init,
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${accessToken}`,
+			...(init?.headers ?? {}),
+		},
+	});
+
+	if (!response.ok) {
+		const body = await response.json().catch(() => null) as { detail?: string } | null;
+		throw new Error(body?.detail ?? `API request failed (${response.status})`);
+	}
+
+	return (await response.json()) as T;
+}
+
 export async function withApiFallback<T>(
 	request: () => Promise<T>,
 	fallback: () => T | Promise<T>

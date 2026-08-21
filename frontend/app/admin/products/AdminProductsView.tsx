@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Calculator, Check, CirclePause, ClipboardCheck, ExternalLink, Play, Trash2, X } from "lucide-react";
 import { API_BASE_URL } from "@/services/api";
+import FulfillmentPreflightPanel from "./FulfillmentPreflightPanel";
 
 const API_BASE = API_BASE_URL;
 
@@ -646,6 +647,8 @@ export default function AdminProductsView() {
 
       {message && <p className="mb-4 text-sm text-green-700">{message}</p>}
       {error && <p className="mb-4 text-sm text-red-700">{error}</p>}
+
+      <FulfillmentPreflightPanel products={products.map((product) => ({ id: product.id, name: product.name, variants: product.variants }))} />
 
       <section className="mb-6 border-y border-[var(--border)] py-5">
         <h2 className="text-lg font-semibold">Paid order fulfillment</h2>
