@@ -439,6 +439,9 @@ class AdminProductService:
             raise BadRequestError("Deterministic readiness gates rejected this supplier candidate")
         if candidate.supplier_validation_status == "REJECT":
             raise BadRequestError("Supplier candidate rejected by supplier validation cannot be approved")
+        enrichment = (candidate.data_snapshot or {}).get("enrichment") or {}
+        if enrichment.get("status") != "ENRICHED":
+            raise BadRequestError("Supplier candidate requires successful enrichment before approval")
         if candidate.approval_status != "APPROVED":
             candidate.approval_status = "APPROVED"
             candidate.commercial_status = "APPROVED"
@@ -557,6 +560,14 @@ class AdminProductService:
                 canonical_supplier_product_id=candidate.supplier_product_id,
                 product_id=candidate.imported_product_id,
                 message="Supplier candidate was already imported",
+            )
+        if (candidate.data_snapshot or {}).get("enrichment", {}).get("status") != "ENRICHED":
+            return BulkApprovedProductImportItem(
+                requested_id=requested_id,
+                status="REJECTED_NOT_APPROVED",
+                canonical_supplier_product_id=candidate.supplier_product_id,
+                product_id=None,
+                message="Successful enrichment is required before import",
             )
 
         product = db.scalar(
@@ -1141,6 +1152,7 @@ class AdminProductService:
             logistics=snapshot.get("logistics", {}),
             freight=snapshot.get("freight", {}),
             commercial_result=snapshot.get("commercial_result", {}),
+            enrichment=snapshot.get("enrichment", {}),
             failure_reasons=snapshot.get("commercial_result", {}).get("failure_reasons", []),
             validation_issues=snapshot.get("validation_issues", []),
             target_margin_percent=snapshot.get("target_margin_percent"),

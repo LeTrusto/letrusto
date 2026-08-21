@@ -14,6 +14,7 @@ from app.repositories.product_repository import ProductRepository
 from app.services.email_service import EmailService
 from app.services.admin_service import AdminService
 from app.services.admin_product_service import AdminProductService
+from app.services.catalog_enrichment_service import CatalogEnrichmentService
 from app.services.ai_service import AIService, InMemorySessionStore
 from app.services.ai_tool_intent_router import AIToolIntentRouter
 from app.services.ai_tool_recommendation_service import AIToolRecommendationService
@@ -120,6 +121,10 @@ def get_admin_service(db: Session = Depends(get_db)) -> AdminService:
 
 def get_admin_product_service(db: Session = Depends(get_db)) -> AdminProductService:
     return AdminProductService(db)
+
+
+def get_catalog_enrichment_service(db: Session = Depends(get_db)) -> CatalogEnrichmentService:
+    return CatalogEnrichmentService(db)
 
 
 def _extract_bearer(authorization: str) -> str:

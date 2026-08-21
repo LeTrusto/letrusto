@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 
-from app.api.deps import get_admin_product_service, get_admin_service, get_current_admin, get_fulfillment_service, get_db
+from app.api.deps import get_admin_product_service, get_admin_service, get_catalog_enrichment_service, get_current_admin, get_fulfillment_service, get_db
 from app.core.config import get_settings
 from app.core.trust import TRUST_CLAIM_STATUSES, TRUST_VERIFICATION_METHODS
 from app.models.entities import User
@@ -34,6 +34,7 @@ from app.schemas.admin_products import (
 )
 from app.services.admin_service import AdminService
 from app.services.admin_product_service import AdminProductService
+from app.services.catalog_enrichment_service import CatalogEnrichmentService
 from app.services.fulfillment_service import FulfillmentService
 from app.services.inventory_reservation_service import InventoryReservationService
 from app.services.order_reconciliation_service import OrderLifecycleReconciliationService
@@ -377,6 +378,15 @@ def get_supplier_candidate(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> SupplierCandidateDTO:
     return service.get_supplier_candidate(candidate_id)
+
+
+@router.post("/supplier-candidates/{candidate_id}/enrich", response_model=SupplierCandidateDTO)
+async def enrich_supplier_candidate(
+    candidate_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: CatalogEnrichmentService = Depends(get_catalog_enrichment_service),
+) -> SupplierCandidateDTO:
+    return await service.enrich(candidate_id)
 
 
 @router.post(

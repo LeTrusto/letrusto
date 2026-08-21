@@ -15,6 +15,7 @@ from app.main import app
 from app.models.entities import Product, SupplierCandidate, User
 from app.schemas.admin_products import BulkApprovedProductImportRequest, SupplierCandidateCreate
 from app.services.admin_product_service import AdminProductService
+from app.services.catalog_enrichment_service import CatalogEnrichmentService
 from app.services.supplier_candidate_readiness_service import SupplierCandidateReadinessService
 from app.suppliers.base import RawSupplierProduct, RawVariant, ShippingOption, ShippingResult, ShippingValidation
 
@@ -118,9 +119,17 @@ def candidate_context(monkeypatch):
 
 
 def create_candidate(service, requested_id="REQUEST-SKU"):
-    return asyncio.run(service.create_supplier_candidate(
+    candidate = asyncio.run(service.create_supplier_candidate(
         SupplierCandidateCreate(supplier="cj", supplier_product_id=requested_id)
     ))
+    stored = service.db.get(SupplierCandidate, candidate.id)
+    snapshot = dict(stored.data_snapshot or {})
+    reference = dict(snapshot.get("reference_data") or {})
+    reference.setdefault("description", "Verified candidate detail")
+    snapshot["reference_data"] = reference
+    stored.data_snapshot = snapshot
+    service.db.commit()
+    return asyncio.run(CatalogEnrichmentService(service.db).enrich(candidate.id))
 
 
 def approve_candidate(service, candidate_id, admin):
@@ -170,6 +179,38 @@ def test_rejected_readiness_cannot_bypass_state_machine_or_approval(candidate_co
         service.transition_supplier_candidate_readiness(candidate.id, "VALIDATED")
     with pytest.raises(BadRequestError, match="readiness"):
         service.approve_supplier_candidate(candidate.id, admin)
+
+
+def test_rejected_approval_status_cannot_be_enriched(candidate_context):
+    db, service, _, _, _, _ = candidate_context
+    candidate = create_candidate(service)
+    stored = db.get(SupplierCandidate, candidate.id)
+    stored.approval_status = "REJECTED"
+    db.commit()
+
+    with pytest.raises(BadRequestError, match="Rejected"):
+        asyncio.run(CatalogEnrichmentService(db).enrich(candidate.id))
+
+
+def test_failed_enrichment_cannot_be_approved_or_imported(candidate_context):
+    db, service, _, admin, _, _ = candidate_context
+    candidate = create_candidate(service)
+    stored = db.get(SupplierCandidate, candidate.id)
+    stored.data_snapshot = {
+        **stored.data_snapshot,
+        "enrichment": {"status": "FAILED", "failure_reasons": ["AI_FAILURE"]},
+    }
+    db.commit()
+
+    with pytest.raises(BadRequestError, match="successful enrichment"):
+        service.approve_supplier_candidate(candidate.id, admin)
+
+    stored.approval_status = "APPROVED"
+    db.commit()
+    result = asyncio.run(service.bulk_import_approved(BulkApprovedProductImportRequest(
+        supplier="cj", product_ids=[candidate.supplier_product_id]
+    )))
+    assert result.results[0].status == "REJECTED_NOT_APPROVED"
 
 
 def test_creation_resolves_and_persists_canonical_identity(candidate_context):

@@ -77,7 +77,9 @@ class ProductImportRequest(BaseModel):
 
 CandidateApprovalStatus = Literal["REVIEW", "APPROVED", "REJECTED", "IMPORTED"]
 CandidateSnapshotStatus = Literal["AVAILABLE", "LEGACY_SNAPSHOT_UNAVAILABLE"]
-CandidateReadinessStatus = Literal["DISCOVERED", "VALIDATED", "REJECTED", "REVIEW"]
+CandidateReadinessStatus = Literal[
+    "DISCOVERED", "VALIDATED", "ENRICHING", "ENRICHED", "REJECTED", "REVIEW"
+]
 
 
 class SupplierCandidateVariantDTO(BaseModel):
@@ -174,6 +176,7 @@ class SupplierCandidateDTO(BaseModel):
     logistics: dict[str, Any]
     freight: dict[str, Any]
     commercial_result: dict[str, Any]
+    enrichment: dict[str, Any]
     failure_reasons: list[str]
     validation_issues: list[str]
     target_margin_percent: Decimal | None

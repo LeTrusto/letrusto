@@ -5,11 +5,15 @@ from typing import Final, Literal
 from app.core.exceptions import BadRequestError
 
 
-CandidateReadinessStatus = Literal["DISCOVERED", "VALIDATED", "REVIEW", "REJECTED"]
+CandidateReadinessStatus = Literal[
+    "DISCOVERED", "VALIDATED", "ENRICHING", "ENRICHED", "REVIEW", "REJECTED"
+]
 
 _ALLOWED_TRANSITIONS: Final[dict[CandidateReadinessStatus, frozenset[CandidateReadinessStatus]]] = {
     "DISCOVERED": frozenset({"VALIDATED", "REVIEW", "REJECTED"}),
-    "VALIDATED": frozenset(),
+    "VALIDATED": frozenset({"ENRICHING"}),
+    "ENRICHING": frozenset({"ENRICHED", "REVIEW", "REJECTED"}),
+    "ENRICHED": frozenset({"REVIEW"}),
     "REVIEW": frozenset({"VALIDATED", "REJECTED"}),
     "REJECTED": frozenset(),
 }
