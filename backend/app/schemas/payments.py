@@ -52,3 +52,18 @@ class AdminFulfillmentOrderDTO(FulfillmentDTO):
     tracking_carrier: str | None = None
     supplier_status: str | None = None
     last_supplier_sync_at: str | None = None
+
+
+class SupplierPaymentRequest(BaseModel):
+    required_amount_usd: Decimal
+
+
+class AdminSupplierPaymentDTO(BaseModel):
+    order_id: UUID
+    supplier_order_id: str
+    supplier_shipment_order_id: str
+    required_amount_usd: Decimal
+    payment_state: str
+    supplier_status: str | None = None
+    payment_error: str | None = None
+    confirmation_required: bool

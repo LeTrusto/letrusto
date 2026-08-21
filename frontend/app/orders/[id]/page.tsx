@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, Package, RotateCcw } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
-import { cancelOrder, getOrder, verifyCashfreePayment } from "@/services/order.service";
+import { cancelOrder, getOrder, verifyPendingOrderPayment } from "@/services/order.service";
 import type { Order } from "@/types/orders";
 
 function money(value: number) { return `₹${value.toLocaleString("en-IN")}`; }
@@ -25,9 +25,7 @@ export default function OrderDetailPage() {
     void Promise.resolve().then(async () => {
       try {
         const initial = await getOrder(accessToken, params.id);
-        if (initial.payment_status === "PENDING") {
-          try { await verifyCashfreePayment(accessToken, params.id); } catch { /* Pending payment is safe. */ }
-        }
+        try { await verifyPendingOrderPayment(accessToken, initial); } catch { /* Pending payment is safe. */ }
         setOrder(await getOrder(accessToken, params.id));
       } catch (err) { setError(err instanceof Error ? err.message : "Unable to load order"); }
     });

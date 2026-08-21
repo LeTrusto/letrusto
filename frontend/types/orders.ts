@@ -45,6 +45,7 @@ export type Order = {
   shipping_address: ShippingAddress;
   items: OrderItem[];
   created_at: string;
+  payment_provider?: "CASHFREE" | "RAZORPAY" | null;
   tracking_number?: string | null;
   tracking_carrier?: string | null;
   shipped_at?: string | null;

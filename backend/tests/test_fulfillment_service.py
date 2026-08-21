@@ -8,6 +8,9 @@ import pytest
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
 from app.models.entities import Cart, CartItem, Order, OrderItem, PaymentAttempt, Product, ProductVariant, User
+from app.api.deps import get_current_admin, get_fulfillment_service
+from app.main import app
+from fastapi.testclient import TestClient
 from app.services.fulfillment_service import FulfillmentService
 from app.services.inventory_reservation_service import InventoryReservationService
 from app.suppliers.base import SupplierOrderResult, SupplierTrackingResult
@@ -28,6 +31,16 @@ class FakeCJ:
 
     async def get_tracking(self, supplier_order_id):
         return SupplierTrackingResult(supported=True, supplier_status="shipped", tracking_number="TRACK-1", carrier="Test Carrier", shipped_at="2026-08-18T10:00:00Z")
+
+    async def get_order_status(self, supplier_order_id):
+        return SupplierOrderResult(accepted=True, supplier_order_id=supplier_order_id, status="AWAITING_PAYMENT", supplier_status="UNPAID")
+
+    async def get_balance(self):
+        from app.suppliers.base import SupplierBalanceResult
+        return SupplierBalanceResult(supported=True, amount_usd=100.0, freeze_amount_usd=0.0)
+
+    async def pay_balance(self, shipment_order_id, pay_id=None):
+        return SupplierOrderResult(accepted=True, supplier_order_id="CJ-EXPLICIT", shipment_order_id=shipment_order_id, status="AWAITING_PAYMENT", supplier_status="UNPAID", payment_state="PENDING", pay_id="PAY-EXPLICIT")
 
 
 def make_paid_order(db):
@@ -128,3 +141,30 @@ def test_unknown_tracking_status_does_not_downgrade_or_erase_tracking(monkeypatc
         assert result.tracking_number == "KEEP-1"
         assert result.supplier_status == "mystery"
     finally: cleanup(db, user, product)
+
+
+def test_admin_supplier_payment_action_is_explicit_and_persists_state(monkeypatch):
+    db = SessionLocal(); user, product, order = make_paid_order(db); fake = FakeCJ()
+    order.supplier_order_id = "CJ-EXPLICIT"
+    order.supplier_shipment_order_id = "SHIP-EXPLICIT"
+    order.supplier_status = "UNPAID"
+    order.supplier_payment_state = "AWAITING_PAYMENT"
+    db.commit()
+    monkeypatch.setattr("app.services.fulfillment_service.build_supplier_adapter", lambda _: fake)
+    monkeypatch.setattr("app.services.fulfillment_service.get_settings", lambda: SimpleNamespace(CJ_API_KEY="configured"))
+    service = FulfillmentService(db)
+    app.dependency_overrides[get_current_admin] = lambda: object()
+    app.dependency_overrides[get_fulfillment_service] = lambda: service
+    try:
+        response = TestClient(app).post(f"/api/v1/admin/orders/{order.id}/supplier-payment", json={"required_amount_usd": 25})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["supplier_order_id"] == "CJ-EXPLICIT"
+        assert body["payment_state"] == "PENDING"
+        assert body["confirmation_required"] is True
+        db.refresh(order)
+        assert order.supplier_pay_id == "PAY-EXPLICIT"
+        assert order.supplier_payment_state == "PENDING"
+    finally:
+        app.dependency_overrides.clear()
+        cleanup(db, user, product)

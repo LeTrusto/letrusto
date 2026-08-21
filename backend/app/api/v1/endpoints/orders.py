@@ -60,6 +60,11 @@ async def verify_razorpay_payment(order_id: UUID, payload: RazorpayPaymentVerifi
     return await service.verify_payment(current_user, order_id, payload)
 
 
+@router.get("/orders/{order_id}/razorpay/payment-status", response_model=PaymentStatusDTO)
+async def verify_razorpay_payment_status(order_id: UUID, current_user: User = Depends(get_current_user), service: RazorpayService = Depends(get_razorpay_service)) -> PaymentStatusDTO:
+    return await service.verify_payment_status(current_user, order_id)
+
+
 @router.post("/payments/razorpay/webhook", status_code=200)
 async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = Header(default=None), service: RazorpayService = Depends(get_razorpay_service)) -> dict[str, str]:
     await service.process_webhook(await request.body(), x_razorpay_signature)

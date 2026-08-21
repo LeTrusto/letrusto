@@ -36,7 +36,7 @@ from app.services.inventory_reservation_service import InventoryReservationServi
 from app.services.order_reconciliation_service import OrderLifecycleReconciliationService
 from app.schemas.reconciliation import ReconciliationResultDTO
 from app.schemas.reservations import AdminInventoryReservationDTO
-from app.schemas.payments import AdminFulfillmentOrderDTO, FulfillmentDTO
+from app.schemas.payments import AdminFulfillmentOrderDTO, AdminSupplierPaymentDTO, FulfillmentDTO, SupplierPaymentRequest
 from app.schemas.admin_analytics import AnalyticsPeriod, AnalyticsSummary, InventoryAnalyticsDTO, OrderProfitabilityDTO, ProductPerformanceDTO, SalesTrendPoint, VariantPerformanceDTO
 from app.services.admin_analytics_service import AdminAnalyticsService
 from app.schemas.marketing import AttributionCreate, AttributionDTO, MarketingCACResponse, MarketingSpendCreate, MarketingSpendDTO
@@ -281,6 +281,28 @@ async def sync_order_fulfillment(
 ):
     order = await service.sync_tracking(order_id)
     return FulfillmentDTO(order_id=order.id, fulfillment_status=order.fulfillment_status, supplier_order_id=order.supplier_order_id, failure_reason=order.fulfillment_failure_reason)
+
+
+@router.post("/orders/{order_id}/supplier-payment", response_model=AdminSupplierPaymentDTO)
+async def pay_supplier_order(
+    order_id: UUID,
+    payload: SupplierPaymentRequest,
+    _: User = Depends(get_current_admin),
+    service: FulfillmentService = Depends(get_fulfillment_service),
+) -> AdminSupplierPaymentDTO:
+    order = await service.pay_supplier(order_id, float(payload.required_amount_usd))
+    if not order.supplier_order_id or not order.supplier_shipment_order_id:
+        raise HTTPException(status_code=409, detail="Supplier payment record is incomplete")
+    return AdminSupplierPaymentDTO(
+        order_id=order.id,
+        supplier_order_id=order.supplier_order_id,
+        supplier_shipment_order_id=order.supplier_shipment_order_id,
+        required_amount_usd=payload.required_amount_usd,
+        payment_state=order.supplier_payment_state or "UNKNOWN",
+        supplier_status=order.supplier_status,
+        payment_error=order.supplier_payment_error,
+        confirmation_required=order.supplier_payment_state != "PAID",
+    )
 
 
 @router.get("/stats", response_model=AdminDashboardStats)

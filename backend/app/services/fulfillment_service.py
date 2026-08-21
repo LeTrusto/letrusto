@@ -10,6 +10,7 @@ from app.models.entities import Order, OrderItem, User
 from app.schemas.payments import AdminFulfillmentOrderDTO
 from app.services.cancellation_service import is_fulfillable
 from app.services.inventory_reservation_service import InventoryReservationService
+from app.services.cj_supplier_payment_service import CJSupplierPaymentService, SupplierPaymentRecord, apply_payment_record_to_order
 from app.suppliers.base import SupplierTrackingResult
 from app.suppliers.factory import build_supplier_adapter
 
@@ -164,7 +165,50 @@ class FulfillmentService:
         else:
             order.supplier_order_id = result.supplier_order_id
             order.supplier_status = result.supplier_status or result.status
+            order.supplier_pay_id = result.pay_id
+            order.supplier_payment_url = result.payment_url
+            order.supplier_shipment_order_id = result.shipment_order_id
+            order.supplier_payment_state = result.payment_state or ("AWAITING_PAYMENT" if order.supplier_status == "UNPAID" else None)
             order.fulfillment_status = self.map_supplier_status(result.status, "SUBMITTED")
             order.fulfillment_submitted_at = datetime.now(timezone.utc)
+        self.db.commit()
+        return order
+
+    async def pay_supplier(self, order_id: UUID, required_amount_usd: float) -> Order:
+        order = self._get_order(order_id, for_update=True)
+        if order.payment_status != "PAID":
+            raise BadRequestError("Customer payment must be PAID before supplier payment")
+        if not order.supplier_order_id:
+            raise BadRequestError("Supplier payment requires an existing CJ order")
+        if not order.supplier_shipment_order_id:
+            raise BadRequestError("Supplier payment requires a CJ shipment order")
+        if required_amount_usd <= 0:
+            raise BadRequestError("Supplier payment amount must be positive")
+
+        record = SupplierPaymentRecord(
+            supplier_order_id=order.supplier_order_id,
+            shipment_order_id=order.supplier_shipment_order_id,
+            payment_state=order.supplier_payment_state or "REQUIRED",
+            supplier_status=order.supplier_status,
+            pay_id=order.supplier_pay_id,
+            payment_error=order.supplier_payment_error,
+            payment_attempted_at=order.supplier_payment_attempted_at,
+            payment_confirmed_at=order.supplier_payment_confirmed_at,
+        )
+        try:
+            result = await CJSupplierPaymentService(build_supplier_adapter("cj")).pay(record, required_amount_usd=required_amount_usd)
+        except Exception as exc:
+            record.payment_state = "FAILED"
+            record.payment_error = str(exc)[:500]
+            apply_payment_record_to_order(order, record)
+            self.db.commit()
+            return order
+        if result.payment_url:
+            order.supplier_payment_url = result.payment_url
+        if result.shipment_order_id:
+            order.supplier_shipment_order_id = result.shipment_order_id
+        if result.supplier_status:
+            order.supplier_status = result.supplier_status
+        apply_payment_record_to_order(order, record)
         self.db.commit()
         return order

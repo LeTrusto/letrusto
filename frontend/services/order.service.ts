@@ -51,3 +51,14 @@ export function verifyRazorpayPayment(token: string, orderId: string, payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export function verifyRazorpayPaymentStatus(token: string, orderId: string) {
+  return orderRequest<PaymentStatus>(`/orders/${orderId}/razorpay/payment-status`, token);
+}
+
+export function verifyPendingOrderPayment(token: string, order: Pick<Order, "id" | "payment_status" | "payment_provider">) {
+  if (order.payment_status !== "PENDING") return Promise.resolve(null);
+  if (order.payment_provider === "RAZORPAY") return verifyRazorpayPaymentStatus(token, order.id);
+  if (order.payment_provider === "CASHFREE") return verifyCashfreePayment(token, order.id);
+  return Promise.resolve(null);
+}

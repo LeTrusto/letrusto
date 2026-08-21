@@ -167,6 +167,43 @@ class RazorpayService:
 
         return await self._mark_payment_success(order, attempt, payload.razorpay_payment_id)
 
+    async def verify_payment_status(self, user: User, order_id: UUID) -> PaymentStatusDTO:
+        order = self._order(user, order_id, for_update=True)
+        if order.payment_provider != self.provider or not order.provider_order_id:
+            raise BadRequestError("Razorpay order does not match the LeTrusto order")
+        if order.payment_status == "PAID":
+            return self._status(order)
+
+        attempt = self.db.scalar(select(PaymentAttempt).where(
+            PaymentAttempt.order_id == order.id,
+            PaymentAttempt.provider == self.provider,
+            PaymentAttempt.provider_order_id == order.provider_order_id,
+        ))
+        if attempt is None:
+            raise BadRequestError("Razorpay payment attempt not found")
+        if not attempt.provider_payment_id:
+            return self._status(order)
+
+        client = self._client()
+        try:
+            provider_order = client.order.fetch(order.provider_order_id)
+            payment = client.payment.fetch(attempt.provider_payment_id)
+        except Exception as exc:
+            raise BadRequestError("Razorpay payment status could not be verified") from exc
+
+        expected_amount = self._amount_in_paise(order)
+        if (
+            str(payment.get("order_id") or "") != order.provider_order_id
+            or int(payment.get("amount") or 0) != expected_amount
+            or str(payment.get("currency") or "") != order.currency
+            or int(provider_order.get("amount") or 0) != expected_amount
+            or str(provider_order.get("currency") or "") != order.currency
+        ):
+            raise BadRequestError("Razorpay payment does not match the order")
+        if str(payment.get("status") or "").lower() != "captured":
+            return self._status(order)
+        return await self._mark_payment_success(order, attempt, attempt.provider_payment_id)
+
     async def process_webhook(self, raw_body: bytes, signature: str | None) -> None:
         """Verify and process the minimum Razorpay payment/refund event set."""
         try:
@@ -320,6 +357,25 @@ class RazorpayService:
             razorpay.Utility().verify_webhook_signature(raw_body, signature, webhook_secret)
         except Exception as exc:
             raise BadRequestError("Invalid Razorpay webhook signature") from exc
+
+    def request_refund(self, *, payment_id: str, refund_amount, reason: str) -> dict:
+        if not self.configured:
+            return {"configured": False, "provider_status": "FAILED", "failure_reason": "Razorpay credentials are not configured"}
+        if not payment_id:
+            return {"configured": True, "provider_status": "FAILED", "failure_reason": "Razorpay payment ID is missing"}
+        amount = (Decimal(refund_amount) * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        try:
+            response = self._client().payment.refund(
+                payment_id,
+                {"amount": int(amount), "notes": {"reason": reason or "Customer cancellation"}},
+            )
+        except Exception as exc:
+            return {"configured": True, "provider_status": "FAILED", "failure_reason": str(exc)[:500]}
+        return {
+            "configured": True,
+            "provider_refund_id": response.get("id"),
+            "provider_status": response.get("status") or "pending",
+        }
 
     @staticmethod
     def _status(order: Order) -> PaymentStatusDTO:

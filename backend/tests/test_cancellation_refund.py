@@ -62,7 +62,7 @@ def _fixture(db):
 
 
 def _make_order(db, user, *, status="PENDING_PAYMENT", payment_status="PENDING", fulfillment_status="PENDING",
-                supplier_order_id=None, total=Decimal("500.00"), provider_order_id=None):
+                supplier_order_id=None, total=Decimal("500.00"), provider_order_id=None, payment_provider=None):
     order = Order(
         order_number=f"LT-TEST-{uuid4().hex[:8]}", user_id=user.id, status=status,
         payment_status=payment_status, fulfillment_status=fulfillment_status,
@@ -70,7 +70,7 @@ def _make_order(db, user, *, status="PENDING_PAYMENT", payment_status="PENDING",
         customer_name="Test", customer_email="test@test.local", customer_phone="9876543210",
         shipping_address={"address": "1 Test St", "city": "Bengaluru", "state": "Karnataka", "postal_code": "560001", "country": "IN"},
         idempotency_key=f"key-{uuid4().hex[:8]}",
-        supplier_order_id=supplier_order_id, provider_order_id=provider_order_id,
+        supplier_order_id=supplier_order_id, provider_order_id=provider_order_id, payment_provider=payment_provider,
     )
     db.add(order)
     db.commit()
@@ -78,7 +78,8 @@ def _make_order(db, user, *, status="PENDING_PAYMENT", payment_status="PENDING",
 
 
 def _make_paid_order(db, user, **kwargs):
-    order = _make_order(db, user, status="PAID", payment_status="PAID", provider_order_id=f"cf-{uuid4().hex[:8]}", **kwargs)
+    payment_provider = kwargs.pop("payment_provider", "CASHFREE")
+    order = _make_order(db, user, status="PAID", payment_status="PAID", payment_provider=payment_provider, provider_order_id=f"cf-{uuid4().hex[:8]}", **kwargs)
     attempt = PaymentAttempt(order=order, provider="CASHFREE", provider_order_id=order.provider_order_id, status="SUCCESS", provider_payment_id=f"cf-pay-{uuid4().hex[:6]}")
     db.add(attempt)
     db.commit()
@@ -233,6 +234,66 @@ class TestAdminCancellation:
 
 
 class TestRefundProvider:
+    def test_razorpay_order_uses_razorpay_refund(self):
+        db = SessionLocal()
+        user, admin, product, _ = _fixture(db)
+        order = _make_paid_order(db, user, payment_provider="RAZORPAY")
+        order.provider_order_id = f"order_{uuid4().hex[:8]}"
+        attempt = PaymentAttempt(order=order, provider="RAZORPAY", provider_order_id=order.provider_order_id, status="CAPTURED", provider_payment_id="pay_razorpay")
+        db.add(attempt)
+        db.commit()
+        cashfree = MagicMock()
+        razorpay = MagicMock()
+        razorpay.request_refund.return_value = {"provider_refund_id": "rfnd_razorpay", "provider_status": "pending"}
+        try:
+            result = CancellationService(db, cashfree_service=cashfree, razorpay_service=razorpay).cancel_by_customer(user, order.id)
+            assert result.payment_status == "REFUND_PENDING"
+            refund = db.query(RefundRequest).filter(RefundRequest.order_id == order.id).one()
+            assert refund.provider == "RAZORPAY"
+            razorpay.request_refund.assert_called_once()
+            cashfree.request_refund.assert_not_called()
+        finally:
+            db.query(RefundRequest).filter(RefundRequest.order_id == order.id).delete()
+            db.query(PaymentAttempt).filter(PaymentAttempt.order_id == order.id).delete()
+            db.delete(order)
+            _cleanup(db, user, admin, product)
+
+    def test_unsupported_provider_fails_without_refund_mutation(self):
+        db = SessionLocal()
+        user, admin, product, _ = _fixture(db)
+        order = _make_paid_order(db, user, payment_provider="UNKNOWN")
+        try:
+            with pytest.raises(BadRequestError, match="missing or unsupported"):
+                CancellationService(db).cancel_by_customer(user, order.id)
+            db.refresh(order)
+            assert order.status == "PAID"
+            assert db.query(RefundRequest).filter(RefundRequest.order_id == order.id).count() == 0
+        finally:
+            db.query(PaymentAttempt).filter(PaymentAttempt.order_id == order.id).delete()
+            db.delete(order)
+            _cleanup(db, user, admin, product)
+
+    def test_razorpay_refund_failure_is_retryable(self):
+        db = SessionLocal()
+        user, admin, product, _ = _fixture(db)
+        order = _make_paid_order(db, user, payment_provider="RAZORPAY")
+        order.provider_order_id = f"order_{uuid4().hex[:8]}"
+        db.add(PaymentAttempt(order=order, provider="RAZORPAY", provider_order_id=order.provider_order_id, status="CAPTURED", provider_payment_id="pay_razorpay_fail"))
+        db.commit()
+        razorpay = MagicMock()
+        razorpay.request_refund.return_value = {"provider_status": "failed", "failure_reason": "Provider rejected refund"}
+        try:
+            result = CancellationService(db, razorpay_service=razorpay).cancel_by_customer(user, order.id)
+            refund = db.query(RefundRequest).filter(RefundRequest.order_id == order.id).one()
+            assert result.payment_status == "REFUND_FAILED"
+            assert refund.status == "FAILED"
+            assert refund.failure_reason == "Provider rejected refund"
+        finally:
+            db.query(RefundRequest).filter(RefundRequest.order_id == order.id).delete()
+            db.query(PaymentAttempt).filter(PaymentAttempt.order_id == order.id).delete()
+            db.delete(order)
+            _cleanup(db, user, admin, product)
+
     @patch("app.services.cashfree_service.httpx.post")
     def test_refund_amount_from_server_not_browser(self, mock_post):
         mock_post.return_value = MagicMock(status_code=200, json=lambda: {"cf_refund_id": "rfnd_amt", "refund_status": "PENDING"})

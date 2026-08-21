@@ -19,7 +19,7 @@ PAID_STATUSES = frozenset({"PAID"})
 
 
 class CancellationService:
-    def __init__(self, db: Session, settings: Settings | None = None, cashfree_service=None) -> None:
+    def __init__(self, db: Session, settings: Settings | None = None, cashfree_service=None, razorpay_service=None) -> None:
         self.db = db
         self.settings = settings or get_settings()
         if cashfree_service is None:
@@ -27,6 +27,11 @@ class CancellationService:
 
             cashfree_service = CashfreeService(db, self.settings)
         self.cashfree_service = cashfree_service
+        if razorpay_service is None:
+            from app.services.razorpay_service import RazorpayService
+
+            razorpay_service = RazorpayService(db, self.settings)
+        self.razorpay_service = razorpay_service
 
     def _get_order_for_user(self, user: User, order_id: UUID) -> Order:
         order = self.db.scalar(select(Order).where(Order.id == order_id, Order.user_id == user.id).with_for_update())
@@ -104,6 +109,8 @@ class CancellationService:
         return order
 
     def _initiate_refund(self, order: Order, *, reason: str, requested_by: str, admin_id: UUID | None = None) -> RefundRequest:
+        if order.payment_provider not in {"CASHFREE", "RAZORPAY"}:
+            raise BadRequestError("Order payment provider is missing or unsupported for refunds")
         existing = self._existing_refund(order)
         if existing:
             return existing
@@ -117,7 +124,7 @@ class CancellationService:
         provider_order_id = order.provider_order_id or order.order_number
         refund = RefundRequest(
             order=order,
-            provider="CASHFREE",
+            provider=order.payment_provider,
             provider_order_id=provider_order_id,
             amount=order.total,
             currency=order.currency,
@@ -129,9 +136,11 @@ class CancellationService:
         )
 
         # Link payment attempt if available
-        attempt = self.db.scalar(
-            select(PaymentAttempt).where(PaymentAttempt.order_id == order.id, PaymentAttempt.status == "SUCCESS")
-        )
+        attempt = self.db.scalar(select(PaymentAttempt).where(
+            PaymentAttempt.order_id == order.id,
+            PaymentAttempt.provider == order.payment_provider,
+            PaymentAttempt.status.in_({"SUCCESS", "CAPTURED"}),
+        ))
         if attempt:
             refund.payment_attempt_id = attempt.id
 
@@ -145,12 +154,22 @@ class CancellationService:
         return refund
 
     def _request_provider_refund(self, refund: RefundRequest) -> None:
-        response = self.cashfree_service.request_refund(
-            provider_order_id=refund.provider_order_id,
-            refund_amount=refund.amount,
-            idempotency_key=refund.idempotency_key,
-            reason=refund.reason or "Customer cancellation",
-        )
+        if refund.provider == "CASHFREE":
+            response = self.cashfree_service.request_refund(
+                provider_order_id=refund.provider_order_id,
+                refund_amount=refund.amount,
+                idempotency_key=refund.idempotency_key,
+                reason=refund.reason or "Customer cancellation",
+            )
+        elif refund.provider == "RAZORPAY":
+            payment_id = refund.payment_attempt.provider_payment_id if refund.payment_attempt else None
+            response = self.razorpay_service.request_refund(
+                payment_id=payment_id or "",
+                refund_amount=refund.amount,
+                reason=refund.reason or "Customer cancellation",
+            )
+        else:
+            response = {"provider_status": "FAILED", "failure_reason": "Unsupported refund provider"}
         refund.provider_refund_id = response.get("provider_refund_id")
         refund.status = self._map_refund_status(response.get("provider_status"))
         if response.get("failure_reason"):
