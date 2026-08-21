@@ -386,8 +386,10 @@ class CJAdapter:
             inv_cj = _safe_int(inv.get("cjInventory"))
             sellable = inv_cj if inv_cj is not None else inv_total
             country = str(inv.get("countryCode") or inv.get("warehouseCountry") or "CN")
-            storage_id = _first_string(inv, "storageId", "warehouseId", "storageCode")
-            warehouse_name = _first_string(inv, "storageName", "warehouseName", "name", "storage")
+            storage_id = _first_string(inv, "areaId", "storageId", "warehouseId", "storageCode")
+            warehouse_name = _first_string(
+                inv, "areaEn", "storageName", "warehouseName", "name", "storage"
+            )
             status = _inventory_verification(inv.get("verifiedWarehouse"))
             warehouses.append(
                 WarehouseInventorySnapshot(
@@ -461,8 +463,10 @@ class CJAdapter:
             entry_cj = _safe_int(entry.get("cjInventoryNum")) or 0
             entry_factory = _safe_int(entry.get("factoryInventoryNum")) or 0
             country = str(entry.get("countryCode") or entry.get("warehouseCountry") or "CN")
-            storage_id = _first_string(entry, "storageId", "warehouseId", "storageCode")
-            warehouse_name = _first_string(entry, "storageName", "warehouseName", "storage")
+            storage_id = _first_string(entry, "areaId", "storageId", "warehouseId", "storageCode")
+            warehouse_name = _first_string(
+                entry, "areaEn", "storageName", "warehouseName", "storage"
+            )
             warehouses.append(
                 WarehouseInventorySnapshot(
                     warehouse_country=country,

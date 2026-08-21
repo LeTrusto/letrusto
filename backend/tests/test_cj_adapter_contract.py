@@ -176,6 +176,149 @@ def test_freight_result_parsing(monkeypatch):
     assert option.provider_metadata == {"channelId": "channel-1", "optionId": "option-1"}
 
 
+@pytest.mark.parametrize(
+    ("vid", "entries", "expected_total", "expected_cj", "expected_factory"),
+    [
+        (
+            "0E582339-83F4-4D0A-8838-9E41584B05F2",
+            [
+                {
+                    "areaId": "1",
+                    "areaEn": "China Warehouse",
+                    "countryCode": "CN",
+                    "totalInventoryNum": 50031,
+                    "cjInventoryNum": 0,
+                    "factoryInventoryNum": 50031,
+                    "stock": [{"stockId": "cn-sub-1"}],
+                },
+                {
+                    "areaId": "2",
+                    "areaEn": "US Warehouse",
+                    "countryCode": "US",
+                    "totalInventoryNum": 243,
+                    "cjInventoryNum": 243,
+                    "factoryInventoryNum": 0,
+                    "stock": [{"stockId": "us-sub-1"}],
+                },
+            ],
+            50274,
+            243,
+            50031,
+        ),
+        (
+            "C2E09731-9358-4273-A763-D0C8C70DD4E2",
+            [
+                {
+                    "areaId": "1",
+                    "areaEn": "China Warehouse",
+                    "countryCode": "CN",
+                    "totalInventoryNum": 54105,
+                    "cjInventoryNum": 0,
+                    "factoryInventoryNum": 54105,
+                    "stock": [{"stockId": "cn-sub-2"}],
+                },
+                {
+                    "areaId": "2",
+                    "areaEn": "US Warehouse",
+                    "countryCode": "US",
+                    "totalInventoryNum": 1,
+                    "cjInventoryNum": 1,
+                    "factoryInventoryNum": 0,
+                    "stock": [{"stockId": "us-sub-2"}],
+                },
+            ],
+            54106,
+            1,
+            54105,
+        ),
+        (
+            "E821D001-A0D1-41C3-B492-244A482BD63E",
+            [
+                {
+                    "areaId": "1",
+                    "areaEn": "China Warehouse",
+                    "countryCode": "CN",
+                    "totalInventoryNum": 53967,
+                    "cjInventoryNum": 4,
+                    "factoryInventoryNum": 53963,
+                    "stock": [{"stockId": "cn-sub-3"}],
+                }
+            ],
+            53967,
+            4,
+            53963,
+        ),
+    ],
+)
+def test_get_inventory_preserves_documented_warehouse_identity_and_inventory_split(
+    monkeypatch, vid, entries, expected_total, expected_cj, expected_factory
+):
+    async def fake_get(endpoint, params=None):
+        assert endpoint == "/product/stock/queryByVid"
+        assert params == {"vid": vid}
+        return {"result": True, "data": entries}
+
+    adapter = CJAdapter("test-key")
+    monkeypatch.setattr(adapter, "_get", fake_get)
+
+    snapshot = asyncio.run(adapter.get_inventory(vid, strict=True))
+
+    assert snapshot is not None
+    assert snapshot.total_inventory == expected_total
+    assert snapshot.cj_inventory == expected_cj
+    assert snapshot.factory_inventory == expected_factory
+    assert sum(warehouse.cj_inventory for warehouse in snapshot.warehouses) == expected_cj
+    assert sum(warehouse.factory_inventory for warehouse in snapshot.warehouses) == expected_factory
+    assert [
+        (warehouse.storage_id, warehouse.warehouse_name, warehouse.warehouse_country)
+        for warehouse in snapshot.warehouses
+    ] == [
+        (entry["areaId"], entry["areaEn"], entry["countryCode"]) for entry in entries
+    ]
+    assert all(entry["stock"][0]["stockId"] for entry in entries)
+
+
+def test_parse_variant_preserves_documented_warehouse_identity_and_aggregate_split():
+    adapter = CJAdapter("test-key")
+    variant = adapter._parse_variant(
+        {
+            "vid": "0E582339-83F4-4D0A-8838-9E41584B05F2",
+            "inventories": [
+                {
+                    "areaId": "1",
+                    "areaEn": "China Warehouse",
+                    "countryCode": "CN",
+                    "totalInventory": 50031,
+                    "cjInventory": 0,
+                    "factoryInventory": 50031,
+                    "stock": [{"stockId": "cn-sub-1"}],
+                },
+                {
+                    "areaId": "2",
+                    "areaEn": "US Warehouse",
+                    "countryCode": "US",
+                    "totalInventory": 243,
+                    "cjInventory": 243,
+                    "factoryInventory": 0,
+                    "stock": [{"stockId": "us-sub-1"}],
+                },
+            ],
+        }
+    )
+
+    assert variant.inventory == 243
+    assert variant.total_inventory == 50274
+    assert variant.cj_inventory == 243
+    assert variant.factory_inventory == 50031
+    assert [
+        (warehouse.storage_id, warehouse.warehouse_name, warehouse.warehouse_country)
+        for warehouse in variant.warehouses
+    ] == [
+        ("1", "China Warehouse", "CN"),
+        ("2", "US Warehouse", "US"),
+    ]
+
+
 def test_http_error_preserves_cj_body_code_message_request_id_and_redacts_credentials():
     response = SimpleNamespace(
         is_success=False,
