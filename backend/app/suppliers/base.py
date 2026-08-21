@@ -14,6 +14,28 @@ class ShippingValidation(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
+class SupplierOrderState(str, Enum):
+    CREATED = "CREATED"
+    IN_CART = "IN_CART"
+    AWAITING_PAYMENT = "AWAITING_PAYMENT"
+    PAID = "PAID"
+    PROCESSING = "PROCESSING"
+    SHIPPED = "SHIPPED"
+    DELIVERED = "DELIVERED"
+    CANCELLED = "CANCELLED"
+    FAILED = "FAILED"
+    UNKNOWN = "UNKNOWN"
+
+
+class SupplierPaymentState(str, Enum):
+    NOT_REQUIRED = "NOT_REQUIRED"
+    REQUIRED = "REQUIRED"
+    PENDING = "PENDING"
+    PAID = "PAID"
+    FAILED = "FAILED"
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclass
 class InventorySnapshot:
     total_inventory: int
@@ -112,6 +134,23 @@ class SupplierOrderResult:
     accepted: bool
     supplier_order_id: str | None = None
     status: str = "FAILED"
+    supplier_status: str | None = None
+    pay_id: str | None = None
+    payment_url: str | None = None
+    shipment_order_id: str | None = None
+    created_at: str | None = None
+    provider_metadata: dict[str, object] = field(default_factory=dict)
+    payment_state: str | None = None
+    error: str = ""
+    error_details: object | None = None
+
+
+@dataclass
+class SupplierBalanceResult:
+    supported: bool
+    amount_usd: float | None = None
+    no_withdrawal_amount_usd: float | None = None
+    freeze_amount_usd: float | None = None
     error: str = ""
     error_details: object | None = None
 
@@ -166,5 +205,19 @@ class SupplierAdapter(Protocol):
     ) -> ShippingResult: ...
 
     async def create_order(self, payload: dict) -> SupplierOrderResult: ...
+
+    async def add_to_cart(self, supplier_order_id: str) -> SupplierOrderResult: ...
+
+    async def confirm_order(self, supplier_order_id: str) -> SupplierOrderResult: ...
+
+    async def generate_parent_order(self, supplier_order_id: str) -> SupplierOrderResult: ...
+
+    async def pay_balance(self, shipment_order_id: str, pay_id: str | None = None) -> SupplierOrderResult: ...
+
+    async def get_balance(self) -> SupplierBalanceResult: ...
+
+    async def get_order_status(self, supplier_order_id: str) -> SupplierOrderResult: ...
+
+    async def cancel_order(self, supplier_order_id: str) -> SupplierOrderResult: ...
 
     async def get_tracking(self, supplier_order_id: str) -> SupplierTrackingResult: ...

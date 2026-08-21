@@ -163,7 +163,8 @@ class FulfillmentService:
             order.fulfillment_failure_reason = result.error or "CJ rejected supplier order"
         else:
             order.supplier_order_id = result.supplier_order_id
-            order.fulfillment_status = result.status or "SUBMITTED"
+            order.supplier_status = result.supplier_status or result.status
+            order.fulfillment_status = self.map_supplier_status(result.status, "SUBMITTED")
             order.fulfillment_submitted_at = datetime.now(timezone.utc)
         self.db.commit()
         return order

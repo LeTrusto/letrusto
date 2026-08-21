@@ -18,6 +18,7 @@ from app.suppliers.base import (
     ShippingOption,
     ShippingResult,
     SupplierOrderResult,
+    SupplierBalanceResult,
     SupplierTrackingResult,
     ShippingValidation,
     SupplierCategory,
@@ -177,6 +178,18 @@ class CJAdapter:
                 await self._throttle_requests()
                 resp = await client.post(f"{_BASE_URL}{path}", headers=self._headers(), json=json_body or {})
             self._raise_for_cj_error(resp, path, "POST")
+            return resp.json()
+
+    async def _delete(self, path: str, params: dict[str, Any] | None = None) -> dict:
+        transport = httpx.AsyncHTTPTransport(retries=1)
+        async with httpx.AsyncClient(timeout=30, transport=transport) as client:
+            await self._throttle_requests()
+            resp = await client.delete(f"{_BASE_URL}{path}", headers=self._headers(), params=params)
+            if resp.status_code == 401:
+                await self.authenticate(force=True)
+                await self._throttle_requests()
+                resp = await client.delete(f"{_BASE_URL}{path}", headers=self._headers(), params=params)
+            self._raise_for_cj_error(resp, path, "DELETE")
             return resp.json()
 
     async def _throttle_requests(self) -> None:
@@ -548,7 +561,7 @@ class CJAdapter:
         )
 
     async def create_order(
-        self, request: CJOrderRequest, *, version: Literal["V2", "V3"] = "V3"
+        self, request: CJOrderRequest | dict, *, version: Literal["V2", "V3"] = "V3"
     ) -> SupplierOrderResult:
         """Create an order using the verified current CJ V2/V3 contract.
 
@@ -559,7 +572,8 @@ class CJAdapter:
             path = CJ_ORDER_ENDPOINTS[version]
         except KeyError as exc:
             raise ValueError(f"Unsupported CJ order API version: {version}") from exc
-        data = await self._post(path, build_cj_order_payload(request))
+        payload = build_cj_order_payload(request) if isinstance(request, CJOrderRequest) else request
+        data = await self._post(path, payload)
         if not data.get("result"):
             details = CJErrorDetails(
                 http_status=None,
@@ -579,11 +593,152 @@ class CJAdapter:
         supplier_order_id = body.get("orderId") or body.get("orderNum") or body.get("orderNumber")
         if not supplier_order_id:
             return SupplierOrderResult(accepted=False, error="CJ response did not include an order ID")
-        return SupplierOrderResult(accepted=True, supplier_order_id=str(supplier_order_id), status="SUBMITTED")
+        supplier_status = str(body.get("orderStatus") or "CREATED").upper()
+        return SupplierOrderResult(
+            accepted=True,
+            supplier_order_id=str(supplier_order_id),
+            status=map_cj_order_status(supplier_status),
+            supplier_status=supplier_status,
+            shipment_order_id=_optional_string(body.get("shipmentOrderId")),
+            created_at=_optional_string(body.get("createDate")),
+            provider_metadata=_safe_metadata(body),
+        )
+
+    async def add_to_cart(self, supplier_order_id: str) -> SupplierOrderResult:
+        path = "/shopping/order/addCart"
+        data = await self._post(path, {"cjOrderIdList": [supplier_order_id]})
+        return _lifecycle_result(data, path, "IN_CART", supplier_order_id)
+
+    async def confirm_order(self, supplier_order_id: str) -> SupplierOrderResult:
+        path = "/shopping/order/addCartConfirm"
+        data = await self._post(path, {"cjOrderIdList": [supplier_order_id]})
+        return _lifecycle_result(data, path, "IN_CART", supplier_order_id)
+
+    async def generate_parent_order(self, supplier_order_id: str) -> SupplierOrderResult:
+        path = "/shopping/order/saveGenerateParentOrder"
+        data = await self._post(path, {"shipmentOrderId": supplier_order_id})
+        if not data.get("result"):
+            return _failed_lifecycle_result(data, path)
+        body = data.get("data") or {}
+        payment = body.get("paymentInformation") or {}
+        return SupplierOrderResult(
+            accepted=True,
+            supplier_order_id=supplier_order_id,
+            status="AWAITING_PAYMENT",
+            supplier_status="UNPAID",
+            pay_id=_optional_string(body.get("payId")),
+            shipment_order_id=supplier_order_id,
+            provider_metadata=_safe_metadata({**body, "paymentInformation": payment}),
+        )
+
+    async def pay_balance(self, shipment_order_id: str, pay_id: str | None = None) -> SupplierOrderResult:
+        path = "/shopping/pay/payBalanceV2"
+        payload: dict[str, object] = {"shipmentOrderId": shipment_order_id}
+        if pay_id:
+            payload["payId"] = pay_id
+        data = await self._post(path, payload)
+        if not data.get("result"):
+            result = _failed_lifecycle_result(data, path)
+            result.payment_state = "FAILED"
+            return result
+        return SupplierOrderResult(
+            accepted=True,
+            supplier_order_id=shipment_order_id,
+            status="AWAITING_PAYMENT",
+            supplier_status="UNPAID",
+            pay_id=pay_id,
+            payment_state="PENDING",
+            provider_metadata={"payment_result": data.get("data"), "request_id": data.get("requestId")},
+        )
+
+    async def get_balance(self) -> SupplierBalanceResult:
+        path = "/shopping/pay/getBalance"
+        data = await self._get(path)
+        if not data.get("result"):
+            return SupplierBalanceResult(
+                supported=True,
+                error=str(data.get("message") or "CJ balance lookup failed"),
+                error_details={"endpoint": path, "code": data.get("code"), "request_id": data.get("requestId")},
+            )
+        body = data.get("data") or {}
+        return SupplierBalanceResult(
+            supported=True,
+            amount_usd=_safe_float(body.get("amount")),
+            no_withdrawal_amount_usd=_safe_float(body.get("noWithdrawalAmount")),
+            freeze_amount_usd=_safe_float(body.get("freezeAmount")),
+        )
+
+    async def get_order_status(self, supplier_order_id: str) -> SupplierOrderResult:
+        path = "/shopping/order/getOrderDetail"
+        data = await self._get(path, {"orderId": supplier_order_id})
+        if not data.get("result"):
+            return _failed_lifecycle_result(data, path)
+        body = data.get("data") or {}
+        supplier_status = str(body.get("orderStatus") or "UNKNOWN").upper()
+        return SupplierOrderResult(
+            accepted=True,
+            supplier_order_id=_optional_string(body.get("cjOrderId")) or supplier_order_id,
+            status=map_cj_order_status(supplier_status, body.get("subStatus")),
+            supplier_status=supplier_status,
+            created_at=_optional_string(body.get("createDate")),
+            provider_metadata=_safe_metadata(body),
+        )
+
+    async def cancel_order(self, supplier_order_id: str) -> SupplierOrderResult:
+        path = "/shopping/order/deleteOrder"
+        data = await self._delete(path, {"orderId": supplier_order_id})
+        return _lifecycle_result(data, path, "CANCELLED", supplier_order_id)
 
     async def get_tracking(self, supplier_order_id: str) -> SupplierTrackingResult:
         # The repository has no verified CJ tracking endpoint or response contract.
         return SupplierTrackingResult(supported=False, error="CJ tracking endpoint is not verified in this integration")
+
+
+def map_cj_order_status(status: str | None, sub_status: str | None = None) -> str:
+    normalized = (status or "").strip().upper()
+    if normalized in {"CREATED", "IN_CART", "UNPAID", "SHIPPED", "DELIVERED", "CANCELLED"}:
+        return {"UNPAID": "AWAITING_PAYMENT"}.get(normalized, normalized)
+    if normalized == "UNSHIPPED":
+        return "PROCESSING" if (sub_status or "").upper() == "PROCESSING" else "PAID"
+    if normalized in {"PENDING", "PROCESSING"}:
+        return "PROCESSING"
+    return "UNKNOWN"
+
+
+def _optional_string(value: Any) -> str | None:
+    return str(value) if value is not None and str(value).strip() else None
+
+
+def _safe_metadata(body: dict[str, Any]) -> dict[str, object]:
+    allowed = {"orderNumber", "orderNum", "orderStatus", "subStatus", "orderAmount", "paymentDate", "createDate"}
+    return {key: body[key] for key in allowed if key in body}
+
+
+def _failed_lifecycle_result(data: dict, path: str) -> SupplierOrderResult:
+    return SupplierOrderResult(
+        accepted=False,
+        status="FAILED",
+        error=str(data.get("message") or "CJ lifecycle operation failed"),
+        error_details={"endpoint": path, "code": data.get("code"), "request_id": data.get("requestId")},
+    )
+
+
+def _lifecycle_result(
+    data: dict,
+    path: str,
+    status: str,
+    supplier_order_id: str,
+    *,
+    supplier_status: str | None = None,
+) -> SupplierOrderResult:
+    if not data.get("result"):
+        return _failed_lifecycle_result(data, path)
+    return SupplierOrderResult(
+        accepted=True,
+        supplier_order_id=supplier_order_id,
+        status=status,
+        supplier_status=supplier_status or status,
+    )
 
 
 def _safe_float(val: Any) -> float | None:

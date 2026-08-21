@@ -108,6 +108,42 @@ def test_order_endpoint_construction(monkeypatch, order_request, version, path):
     assert calls[0][0] == path
 
 
+def test_pay_balance_v2_requires_shipment_order_and_returns_pending(monkeypatch):
+    calls = []
+
+    async def fake_post(endpoint, payload):
+        calls.append((endpoint, payload))
+        return {"result": True, "data": "PAYMENT-RESULT", "requestId": "request-1"}
+
+    adapter = CJAdapter("test-key")
+    monkeypatch.setattr(adapter, "_post", fake_post)
+
+    result = asyncio.run(adapter.pay_balance("SHIP-1", "PAY-1"))
+
+    assert calls == [
+        ("/shopping/pay/payBalanceV2", {"shipmentOrderId": "SHIP-1", "payId": "PAY-1"})
+    ]
+    assert result.payment_state == "PENDING"
+    assert result.provider_metadata["payment_result"] == "PAYMENT-RESULT"
+
+
+def test_get_balance_parses_official_usd_fields(monkeypatch):
+    async def fake_get(endpoint, params=None):
+        assert endpoint == "/shopping/pay/getBalance"
+        assert params is None
+        return {"result": True, "data": {"amount": 100.5, "noWithdrawalAmount": 4.5, "freezeAmount": 10}}
+
+    adapter = CJAdapter("test-key")
+    monkeypatch.setattr(adapter, "_get", fake_get)
+
+    result = asyncio.run(adapter.get_balance())
+
+    assert result.supported is True
+    assert result.amount_usd == 100.5
+    assert result.no_withdrawal_amount_usd == 4.5
+    assert result.freeze_amount_usd == 10.0
+
+
 def test_freight_result_parsing(monkeypatch):
     async def fake_post(endpoint, payload):
         assert endpoint == "/logistic/freightCalculate"
