@@ -14,18 +14,24 @@ class UserRepository:
     def get_by_id(self, user_id: uuid.UUID) -> User | None:
         return self.db.query(User).filter(User.id == user_id).first()
 
-    def get_by_email(self, email: str) -> User | None:
+    def get_by_email(self, email: str | None) -> User | None:
+        if not email:
+            return None
         return self.db.query(User).filter(User.email == email.lower().strip()).first()
+
+    def get_by_mobile(self, mobile_number: str) -> User | None:
+        return self.db.query(User).filter(User.mobile_number == mobile_number).first()
 
     def get_by_google_id(self, google_id: str) -> User | None:
         return self.db.query(User).filter(User.google_id == google_id).first()
 
-    def create(self, email: str, full_name: str, password_hash: str | None = None, google_id: str | None = None) -> User:
+    def create(self, email: str | None, full_name: str, password_hash: str | None = None, google_id: str | None = None, mobile_number: str | None = None) -> User:
         user = User(
-            email=email.lower().strip(),
+            email=email.lower().strip() if email else None,
             full_name=full_name,
             password_hash=password_hash,
             google_id=google_id,
+            mobile_number=mobile_number,
         )
         self.db.add(user)
         self.db.flush()

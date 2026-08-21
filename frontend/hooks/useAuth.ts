@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 
 import { useAuthContext } from "@/lib/authContext";
-import type { LoginPayload, RegisterPayload } from "@/types/auth";
+import type { LoginPayload, OtpVerifyPayload, RegisterPayload } from "@/types/auth";
 
 export function useAuth() {
   const ctx = useAuthContext();
@@ -13,6 +13,14 @@ export function useAuth() {
   const loginAndRedirect = useCallback(
     async (payload: LoginPayload, redirectTo = "/dashboard") => {
       await ctx.login(payload);
+      router.push(redirectTo);
+    },
+    [ctx, router]
+  );
+
+  const loginWithOtpAndRedirect = useCallback(
+    async (payload: OtpVerifyPayload, redirectTo = "/dashboard") => {
+      await ctx.loginWithOtp(payload);
       router.push(redirectTo);
     },
     [ctx, router]
@@ -41,6 +49,7 @@ export function useAuth() {
     isAuthenticated: Boolean(ctx.user),
     isAdmin: ctx.user?.role === "admin",
     login: loginAndRedirect,
+    loginWithOtp: loginWithOtpAndRedirect,
     register: registerAndRedirect,
     logout: logoutAndRedirect,
   };

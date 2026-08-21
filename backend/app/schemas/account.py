@@ -4,7 +4,7 @@ from app.schemas.orders import OrderListDTO
 
 
 class CustomerAccountDTO(BaseModel):
-    email: str
+    email: str | None
     full_name: str
     email_verified: bool
     created_at: str

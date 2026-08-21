@@ -32,13 +32,31 @@ class RefreshRequest(BaseModel):
     refresh_token: str = Field(min_length=10)
 
 
+class OtpRequest(BaseModel):
+    mobile_number: str = Field(min_length=10, max_length=16)
+
+
+class OtpVerifyRequest(BaseModel):
+    mobile_number: str = Field(min_length=10, max_length=16)
+    otp: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class OtpRequestResponse(BaseModel):
+    message: str
+
+
+class LinkEmailRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=64)
+
+
 class AuthResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
     user_id: str
-    email: str
+    email: str | None
     full_name: str
     role: str
     avatar_url: str | None

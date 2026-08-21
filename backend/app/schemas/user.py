@@ -3,7 +3,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 class UserDTO(BaseModel):
     id: str
-    email: str
+    email: str | None
     full_name: str
     avatar_url: str | None
     role: str

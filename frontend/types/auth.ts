@@ -2,7 +2,7 @@ export type UserRole = "user" | "admin";
 
 export type AuthUser = {
   id: string;
-  email: string;
+  email: string | null;
   full_name: string;
   role: UserRole;
   avatar_url: string | null;
@@ -21,7 +21,7 @@ export type AuthResponse = {
   token_type: string;
   expires_in: number;
   user_id: string;
-  email: string;
+  email: string | null;
   full_name: string;
   role: UserRole;
   avatar_url: string | null;
@@ -37,3 +37,6 @@ export type LoginPayload = {
   email: string;
   password: string;
 };
+
+export type OtpRequestPayload = { mobile_number: string };
+export type OtpVerifyPayload = { mobile_number: string; otp: string };

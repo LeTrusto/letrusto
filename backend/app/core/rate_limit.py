@@ -25,7 +25,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if self.default_limit <= 0:
             return await call_next(request)
 
-        is_auth_path = path.endswith("/auth/register") or path.endswith("/auth/login")
+        is_auth_path = path.startswith("/api/v1/auth/") and path.endswith(("/register", "/login", "/otp/request", "/otp/verify"))
         limit = self.auth_limit if is_auth_path else self.default_limit
 
         key = f"{client_ip}:{path if is_auth_path else 'global'}"

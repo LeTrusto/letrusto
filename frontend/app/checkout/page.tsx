@@ -51,7 +51,7 @@ export default function CheckoutPage() {
   }, []);
 
   if (isLoading) return <main className="max-w-2xl mx-auto px-4 py-20 text-center">Loading checkout...</main>;
-  if (!isAuthenticated) return <main className="max-w-2xl mx-auto px-4 py-20 text-center"><h1 className="lt-heading-2">Sign in to checkout</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Your cart is ready. Sign in to create a pending-payment order.</p><Link href="/login?redirect=/checkout" className="lt-btn lt-btn-primary mt-6 inline-flex">Sign In</Link></main>;
+  if (!isAuthenticated) return <main className="max-w-2xl mx-auto px-4 py-20 text-center"><h1 className="lt-heading-2">Sign in to checkout</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Your cart is ready. Choose a customer login method to continue.</p><div className="mt-6 flex flex-wrap justify-center gap-3"><Link href="/login?redirect=/checkout" className="lt-btn lt-btn-primary inline-flex">Continue with Mobile OTP</Link><Link href="/login?redirect=/checkout&method=email" className="lt-btn lt-btn-secondary inline-flex">Login with Email</Link></div></main>;
   if (items.length === 0) return <main className="max-w-2xl mx-auto px-4 py-20 text-center"><h1 className="lt-heading-2">Your cart is empty</h1><Link href="/shop" className="lt-btn lt-btn-primary mt-6 inline-flex">Continue Shopping</Link></main>;
 
   async function submit(event: React.FormEvent) {

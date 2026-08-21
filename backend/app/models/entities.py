@@ -554,7 +554,8 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    mobile_number: Mapped[str | None] = mapped_column(String(15), unique=True, index=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     full_name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -576,6 +577,20 @@ class User(Base):
     support_tickets: Mapped[list["SupportTicket"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     cart: Mapped["Cart | None"] = relationship(back_populates="user", cascade="all, delete-orphan", uselist=False)
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
+
+
+class OtpChallenge(Base):
+    __tablename__ = "otp_challenges"
+    __table_args__ = (Index("ix_otp_challenges_mobile_created", "mobile_number", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mobile_number: Mapped[str] = mapped_column(String(15), nullable=False, index=True)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    request_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class Cart(Base):

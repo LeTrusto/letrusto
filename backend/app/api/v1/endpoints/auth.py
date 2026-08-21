@@ -1,11 +1,15 @@
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 
 from app.api.deps import get_auth_service, get_current_user
 from app.core.exceptions import UnauthorizedError
 from app.models.entities import User
 from app.schemas.auth import (
     AuthResponse,
+    LinkEmailRequest,
     LoginRequest,
+    OtpRequest,
+    OtpRequestResponse,
+    OtpVerifyRequest,
     RefreshRequest,
     RegisterRequest,
     TokenIntrospectionResponse,
@@ -14,6 +18,7 @@ from app.schemas.auth import (
 )
 from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
+from app.services.otp_auth_service import OtpAuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -26,6 +31,28 @@ def register(payload: RegisterRequest, service: AuthService = Depends(get_auth_s
 @router.post("/login", response_model=AuthResponse)
 def login(payload: LoginRequest, service: AuthService = Depends(get_auth_service)) -> AuthResponse:
     return service.login(email=payload.email, password=payload.password)
+
+
+@router.post("/otp/request", response_model=OtpRequestResponse)
+def request_otp(payload: OtpRequest, request: Request, service: AuthService = Depends(get_auth_service)) -> OtpRequestResponse:
+    OtpAuthService(service.db).request_otp(payload.mobile_number, request.client.host if request.client else None)
+    return OtpRequestResponse(message="If this mobile number can receive messages, an OTP has been sent")
+
+
+@router.post("/otp/verify", response_model=AuthResponse)
+def verify_otp(payload: OtpVerifyRequest, service: AuthService = Depends(get_auth_service)) -> AuthResponse:
+    return OtpAuthService(service.db).verify_otp(payload.mobile_number, payload.otp)
+
+
+@router.post("/link-email", response_model=AuthResponse)
+def link_email(
+    payload: LinkEmailRequest,
+    current_user: User = Depends(get_current_user),
+    service: AuthService = Depends(get_auth_service),
+) -> AuthResponse:
+    if current_user.role != "user":
+        raise UnauthorizedError("Customer authentication required")
+    return service.link_email(current_user, str(payload.email), payload.password)
 
 
 @router.post("/refresh", response_model=AuthResponse)

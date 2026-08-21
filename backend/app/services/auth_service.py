@@ -20,6 +20,10 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.auth import AuthResponse, TokenIntrospectionResponse, TokenResponse
 
 
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
 class AuthService:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -66,6 +70,19 @@ class AuthService:
             raise UnauthorizedError("Account deactivated")
         return self._build_auth_response(user)
 
+    def link_email(self, user: User, email: str, password: str) -> AuthResponse:
+        normalized_email = email.lower().strip()
+        existing = self.user_repo.get_by_email(normalized_email)
+        if existing and existing.id != user.id:
+            raise BadRequestError("Email is already linked to another account")
+        if user.email and user.email != normalized_email:
+            raise BadRequestError("An email is already linked to this account")
+        user.email = normalized_email
+        user.password_hash = hash_password(password)
+        self.db.commit()
+        self.db.refresh(user)
+        return self._build_auth_response(user)
+
     def refresh(self, refresh_token_value: str) -> AuthResponse:
         token_hash = hash_refresh_token(refresh_token_value)
         record = (
@@ -75,7 +92,7 @@ class AuthService:
         )
         if not record:
             raise UnauthorizedError("Invalid or expired refresh token")
-        if record.expires_at < datetime.now(timezone.utc):
+        if _as_utc(record.expires_at) < datetime.now(timezone.utc):
             record.revoked = True
             self.db.commit()
             raise UnauthorizedError("Refresh token expired")
@@ -114,7 +131,7 @@ class AuthService:
     def _build_auth_response(self, user: User) -> AuthResponse:
         access_token = create_access_token(
             subject=str(user.id),
-            extra={"role": user.role, "email": user.email},
+            extra={"role": user.role, "email": user.email or ""},
         )
         refresh_token_value = generate_refresh_token()
         expires_at = datetime.now(timezone.utc) + timedelta(days=self.settings.REFRESH_TOKEN_EXPIRE_DAYS)

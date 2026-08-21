@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     SUPPORT_EMAIL: str = "hello@letrusto.com"
     FROM_EMAIL: str = "support@letrusto.com"
 
+    SMS_PROVIDER: str = "mock"
+    SMS_API_URL: str = ""
+    SMS_API_KEY: str = ""
+    SMS_SENDER_ID: str = ""
+    OTP_EXPIRE_MINUTES: int = 5
+    OTP_MAX_ATTEMPTS: int = 5
+    OTP_RESEND_COOLDOWN_SECONDS: int = 60
+    OTP_MAX_REQUESTS_PER_HOUR: int = 5
+
     AI_PROVIDER: str = "heuristic"
     AI_SESSION_TTL_MINUTES: int = 120
 
