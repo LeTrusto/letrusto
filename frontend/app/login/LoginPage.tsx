@@ -4,7 +4,7 @@ import { Eye, EyeOff, Loader2, LogIn, Smartphone } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { requestOtp } from "@/services/auth.service";
@@ -21,6 +21,13 @@ export default function LoginPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (!cooldown) return;
+    const timer = window.setInterval(() => setCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldown]);
 
   if (isAuthenticated) return null;
 
@@ -48,6 +55,8 @@ export default function LoginPage() {
     try {
       await requestOtp({ mobile_number: mobile });
       setOtpSent(true);
+      setOtp("");
+      setCooldown(60);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to send OTP");
     } finally {
@@ -72,8 +81,8 @@ export default function LoginPage() {
           {mode === "mobile" ? (
             <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">
               <div><label className="mb-1.5 block text-sm font-semibold text-gray-700">Mobile number</label><input type="tel" required autoComplete="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100" placeholder="+91 98765 43210" /></div>
-              {otpSent && <div><label className="mb-1.5 block text-sm font-semibold text-gray-700">OTP</label><input type="text" required inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm tracking-[0.35em] outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100" placeholder="000000" /></div>}
-              {!otpSent ? <button type="button" disabled={loading} onClick={() => { void handleRequestOtp(); }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-3.5 text-sm font-bold text-white transition hover:scale-[1.02] disabled:opacity-60">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}Send OTP</button> : <button type="submit" disabled={loading || otp.length !== 6} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-3.5 text-sm font-bold text-white transition hover:scale-[1.02] disabled:opacity-60">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}Verify OTP</button>}
+              {otpSent && <div><label className="mb-1.5 block text-sm font-semibold text-gray-700">Enter 4-digit OTP</label><input type="text" required inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm tracking-[0.35em] outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100" placeholder="0000" maxLength={4} /></div>}
+              {!otpSent ? <button type="button" disabled={loading} onClick={() => { void handleRequestOtp(); }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-3.5 text-sm font-bold text-white transition hover:scale-[1.02] disabled:opacity-60">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}Send OTP</button> : <><button type="submit" disabled={loading || otp.length !== 4} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-3.5 text-sm font-bold text-white transition hover:scale-[1.02] disabled:opacity-60">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}Verify OTP</button><button type="button" disabled={loading || cooldown > 0} onClick={() => { void handleRequestOtp(); }} className="w-full text-sm font-semibold text-purple-700 disabled:text-gray-400">{cooldown > 0 ? `Resend OTP in ${cooldown}s` : "Resend OTP"}</button></>}
             </form>
           ) : (
             <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">

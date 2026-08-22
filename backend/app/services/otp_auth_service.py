@@ -63,7 +63,7 @@ class OtpAuthService:
         if recent_count >= self.settings.OTP_MAX_REQUESTS_PER_HOUR:
             raise BadRequestError("Too many OTP requests. Please try again later")
 
-        otp = f"{secrets.randbelow(1_000_000):06d}"
+        otp = f"{secrets.randbelow(10_000):04d}"
         challenge = OtpChallenge(
             mobile_number=normalized,
             code_hash=_hash_otp(normalized, otp),
@@ -75,6 +75,8 @@ class OtpAuthService:
         self.sms_provider.send_otp(normalized, otp)
 
     def verify_otp(self, mobile_number: str, otp: str):
+        if len(otp) != 4 or not otp.isdecimal():
+            raise UnauthorizedError("Invalid or expired OTP")
         normalized = normalize_indian_mobile(mobile_number)
         challenge = (
             self.db.query(OtpChallenge)

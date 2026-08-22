@@ -31,7 +31,7 @@ export default function AccountPage() {
     setMessage("");
     setError("");
     try {
-      const updated = await updateAccountProfile(accessToken, name.trim());
+      const updated = await updateAccountProfile(accessToken, { full_name: name.trim() });
       setAccount(updated);
       setMessage("Profile updated.");
     } catch {

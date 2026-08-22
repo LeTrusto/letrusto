@@ -557,6 +557,8 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
     mobile_number: Mapped[str | None] = mapped_column(String(15), unique=True, index=True, nullable=True)
+    phone_number: Mapped[str | None] = mapped_column(String(15), nullable=True)
+    shipping_address: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     full_name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)

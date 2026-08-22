@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/lib/cartContext";
 import { buildRazorpayCheckoutOptions, callbackMatchesOrder, isBackendPaymentSuccess, RAZORPAY_CHECKOUT_SCRIPT_URL, type RazorpayCheckoutOptions, type RazorpayPaymentFailure, type RazorpayResult } from "@/lib/razorpayCheckout";
 import { createOrder, createRazorpayOrder, verifyRazorpayPayment } from "@/services/order.service";
+import { getAccount, updateAccountProfile } from "@/services/account.service";
 import type { Order, RazorpayOrder } from "@/types/orders";
 import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
@@ -40,6 +41,21 @@ export default function CheckoutPage() {
   const [razorpayReady, setRazorpayReady] = useState(false);
   const idempotencyKey = useRef<string | null>(null);
   const paymentCallbackHandled = useRef(false);
+  const checkoutEdited = useRef(false);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    void getAccount(accessToken).then((account) => {
+      if (checkoutEdited.current) return;
+      setForm((current) => ({
+        ...current,
+        name: account.full_name || current.name,
+        email: account.email || current.email,
+        phone: account.phone ?? current.phone,
+        ...(account.shipping_address ?? {}),
+      }));
+    }).catch(() => {});
+  }, [accessToken]);
 
   useEffect(() => {
     void getPublicProducts().then((catalog) => {
@@ -60,6 +76,11 @@ export default function CheckoutPage() {
     setWorking(true); setError(""); setPaymentState("creating");
     try {
       idempotencyKey.current ??= `checkout-${crypto.randomUUID()}`;
+      await updateAccountProfile(accessToken, {
+        full_name: form.name,
+        phone: form.phone,
+        shipping_address: { address: form.address, city: form.city, state: form.state, postal_code: form.postal_code, country: form.country },
+      });
       const order = await createOrder(accessToken, {
         items: items.map((item) => ({
           product_id: item.productId,
@@ -90,7 +111,10 @@ export default function CheckoutPage() {
     }
   }
 
-  const update = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, [field]: event.target.value }));
+  const update = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    checkoutEdited.current = true;
+    setForm((current) => ({ ...current, [field]: event.target.value }));
+  };
   function openRazorpay() {
     if (!razorpayOrder || paymentState === "opening" || paymentState === "verifying") return;
     setError("");

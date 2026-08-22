@@ -3,21 +3,33 @@ from fastapi import APIRouter, Depends, Query
 from app.api.deps import get_current_user, get_order_service, get_user_service
 from app.models.entities import User
 from app.schemas.account import CustomerAccountDTO, CustomerOrdersResponse, CustomerProfileUpdateRequest
+from app.schemas.orders import ShippingAddress
 from app.schemas.user import UserProfileUpdateRequest
 from app.services.order_service import OrderService
 from app.services.user_service import UserService
+from app.services.otp_auth_service import normalize_indian_mobile
 
 router = APIRouter(prefix="/account", tags=["account"])
+
+def _account_dto(user: User) -> CustomerAccountDTO:
+    phone = user.phone_number or user.mobile_number
+    if phone:
+        try:
+            phone = normalize_indian_mobile(phone)
+        except Exception:
+            phone = phone.strip()
+    shipping_address = None
+    if user.shipping_address:
+        try:
+            shipping_address = ShippingAddress.model_validate(user.shipping_address)
+        except Exception:
+            pass
+    return CustomerAccountDTO(email=user.email, full_name=user.full_name, phone=phone, shipping_address=shipping_address, email_verified=user.email_verified, created_at=user.created_at.isoformat())
 
 
 @router.get("", response_model=CustomerAccountDTO)
 def get_account(current_user: User = Depends(get_current_user)) -> CustomerAccountDTO:
-    return CustomerAccountDTO(
-        email=current_user.email,
-        full_name=current_user.full_name,
-        email_verified=current_user.email_verified,
-        created_at=current_user.created_at.isoformat(),
-    )
+    return _account_dto(current_user)
 
 
 @router.get("/orders", response_model=CustomerOrdersResponse)
@@ -36,10 +48,5 @@ def update_account_profile(
     current_user: User = Depends(get_current_user),
     service: UserService = Depends(get_user_service),
 ) -> CustomerAccountDTO:
-    updated = service.update_profile(current_user.id, UserProfileUpdateRequest(full_name=payload.full_name))
-    return CustomerAccountDTO(
-        email=updated.email,
-        full_name=updated.full_name,
-        email_verified=updated.email_verified,
-        created_at=updated.created_at,
-    )
+    updated = service.update_customer_profile(current_user.id, payload.full_name, payload.phone, payload.shipping_address)
+    return _account_dto(updated)

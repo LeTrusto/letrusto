@@ -6,7 +6,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.models.entities import Notification, PriceAlert, SavedComparison
+from app.models.entities import Notification, PriceAlert, SavedComparison, User
 from app.repositories.product_repository import ProductRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import (
@@ -18,6 +18,7 @@ from app.schemas.user import (
     UserDTO,
     UserProfileUpdateRequest,
 )
+from app.services.otp_auth_service import normalize_indian_mobile
 
 
 def _to_user_dto(user) -> UserDTO:
@@ -53,6 +54,20 @@ class UserService:
         self.db.commit()
         self.db.refresh(user)
         return _to_user_dto(user)
+
+    def update_customer_profile(self, user_id: uuid.UUID, full_name: str | None, phone: str | None, shipping_address) -> User:
+        user = self.user_repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundError("User not found")
+        if full_name is not None:
+            user.full_name = full_name
+        if phone is not None:
+            user.phone_number = normalize_indian_mobile(phone)
+        if shipping_address is not None:
+            user.shipping_address = shipping_address.model_dump()
+        self.db.commit()
+        self.db.refresh(user)
+        return user
 
     # ── Saved Comparisons ────────────────────────────────────────────────────
     def list_saved_comparisons(self, user_id: uuid.UUID) -> list[SavedComparisonDTO]:

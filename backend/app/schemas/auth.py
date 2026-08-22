@@ -38,7 +38,7 @@ class OtpRequest(BaseModel):
 
 class OtpVerifyRequest(BaseModel):
     mobile_number: str = Field(min_length=10, max_length=16)
-    otp: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+    otp: str = Field(min_length=4, max_length=4, pattern=r"^\d{4}$")
 
 
 class OtpRequestResponse(BaseModel):

@@ -39,10 +39,27 @@ def issue(db, sms, mobile="9876543210"):
     return MockSmsProvider.sent[-1].otp
 
 
-def test_otp_request_does_not_return_code(db, sms):
+def test_otp_request_does_not_return_code(db, sms, caplog):
     issue(db, sms)
     assert len(sms.sent) == 1
+    assert len(sms.sent[0].otp) == 4
     assert db.query(OtpChallenge).one().code_hash != sms.sent[0].otp
+    assert sms.sent[0].otp not in caplog.text
+
+
+def test_otp_preserves_leading_zeroes(db, sms, monkeypatch):
+    monkeypatch.setattr("app.services.otp_auth_service.secrets.randbelow", lambda _: 7)
+    code = issue(db, sms)
+    assert code == "0007"
+    assert len(code) == 4
+
+
+@pytest.mark.parametrize("invalid_otp", ["123", "12345", "123456"])
+def test_invalid_otp_lengths_are_rejected_without_consuming_attempt(db, sms, invalid_otp):
+    issue(db, sms)
+    with pytest.raises(UnauthorizedError, match="Invalid or expired OTP"):
+        OtpAuthService(db, sms).verify_otp("9876543210", invalid_otp)
+    assert db.query(OtpChallenge).one().attempts == 0
 
 
 def test_expired_otp_is_rejected(db, sms):
@@ -59,7 +76,7 @@ def test_wrong_otp_and_attempt_limit(db, sms):
     service = OtpAuthService(db, sms)
     for _ in range(5):
         with pytest.raises(UnauthorizedError):
-            service.verify_otp("9876543210", "000000")
+            service.verify_otp("9876543210", "0000")
     with pytest.raises(UnauthorizedError, match="verification limit"):
         service.verify_otp("9876543210", sms.sent[0].otp)
 
