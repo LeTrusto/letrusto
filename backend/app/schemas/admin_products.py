@@ -420,3 +420,33 @@ class AdminProductDTO(BaseModel):
 class AdminProductListResponse(BaseModel):
     products: list[AdminProductDTO]
     total: int
+
+
+class AdminWarehouseInventoryDTO(BaseModel):
+    product_id: UUID
+    variant_id: UUID
+    vid: str
+    sku: str
+    sellable_cj_inventory: int
+    factory_inventory: int
+    total_inventory: int
+    warehouse_country: str
+    warehouse_name: str | None
+    storage_id: str | None
+    last_synced_at: datetime
+
+
+class AdminVariantInventoryDTO(BaseModel):
+    product_id: UUID
+    variant_id: UUID
+    vid: str
+    sku: str
+    sellable_cj_inventory: int
+    factory_inventory: int
+    total_inventory: int
+    warehouses: list[AdminWarehouseInventoryDTO]
+
+
+class AdminProductInventoryResponse(BaseModel):
+    product_id: UUID
+    variants: list[AdminVariantInventoryDTO]

@@ -28,7 +28,10 @@ from app.models.entities import (
 )
 from app.schemas.admin_products import (
     AdminProductDTO,
+    AdminProductInventoryResponse,
     AdminProductListResponse,
+    AdminVariantInventoryDTO,
+    AdminWarehouseInventoryDTO,
     AdminProductVariantDTO,
     BulkApprovedProductImportItem,
     BulkApprovedProductImportRequest,
@@ -85,6 +88,47 @@ class AdminProductService:
 
     def get_product(self, product_id: UUID) -> AdminProductDTO:
         return self._dto(self._get(product_id))
+
+    def get_inventory(self, product_id: UUID) -> AdminProductInventoryResponse:
+        product = self.db.scalar(
+            select(Product)
+            .options(selectinload(Product.variants).selectinload(ProductVariant.warehouse_inventory))
+            .where(Product.id == product_id)
+        )
+        if product is None:
+            raise NotFoundError("Product not found")
+
+        variants = []
+        for variant in sorted(product.variants, key=lambda item: item.position):
+            warehouses = [
+                AdminWarehouseInventoryDTO(
+                    product_id=product.id,
+                    variant_id=variant.id,
+                    vid=variant.supplier_variant_id,
+                    sku=variant.supplier_variant_sku,
+                    sellable_cj_inventory=warehouse.cj_sellable_inventory,
+                    factory_inventory=warehouse.factory_inventory,
+                    total_inventory=warehouse.total_inventory,
+                    warehouse_country=warehouse.warehouse_country,
+                    warehouse_name=warehouse.warehouse_name,
+                    storage_id=warehouse.storage_id,
+                    last_synced_at=warehouse.last_synced_at,
+                )
+                for warehouse in sorted(variant.warehouse_inventory, key=lambda item: str(item.id))
+            ]
+            variants.append(
+                AdminVariantInventoryDTO(
+                    product_id=product.id,
+                    variant_id=variant.id,
+                    vid=variant.supplier_variant_id,
+                    sku=variant.supplier_variant_sku,
+                    sellable_cj_inventory=variant.cj_inventory or 0,
+                    factory_inventory=variant.factory_inventory or 0,
+                    total_inventory=variant.total_inventory or 0,
+                    warehouses=warehouses,
+                )
+            )
+        return AdminProductInventoryResponse(product_id=product.id, variants=variants)
 
     async def import_product(self, payload: ProductImportRequest, *, commit: bool = True) -> AdminProductDTO:
         existing = self.db.scalar(select(Product).where(Product.supplier == payload.supplier, Product.supplier_product_id == payload.supplier_product_id))

@@ -11,6 +11,7 @@ from app.models.entities import User
 from app.schemas.admin import AdminDashboardStats, AdminUserListResponse
 from app.schemas.admin_products import (
     AdminProductDTO,
+    AdminProductInventoryResponse,
     AdminProductListResponse,
     BulkApprovedProductImportRequest,
     BulkApprovedProductImportResponse,
@@ -482,6 +483,15 @@ def get_catalog_product(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> AdminProductDTO:
     return service.get_product(product_id)
+
+
+@router.get("/products/{product_id}/inventory", response_model=AdminProductInventoryResponse)
+def get_catalog_product_inventory(
+    product_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> AdminProductInventoryResponse:
+    return service.get_inventory(product_id)
 
 
 @router.patch("/products/{product_id}", response_model=AdminProductDTO)

@@ -1,11 +1,12 @@
 import asyncio
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.deps import get_admin_product_service, get_current_admin
+from app.api.deps import get_admin_product_service, get_current_admin, get_current_user
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
 from app.main import app
@@ -221,6 +222,70 @@ def test_sync_preserves_existing_identity_when_fresh_inventory_omits_it_and_pref
         assert result.status == "FULFILLABLE"
         assert (result.storage_id, result.warehouse_name, result.sellable_inventory) == ("1", "China Warehouse", 20)
     finally:
+        db.query(Product).filter(Product.id == product.id).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+def test_admin_inventory_route_returns_all_warehouse_rows_without_mutation():
+    db = SessionLocal()
+    product = make_product(db)
+    variants = db.query(ProductVariant).filter(ProductVariant.product_id == product.id).order_by(ProductVariant.position).all()
+    first_sync = datetime.now(timezone.utc)
+    rows = [
+        SupplierVariantInventory(
+            product_id=product.id, variant_id=variants[0].id, supplier="cj", supplier_product_id=product.supplier_product_id,
+            supplier_variant_id="VID-1", warehouse_identity="1", warehouse_country="CN", storage_id="1",
+            warehouse_name="China Warehouse", total_inventory=80, cj_sellable_inventory=20, factory_inventory=60,
+            last_synced_at=first_sync,
+        ),
+        SupplierVariantInventory(
+            product_id=product.id, variant_id=variants[0].id, supplier="cj", supplier_product_id=product.supplier_product_id,
+            supplier_variant_id="VID-1", warehouse_identity="2", warehouse_country="US", storage_id="2",
+            warehouse_name="US Warehouse", total_inventory=40, cj_sellable_inventory=10, factory_inventory=30,
+            last_synced_at=first_sync,
+        ),
+    ]
+    db.add_all(rows)
+    db.commit()
+    before = [(row.id, row.last_synced_at, row.cj_sellable_inventory, row.factory_inventory) for row in rows]
+    service = AdminProductService(db)
+    app.dependency_overrides[get_current_admin] = lambda: object()
+    app.dependency_overrides[get_admin_product_service] = lambda: service
+    try:
+        response = TestClient(app).get(f"/api/v1/admin/products/{product.id}/inventory")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["product_id"] == str(product.id)
+        first = payload["variants"][0]
+        assert (first["vid"], first["sku"]) == ("VID-1", "SKU-1")
+        assert (first["sellable_cj_inventory"], first["factory_inventory"], first["total_inventory"]) == (9, 8, 17)
+        assert [(row["warehouse_country"], row["warehouse_name"], row["storage_id"], row["sellable_cj_inventory"], row["factory_inventory"]) for row in first["warehouses"]] == [
+            ("CN", "China Warehouse", "1", 20, 60),
+            ("US", "US Warehouse", "2", 10, 30),
+        ]
+        assert all(row["last_synced_at"] for row in first["warehouses"])
+        db.expire_all()
+        after = [(row.id, row.last_synced_at, row.cj_sellable_inventory, row.factory_inventory) for row in db.query(SupplierVariantInventory).filter(SupplierVariantInventory.product_id == product.id).order_by(SupplierVariantInventory.storage_id)]
+        assert after == sorted(before, key=lambda item: str(item[0]))
+    finally:
+        app.dependency_overrides.clear()
+        db.query(Product).filter(Product.id == product.id).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+def test_admin_inventory_route_rejects_unauthenticated_and_customer_users():
+    db = SessionLocal()
+    product = make_product(db)
+    try:
+        unauthenticated = TestClient(app).get(f"/api/v1/admin/products/{product.id}/inventory")
+        assert unauthenticated.status_code == 401
+        app.dependency_overrides[get_current_user] = lambda: type("Customer", (), {"role": "customer"})()
+        customer = TestClient(app).get(f"/api/v1/admin/products/{product.id}/inventory")
+        assert customer.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
         db.query(Product).filter(Product.id == product.id).delete(synchronize_session=False)
         db.commit()
         db.close()
