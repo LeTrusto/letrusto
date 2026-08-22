@@ -592,6 +592,14 @@ def test_approved_enriched_candidate_imports_as_draft_with_content_and_determini
             "total_inventory": 1000,
             "cj_inventory": 50,
             "factory_inventory": 950,
+        }, {
+            "supplier_variant_id": variant_id,
+            "warehouse_country": "IN",
+            "storage_id": "in-1",
+            "warehouse_name": "India Warehouse",
+            "total_inventory": 40,
+            "cj_inventory": 40,
+            "factory_inventory": 0,
         }],
     }
     db.commit()
@@ -614,8 +622,11 @@ def test_approved_enriched_candidate_imports_as_draft_with_content_and_determini
     assert db.scalar(select(func.count(ProductSpecification.id)).where(ProductSpecification.product_id == product.id)) == 3
     assert db.scalar(select(func.count(ProductTag.id)).where(ProductTag.product_id == product.id)) == 3
     inventory = db.scalars(select(SupplierVariantInventory).where(SupplierVariantInventory.product_id == product.id)).all()
-    assert len(inventory) == 1
-    assert (inventory[0].storage_id, inventory[0].cj_sellable_inventory, inventory[0].factory_inventory) == ("1", 50, 950)
+    assert len(inventory) == 2
+    assert [(row.storage_id, row.warehouse_name, row.warehouse_country, row.cj_sellable_inventory, row.factory_inventory) for row in inventory] == [
+        ("1", "China Warehouse", "CN", 50, 950),
+        ("in-1", "India Warehouse", "IN", 40, 0),
+    ]
 
 
 def test_candidate_import_never_sets_active_and_records_readiness(candidate_context):

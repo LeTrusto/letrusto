@@ -1257,9 +1257,39 @@ class AdminProductService:
     def _sync_variant_warehouse_inventory(self, product, variant, snapshot) -> None:
         if not snapshot.warehouses:
             return
+        stored_warehouses = list(self.db.scalars(
+            select(SupplierVariantInventory)
+            .where(
+                SupplierVariantInventory.product_id == product.id,
+                SupplierVariantInventory.variant_id == variant.id,
+                SupplierVariantInventory.supplier_variant_id == variant.supplier_variant_id,
+            )
+            .order_by(SupplierVariantInventory.id)
+        ))
         identities = set()
+        used_stored_ids = set()
         for warehouse in snapshot.warehouses:
-            identity = warehouse.storage_id or f"{warehouse.warehouse_country}:{warehouse.warehouse_name or ''}"
+            stored = next(
+                (
+                    item for item in stored_warehouses
+                    if item.id not in used_stored_ids
+                    and item.warehouse_country == warehouse.warehouse_country
+                    and (
+                        (warehouse.storage_id and item.storage_id == warehouse.storage_id)
+                        or (warehouse.warehouse_name and item.warehouse_name == warehouse.warehouse_name)
+                        or (warehouse.storage_id is None and warehouse.warehouse_name is None)
+                    )
+                ),
+                None,
+            )
+            if stored:
+                used_stored_ids.add(stored.id)
+            storage_id = warehouse.storage_id or (stored.storage_id if stored else None)
+            warehouse_name = warehouse.warehouse_name or (stored.warehouse_name if stored else None)
+            identity = (
+                stored.warehouse_identity if stored and not warehouse.storage_id and not warehouse.warehouse_name
+                else storage_id or f"{warehouse.warehouse_country}:{warehouse_name or ''}"
+            )
             identities.add(identity)
             record = self.db.scalar(
                 select(SupplierVariantInventory).where(
@@ -1282,8 +1312,8 @@ class AdminProductService:
             record.variant_id = variant.id
             record.supplier_product_id = product.supplier_product_id or ""
             record.warehouse_country = warehouse.warehouse_country
-            record.storage_id = warehouse.storage_id
-            record.warehouse_name = warehouse.warehouse_name
+            record.storage_id = storage_id
+            record.warehouse_name = warehouse_name
             record.total_inventory = warehouse.total_inventory
             record.cj_sellable_inventory = warehouse.cj_inventory
             record.factory_inventory = warehouse.factory_inventory

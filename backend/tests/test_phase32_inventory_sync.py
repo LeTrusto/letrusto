@@ -11,7 +11,8 @@ from app.db.session import SessionLocal
 from app.main import app
 from app.models.entities import Product, ProductVariant, SupplierVariantInventory
 from app.services.admin_product_service import AdminProductService
-from app.suppliers.base import InventorySnapshot, RawSupplierProduct, WarehouseInventorySnapshot
+from app.services.fulfillment_preflight_service import FulfillmentPreflightService
+from app.suppliers.base import InventorySnapshot, RawSupplierProduct, ShippingOption, ShippingResult, ShippingValidation, WarehouseInventorySnapshot
 
 
 class SyncAdapter:
@@ -40,6 +41,15 @@ class SyncAdapter:
         if self.failure:
             raise self.failure
         return self.snapshots.get(variant_id)
+
+    async def calculate_shipping(self, *args, **kwargs) -> ShippingResult:
+        return ShippingResult(
+            can_ship=True,
+            validation=ShippingValidation.VERIFIED,
+            options=[ShippingOption(carrier="CJPacket", method="Standard", cost_usd=3.0, estimated_days="8-12")],
+            origin_country="CN",
+            destination_country="IN",
+        )
 
 
 def make_product(db, *, supplier="cj", supplier_product_id="cj-product"):
@@ -154,6 +164,62 @@ def test_sync_persists_exact_cj_warehouse_identity_without_variant_overwrite(mon
             "E821D001-A0D1-41C3-B492-244A482BD63E",
             "VID-OTHER",
         ]
+    finally:
+        db.query(Product).filter(Product.id == product.id).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+def test_sync_preserves_existing_identity_when_fresh_inventory_omits_it_and_preflight_consumes_row(monkeypatch):
+    import app.services.admin_product_service as module
+
+    adapter = SyncAdapter(snapshots={
+        "VID-1": InventorySnapshot(
+            80,
+            20,
+            60,
+            "verified",
+            [WarehouseInventorySnapshot("CN", None, None, 80, 20, 60, "verified")],
+        ),
+        "VID-2": InventorySnapshot(0, 0, 0, "verified"),
+    })
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: adapter)
+    db = SessionLocal()
+    product = make_product(db)
+    product.status = "ACTIVE"
+    variants = db.query(ProductVariant).filter(ProductVariant.product_id == product.id).order_by(ProductVariant.position).all()
+    variants[0].active = True
+    variants[1].active = True
+    db.add(SupplierVariantInventory(
+        product_id=product.id,
+        variant_id=variants[0].id,
+        supplier="cj",
+        supplier_product_id=product.supplier_product_id,
+        supplier_variant_id="VID-1",
+        warehouse_identity="1",
+        warehouse_country="CN",
+        storage_id="1",
+        warehouse_name="China Warehouse",
+        total_inventory=10,
+        cj_sellable_inventory=2,
+        factory_inventory=8,
+        verification_status="verified",
+    ))
+    db.commit()
+    try:
+        asyncio.run(AdminProductService(db).sync_inventory(product.id))
+        row = db.query(SupplierVariantInventory).filter(SupplierVariantInventory.variant_id == variants[0].id).one()
+        assert (row.warehouse_identity, row.storage_id, row.warehouse_name, row.warehouse_country) == ("1", "1", "China Warehouse", "CN")
+        assert (row.cj_sellable_inventory, row.factory_inventory) == (20, 60)
+
+        result = asyncio.run(FulfillmentPreflightService(db, adapter).check(
+            product_id=product.id,
+            variant_id=variants[0].id,
+            quantity=1,
+            destination_country="IN",
+        ))
+        assert result.status == "FULFILLABLE"
+        assert (result.storage_id, result.warehouse_name, result.sellable_inventory) == ("1", "China Warehouse", 20)
     finally:
         db.query(Product).filter(Product.id == product.id).delete(synchronize_session=False)
         db.commit()
