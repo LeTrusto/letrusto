@@ -880,6 +880,7 @@ class AdminProductService:
 
     def update_status(self, product_id: UUID, payload: ProductStatusUpdate) -> AdminProductDTO:
         product = self._get(product_id)
+        refresh_readiness = payload.brand_id is not None
         if payload.category_id is not None:
             if self.db.get(Category, payload.category_id) is None:
                 raise NotFoundError("Category not found")
@@ -890,6 +891,8 @@ class AdminProductService:
             product.brand_id = payload.brand_id
         if payload.description is not None:
             product.description = payload.description.strip()
+        if refresh_readiness:
+            self._refresh_catalog_readiness(product)
         if product.supplier:
             if payload.status != product.status:
                 if payload.status != "DRAFT" or product.status != "DRAFT":
@@ -902,6 +905,16 @@ class AdminProductService:
         product.status = payload.status
         self.db.commit()
         return self._dto(self._get(product.id))
+
+    @staticmethod
+    def _refresh_catalog_readiness(product: Product) -> None:
+        readiness = CatalogReadinessService.validate_activation(product)
+        details = dict(product.supplier_validation_details or {})
+        details["catalog_readiness"] = {
+            "ready": readiness.ready,
+            "blocking_reasons": list(readiness.blocking_reasons),
+        }
+        product.supplier_validation_details = details
 
     def calculate_price(
         self, product_id: UUID, payload: PriceCalculationRequest

@@ -1,5 +1,6 @@
 import asyncio
 from copy import deepcopy
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -10,7 +11,8 @@ from app.api.deps import get_admin_product_service, get_current_admin
 from app.core.exceptions import BadRequestError
 from app.main import app
 from app.db.session import SessionLocal
-from app.models.entities import Brand, Category, Product, ProductVariant, SupplierCandidate, SupplierVariantInventory
+from app.models.entities import Brand, Category, InventoryReservation, Order, PaymentAttempt, Product, ProductImage, ProductVariant, SupplierCandidate, SupplierVariantInventory
+from app.schemas.admin_products import ProductStatusUpdate
 from app.services.admin_product_service import AdminProductService
 from app.suppliers.base import (
     RawSupplierProduct,
@@ -463,6 +465,113 @@ def test_import_is_idempotent_and_supplier_status_patch_is_gated(monkeypatch):
             service.update_status(first.id, ProductStatusUpdate(status="PAUSED"))
     finally:
         db.query(Product).filter(Product.supplier_product_id == product_id).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+def _readiness_refresh_product(db, *, suffix: str, brand_id: int | None, cj_inventory: int = 4) -> Product:
+    category = Category(name=f"Refresh Category {suffix}", slug=f"refresh-category-{suffix}")
+    db.add(category)
+    db.flush()
+    product = Product(
+        id=uuid4(), slug=f"readiness-refresh-{suffix}", name="Readiness refresh product",
+        description="A complete supplier-backed product", status="DRAFT", supplier="cj",
+        supplier_product_id=f"refresh-{suffix}", supplier_cost=Decimal("100.00"),
+        shipping_cost=Decimal("20.00"), selling_price=Decimal("199.00"),
+        total_inventory=cj_inventory, cj_inventory=cj_inventory, factory_inventory=0,
+        verified_warehouse="verified", supplier_validation_status="PASS",
+        supplier_validation_score=80, commercial_status="APPROVED", brand_id=brand_id, category_id=category.id,
+        last_supplier_sync_at=datetime.now(timezone.utc),
+        supplier_validation_details={"minimum_price_inr": "199.00", "enrichment": {"category": "home-kitchen"}},
+    )
+    product.images = [ProductImage(url="https://cf.cjdropshipping.com/readiness.jpg", position=1)]
+    product.variants = [ProductVariant(
+        supplier_variant_id=f"VID-{suffix}", supplier_variant_sku=f"SKU-{suffix}",
+        name="Default", attributes="Default", selling_price=Decimal("199.00"),
+        total_inventory=cj_inventory, cj_inventory=cj_inventory, factory_inventory=0,
+        verified_warehouse="verified", active=True, position=1,
+    )]
+    db.add(product)
+    db.commit()
+    return product
+
+
+def test_brand_assignment_refreshes_readiness_and_clears_brand_blocker():
+    db = SessionLocal()
+    suffix = str(uuid4())[:8]
+    brand = Brand(name=f"Refresh Brand {suffix}", slug=f"refresh-brand-{suffix}")
+    db.add(brand)
+    db.flush()
+    product = _readiness_refresh_product(db, suffix=suffix, brand_id=None)
+    service = AdminProductService(db)
+    try:
+        result = service.update_status(product.id, ProductStatusUpdate(status="DRAFT", brand_id=brand.id))
+        readiness = result.supplier_validation_details["catalog_readiness"]
+        assert result.status == "DRAFT"
+        assert readiness["ready"] is True
+        assert "BRAND_REVIEW_REQUIRED" not in readiness["blocking_reasons"]
+    finally:
+        category_id = product.category_id
+        db.delete(product)
+        db.flush()
+        db.query(Category).filter(Category.id == category_id).delete(synchronize_session=False)
+        db.delete(brand)
+        db.commit()
+        db.close()
+
+
+def test_brand_assignment_preserves_genuine_readiness_blocker_and_is_idempotent():
+    db = SessionLocal()
+    suffix = str(uuid4())[:8]
+    brand = Brand(name=f"Blocked Brand {suffix}", slug=f"blocked-brand-{suffix}")
+    db.add(brand)
+    db.flush()
+    product = _readiness_refresh_product(db, suffix=suffix, brand_id=None, cj_inventory=0)
+    service = AdminProductService(db)
+    try:
+        first = service.update_status(product.id, ProductStatusUpdate(status="DRAFT", brand_id=brand.id))
+        second = service.update_status(product.id, ProductStatusUpdate(status="DRAFT", brand_id=brand.id))
+        reasons = second.supplier_validation_details["catalog_readiness"]["blocking_reasons"]
+        assert second.status == "DRAFT"
+        assert second.brand_id == brand.id
+        assert second.supplier_validation_details["catalog_readiness"] == first.supplier_validation_details["catalog_readiness"]
+        assert "BRAND_REVIEW_REQUIRED" not in reasons
+        assert "NO_SELLABLE_INVENTORY" in reasons
+    finally:
+        category_id = product.category_id
+        db.delete(product)
+        db.flush()
+        db.query(Category).filter(Category.id == category_id).delete(synchronize_session=False)
+        db.delete(brand)
+        db.commit()
+        db.close()
+
+
+def test_brand_assignment_triggers_no_commerce_behavior_and_leaves_legacy_product_unchanged():
+    db = SessionLocal()
+    suffix = str(uuid4())[:8]
+    brand = Brand(name=f"Commerce Guard Brand {suffix}", slug=f"commerce-guard-brand-{suffix}")
+    db.add(brand)
+    db.flush()
+    legacy = Product(id=uuid4(), slug=f"legacy-{suffix}", name="Product 1", description="Existing product", status="ACTIVE", brand_id=brand.id)
+    product = _readiness_refresh_product(db, suffix=suffix, brand_id=None)
+    db.add(legacy)
+    db.commit()
+    service = AdminProductService(db)
+    before = (db.query(Order).count(), db.query(PaymentAttempt).count(), db.query(InventoryReservation).count())
+    try:
+        service.update_status(product.id, ProductStatusUpdate(status="DRAFT", brand_id=brand.id))
+        after = (db.query(Order).count(), db.query(PaymentAttempt).count(), db.query(InventoryReservation).count())
+        unchanged_legacy = db.get(Product, legacy.id)
+        assert after == before
+        assert (unchanged_legacy.name, unchanged_legacy.status, unchanged_legacy.brand_id) == ("Product 1", "ACTIVE", brand.id)
+    finally:
+        category_id = product.category_id
+        db.delete(product)
+        db.flush()
+        db.query(Category).filter(Category.id == category_id).delete(synchronize_session=False)
+        db.delete(legacy)
+        db.delete(brand)
         db.commit()
         db.close()
 
