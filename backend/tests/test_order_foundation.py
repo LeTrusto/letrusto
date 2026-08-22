@@ -5,7 +5,7 @@ import pytest
 
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
-from app.models.entities import Order, Product, ProductVariant, User
+from app.models.entities import Order, Product, ProductVariant, SupplierVariantInventory, User
 from app.schemas.orders import CartItemRequest, CreateOrderRequest, CustomerDetails, ShippingAddress
 from app.services.order_service import OrderService
 
@@ -39,6 +39,13 @@ def make_order_fixture(db):
         active=True,
     )
     db.add_all([user, product])
+    db.flush()
+    db.add(SupplierVariantInventory(
+        product_id=product.id, variant_id=variant.id, supplier_product_id=product.supplier_product_id,
+        supplier_variant_id=variant.supplier_variant_id, warehouse_identity=f"CN-{suffix}",
+        warehouse_country="CN", storage_id="CN", warehouse_name="China Warehouse",
+        total_inventory=2, cj_sellable_inventory=2, factory_inventory=999,
+    ))
     db.commit()
     return user, product, variant
 

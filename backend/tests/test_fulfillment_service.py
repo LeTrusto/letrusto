@@ -7,7 +7,7 @@ import pytest
 
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
-from app.models.entities import Cart, CartItem, Order, OrderItem, PaymentAttempt, Product, ProductVariant, User
+from app.models.entities import Cart, CartItem, Order, OrderItem, PaymentAttempt, Product, ProductVariant, SupplierVariantInventory, User
 from app.api.deps import get_current_admin, get_fulfillment_service
 from app.main import app
 from fastapi.testclient import TestClient
@@ -48,7 +48,8 @@ def make_paid_order(db):
     user = User(email=f"fulfillment-{suffix}@example.com", full_name="Fulfillment Test")
     product = Product(slug=f"fulfillment-product-{suffix}", name="Fulfillment product", description="test", status="ACTIVE", supplier="cj", supplier_product_id=f"CJ-PID-{suffix}", price_value=Decimal("100"), selling_price=Decimal("100"), ai_score=1, rating=Decimal("1"), ai_summary="", review_summary="")
     variant = ProductVariant(product=product, supplier_variant_id=f"CJ-VID-{suffix}", supplier_variant_sku=f"CJ-SKU-{suffix}", name="Blue", attributes="Blue", position=1, selling_price=Decimal("100"), cj_inventory=2, factory_inventory=999)
-    db.add_all([user, product]); db.commit()
+    db.add_all([user, product]); db.flush()
+    db.add(SupplierVariantInventory(product_id=product.id, variant_id=variant.id, supplier_product_id=product.supplier_product_id, supplier_variant_id=variant.supplier_variant_id, warehouse_identity=f"CN-{suffix}", warehouse_country="CN", storage_id="CN", warehouse_name="China Warehouse", total_inventory=2, cj_sellable_inventory=2, factory_inventory=999)); db.commit()
     payload = CreateOrderRequest(items=[CartItemRequest(product_id=product.slug, variant_id="variant-1", quantity=1)], customer=CustomerDetails(name="Buyer", email="buyer@example.com", phone="9876543210"), shipping_address=ShippingAddress(address="1 Street", city="Bengaluru", state="Karnataka", postal_code="560001", country="IN"), idempotency_key=f"fulfillment-{suffix}-key")
     result = OrderService(db).create_order(user, payload)
     order = db.get(Order, result.id)

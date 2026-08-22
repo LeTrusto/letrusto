@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from app.db.session import SessionLocal
 from app.main import app
 from app.core.security import create_access_token
-from app.models.entities import InventoryReservation, MarketingSpend, Order, OrderItem, OrderMarketingAttribution, PaymentAttempt, Product, ProductVariant, RefundRequest, User
+from app.models.entities import InventoryReservation, MarketingSpend, Order, OrderItem, OrderMarketingAttribution, PaymentAttempt, Product, ProductVariant, RefundRequest, SupplierVariantInventory, User
 from app.schemas.orders import CartItemRequest, CreateOrderRequest, CustomerDetails, ShippingAddress
 from app.services.admin_analytics_service import AdminAnalyticsService
 from app.services.order_service import OrderService
@@ -90,6 +90,8 @@ def test_new_order_captures_immutable_economics_snapshot():
     product = Product(slug=f"snapshot-{suffix}", name="Snapshot Product", description="test", status="ACTIVE", supplier="cj", supplier_product_id=f"CJ-{suffix}", price_value=Decimal("100"), selling_price=Decimal("100"), shipping_cost=Decimal("12"), ai_score=1, rating=Decimal("1"), ai_summary="", review_summary="")
     variant = ProductVariant(product=product, supplier_variant_id=f"VID-{suffix}", supplier_variant_sku=f"SKU-{suffix}", name="Default", position=1, selling_price=Decimal("100"), supplier_cost=Decimal("40"), supplier_cost_usd=Decimal("0.50"), cj_inventory=5, active=True)
     db.add_all([user, product, variant])
+    db.flush()
+    db.add(SupplierVariantInventory(product_id=product.id, variant_id=variant.id, supplier_product_id=product.supplier_product_id, supplier_variant_id=variant.supplier_variant_id, warehouse_identity=f"CN-{suffix}", warehouse_country="CN", storage_id="CN", warehouse_name="China Warehouse", total_inventory=5, cj_sellable_inventory=5, factory_inventory=0))
     db.commit()
     try:
         request = CreateOrderRequest(items=[CartItemRequest(product_id=product.slug, variant_id="variant-1", quantity=2)], customer=CustomerDetails(name="Snapshot Test", email=user.email, phone="9876543210"), shipping_address=ShippingAddress(address="1 Test", city="Bengaluru", state="Karnataka", postal_code="560001", country="IN"), idempotency_key=f"snapshot-{suffix}-key")

@@ -13,7 +13,7 @@ import pytest
 
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
-from app.models.entities import InventoryReservation, Order, Product, ProductVariant, User
+from app.models.entities import InventoryReservation, Order, Product, ProductVariant, SupplierVariantInventory, User
 from app.schemas.orders import CartItemRequest, CreateOrderRequest, CustomerDetails, ShippingAddress
 from app.services.cancellation_service import CancellationService
 from app.services.cashfree_service import CashfreeService
@@ -61,6 +61,17 @@ def fixture(db, *, inventory=5, factory_inventory=999, variant_count=1):
         for index in range(1, variant_count + 1)
     ]
     db.add_all([user, other, product, *variants])
+    db.flush()
+    db.add_all([
+        SupplierVariantInventory(
+            product_id=product.id, variant_id=variant.id, supplier_product_id=product.supplier_product_id,
+            supplier_variant_id=variant.supplier_variant_id, warehouse_identity=f"CN-{suffix}-{variant.position}",
+            warehouse_country="CN", storage_id="CN", warehouse_name="China Warehouse",
+            total_inventory=variant.cj_inventory or 0, cj_sellable_inventory=variant.cj_inventory or 0,
+            factory_inventory=variant.factory_inventory or 0,
+        )
+        for variant in variants
+    ])
     db.commit()
     return user, other, product, variants
 

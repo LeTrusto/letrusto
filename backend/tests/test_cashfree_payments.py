@@ -12,7 +12,7 @@ import pytest
 
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
-from app.models.entities import Cart, CartItem, Order, OrderItem, PaymentAttempt, Product, ProductVariant, User
+from app.models.entities import Cart, CartItem, Order, OrderItem, PaymentAttempt, Product, ProductVariant, SupplierVariantInventory, User
 from app.services.cashfree_service import CashfreeService
 from app.services.order_service import OrderService
 from app.schemas.orders import CartItemRequest, CreateOrderRequest, CustomerDetails, ShippingAddress
@@ -23,7 +23,8 @@ def make_order(db):
     user = User(email=f"cashfree-{suffix}@example.com", full_name="Cashfree Test")
     product = Product(slug=f"cashfree-product-{suffix}", name="Cashfree product", description="test", status="ACTIVE", supplier="cj", supplier_product_id=f"cashfree-cj-{suffix}", price_value=Decimal("100"), selling_price=Decimal("100"), ai_score=1, rating=Decimal("1"), ai_summary="", review_summary="")
     variant = ProductVariant(product=product, supplier_variant_id=f"VID-{suffix}", supplier_variant_sku=f"SKU-{suffix}", name="Blue", position=1, selling_price=Decimal("100"), cj_inventory=2, factory_inventory=999)
-    db.add_all([user, product]); db.commit()
+    db.add_all([user, product]); db.flush()
+    db.add(SupplierVariantInventory(product_id=product.id, variant_id=variant.id, supplier_product_id=product.supplier_product_id, supplier_variant_id=variant.supplier_variant_id, warehouse_identity=f"CN-{suffix}", warehouse_country="CN", storage_id="CN", warehouse_name="China Warehouse", total_inventory=2, cj_sellable_inventory=2, factory_inventory=999)); db.commit()
     payload = CreateOrderRequest(items=[CartItemRequest(product_id=product.slug, variant_id="variant-1", quantity=1)], customer=CustomerDetails(name="Buyer", email="buyer@example.com", phone="9876543210"), shipping_address=ShippingAddress(address="1 Street", city="Bengaluru", state="Karnataka", postal_code="560001", country="IN"), idempotency_key=f"cashfree-{suffix}-key")
     order = OrderService(db).create_order(user, payload)
     return user, product, db.get(Order, order.id)

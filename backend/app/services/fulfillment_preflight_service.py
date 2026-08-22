@@ -83,6 +83,8 @@ class FulfillmentPreflightService:
             warehouse
             for warehouse in warehouses
             if warehouse.cj_sellable_inventory >= quantity
+            and warehouse.warehouse_identity
+            and warehouse.storage_id
             and (storage_id is None or warehouse.storage_id == storage_id)
         ]
         if not candidates:

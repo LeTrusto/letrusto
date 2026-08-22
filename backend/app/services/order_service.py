@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
@@ -11,11 +12,13 @@ from app.core.config import get_settings
 from app.models.entities import Cart, CartItem, Order, OrderItem, Product, ProductVariant, User
 from app.schemas.orders import CartDTO, CartItemDTO, CartItemRequest, CreateOrderRequest, OrderDTO, OrderItemDTO, OrderListDTO
 from app.services.inventory_reservation_service import InventoryReservationService
+from app.services.fulfillment_preflight_service import FulfillmentPreflightService
 
 
 class OrderService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, fulfillment_preflight_service: FulfillmentPreflightService | None = None) -> None:
         self.db = db
+        self.fulfillment_preflight_service = fulfillment_preflight_service or FulfillmentPreflightService(db)
 
     def _cart(self, user: User) -> Cart:
         cart = self.db.scalar(
@@ -34,13 +37,15 @@ class OrderService:
         )
         if product is None:
             raise NotFoundError("Active product not found")
-        if not variant_id.startswith("variant-"):
-            raise BadRequestError("Invalid product variant")
-        try:
-            position = int(variant_id.removeprefix("variant-"))
-        except ValueError as exc:
-            raise BadRequestError("Invalid product variant") from exc
-        variant = next((item for item in product.variants if item.position == position), None)
+        variant = next((item for item in product.variants if item.supplier_variant_id == variant_id), None)
+        if variant is None:
+            if not variant_id.startswith("variant-"):
+                raise BadRequestError("Invalid product variant")
+            try:
+                position = int(variant_id.removeprefix("variant-"))
+            except ValueError as exc:
+                raise BadRequestError("Invalid product variant") from exc
+            variant = next((item for item in product.variants if item.position == position), None)
         if variant is None or not variant.active or variant.selling_price is None:
             raise BadRequestError("Product variant is unavailable")
         return product, variant
@@ -206,6 +211,20 @@ class OrderService:
         resolved = [(product, variants_by_id[variant.id], quantity) for product, variant, quantity in resolved]
         for _, variant, quantity in resolved:
             self._validate_inventory(variant, quantity)
+        for product, variant, quantity in resolved:
+            try:
+                preflight = asyncio.run(self.fulfillment_preflight_service.check(
+                    product_id=product.id,
+                    variant_id=variant.id,
+                    quantity=quantity,
+                    destination_country=payload.shipping_address.country,
+                ))
+            except Exception as exc:
+                self.db.rollback()
+                raise BadRequestError("Product variant is unavailable for the selected destination") from exc
+            if preflight.status != "FULFILLABLE":
+                self.db.rollback()
+                raise BadRequestError("Product variant is unavailable for the selected destination")
         subtotal = sum((variant.selling_price * quantity for _, variant, quantity in resolved), Decimal("0"))
         now = datetime.now(timezone.utc)
         order = Order(

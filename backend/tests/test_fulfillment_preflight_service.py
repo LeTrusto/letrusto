@@ -62,9 +62,9 @@ class FakeAdapter:
 def warehouse(country, sellable, factory=0, storage_id=None, identity=None):
     return SimpleNamespace(
         warehouse_country=country,
-        storage_id=storage_id or country,
+        storage_id=storage_id if storage_id is not None else country,
         warehouse_name=f"{country} warehouse",
-        warehouse_identity=identity or storage_id or country,
+        warehouse_identity=identity if identity is not None else storage_id or country,
         cj_sellable_inventory=sellable,
         factory_inventory=factory,
     )
@@ -106,6 +106,12 @@ def test_china_sellable_stock_and_route_is_fulfillable():
 
 def test_factory_inventory_is_not_sellable():
     result = asyncio.run(check([warehouse("CN", 0, factory=50031)], FakeAdapter(routes={"CN": route()})))
+    assert result.status == "NOT_FULFILLABLE"
+    assert result.error_classification == "INVENTORY"
+
+
+def test_missing_warehouse_identity_fails_safely():
+    result = asyncio.run(check([warehouse("CN", 5, storage_id="", identity="")], FakeAdapter(routes={"CN": route()})))
     assert result.status == "NOT_FULFILLABLE"
     assert result.error_classification == "INVENTORY"
 
