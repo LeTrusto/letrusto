@@ -9,7 +9,7 @@ from app.api.deps import get_admin_product_service, get_current_admin
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
 from app.main import app
-from app.models.entities import Product, ProductImage, ProductMarketEvidence, ProductVariant, User
+from app.models.entities import InventoryReservation, Order, PaymentAttempt, Product, ProductImage, ProductMarketEvidence, ProductVariant, SupplierVariantInventory, User
 from app.schemas.admin_products import ProductRejectionRequest, ProductStatusUpdate
 from app.services.admin_product_service import AdminProductService
 from app.services.launch_pricing_policy import LaunchPricingPolicy
@@ -214,6 +214,60 @@ def test_approved_draft_activates(approval_context):
     make_activation_ready(db, product)
     result = service.activate(product.id)
     assert result.status == "ACTIVE" and result.commercial_status == "APPROVED"
+
+
+def test_activation_only_changes_status_and_preserves_supplier_and_commerce_state(approval_context):
+    db, service, _, admin, product, variant = approval_context
+    service.approve(product.id, admin)
+    make_activation_ready(db, product)
+    warehouse = SupplierVariantInventory(
+        product_id=product.id, variant_id=variant.id, supplier="cj",
+        supplier_product_id=product.supplier_product_id, supplier_variant_id=variant.supplier_variant_id,
+        warehouse_identity="1", warehouse_country="CN", storage_id="1", warehouse_name="China Warehouse",
+        total_inventory=77691, cj_sellable_inventory=40, factory_inventory=77651,
+    )
+    db.add(warehouse)
+    db.commit()
+    before = {
+        "product": (
+            product.supplier, product.supplier_product_id, product.total_inventory, product.cj_inventory,
+            product.factory_inventory, product.supplier_cost, product.shipping_cost, product.selling_price,
+            product.supplier_validation_details,
+        ),
+        "variant": (
+            variant.supplier_variant_id, variant.supplier_variant_sku, variant.total_inventory,
+            variant.cj_inventory, variant.factory_inventory, variant.supplier_cost, variant.selling_price,
+        ),
+        "warehouse": (
+            warehouse.warehouse_identity, warehouse.warehouse_country, warehouse.storage_id,
+            warehouse.warehouse_name, warehouse.total_inventory, warehouse.cj_sellable_inventory,
+            warehouse.factory_inventory, warehouse.last_synced_at,
+        ),
+        "commerce_counts": (db.query(Order).count(), db.query(PaymentAttempt).count(), db.query(InventoryReservation).count()),
+    }
+
+    assert service.activate(product.id).status == "ACTIVE"
+    db.refresh(product)
+    db.refresh(variant)
+    db.refresh(warehouse)
+    after = {
+        "product": (
+            product.supplier, product.supplier_product_id, product.total_inventory, product.cj_inventory,
+            product.factory_inventory, product.supplier_cost, product.shipping_cost, product.selling_price,
+            product.supplier_validation_details,
+        ),
+        "variant": (
+            variant.supplier_variant_id, variant.supplier_variant_sku, variant.total_inventory,
+            variant.cj_inventory, variant.factory_inventory, variant.supplier_cost, variant.selling_price,
+        ),
+        "warehouse": (
+            warehouse.warehouse_identity, warehouse.warehouse_country, warehouse.storage_id,
+            warehouse.warehouse_name, warehouse.total_inventory, warehouse.cj_sellable_inventory,
+            warehouse.factory_inventory, warehouse.last_synced_at,
+        ),
+        "commerce_counts": (db.query(Order).count(), db.query(PaymentAttempt).count(), db.query(InventoryReservation).count()),
+    }
+    assert after == before | {"commerce_counts": before["commerce_counts"]}
 
 
 def test_unapproved_draft_cannot_activate(approval_context):
