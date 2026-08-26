@@ -11,12 +11,12 @@ import { getPublicProducts, toCommerceProduct } from "@/services/product.service
 import type { CommerceProduct } from "@/types/commerce";
 
 export const metadata: Metadata = {
-  title: "Trending Finds. Everyday Prices.",
-  description: "Discover trending beauty, jewellery and style finds at everyday prices. LeTrusto — curated discovery commerce for India.",
+  title: "Unique Designs. Freshly Printed. Shipped Worldwide.",
+  description: "Custom apparel, wall art and accessories — printed on demand and shipped worldwide. LeTrusto — unique designs, freshly printed.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "LeTrusto — Trending Finds. Everyday Prices.",
-    description: "Discover trending beauty, jewellery and style finds at everyday prices.",
+    title: "LeTrusto — Unique Designs. Freshly Printed.",
+    description: "Custom apparel, wall art and accessories — printed on demand and shipped worldwide.",
     url: "/",
     siteName: "LeTrusto",
     type: "website",
@@ -34,14 +34,14 @@ export default async function Home() {
 
   return (
     <main className="bg-[#f8f7ea]">
-      <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Trending Finds. Everyday Prices.", url: "https://letrusto.com", description: "Discover trending beauty, jewellery and style finds at everyday prices." }} />
+      <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Unique Designs. Freshly Printed.", url: "https://letrusto.com", description: "Custom apparel, wall art and accessories — printed on demand and shipped worldwide." }} />
       <Hero />
       {products.length > 0 ? (
-        <ProductRail title="Current catalog" subtitle="Products currently available from LeTrusto" products={products.slice(0, 8)} href="/shop" />
+        <ProductRail title="Fresh prints" subtitle="Custom designs printed on demand" products={products.slice(0, 8)} href="/shop" />
       ) : (
         <section className="mx-auto max-w-7xl px-4 py-14 text-center md:px-6">
           <h2 className="lt-heading-2">Our catalog is being prepared</h2>
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">New LeTrusto products will appear here soon.</p>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">Unique printed products will appear here soon.</p>
         </section>
       )}
       <ShopByStyle />

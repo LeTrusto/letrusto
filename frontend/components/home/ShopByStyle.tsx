@@ -1,21 +1,21 @@
 import Link from "next/link";
 import { type CommerceCategory, CATEGORY_MAP } from "@/types/commerce";
-import { Gem, Scissors, Sparkles, ShoppingBag, Gift } from "lucide-react";
+import { Shirt, Frame, ShoppingBag, Home, BookOpen } from "lucide-react";
 
-const CATEGORIES: { id: CommerceCategory; icon: typeof Gem }[] = [
-  { id: "jewellery", icon: Gem },
-  { id: "hair-style", icon: Scissors },
-  { id: "beauty-tools", icon: Sparkles },
+const CATEGORIES: { id: CommerceCategory; icon: typeof Shirt }[] = [
+  { id: "apparel", icon: Shirt },
+  { id: "wall-art", icon: Frame },
   { id: "accessories", icon: ShoppingBag },
-  { id: "gifts", icon: Gift },
+  { id: "home-living", icon: Home },
+  { id: "stationery", icon: BookOpen },
 ];
 
 export default function ShopByStyle() {
   return (
     <section className="py-12 md:py-16">
       <div className="max-w-7xl mx-auto px-4 md:px-6">
-        <h2 className="lt-heading-2 text-center">Shop by Style</h2>
-        <p className="mt-2 text-center text-[var(--text-secondary)] text-sm">Find exactly what you&apos;re looking for</p>
+        <h2 className="lt-heading-2 text-center">Shop by Category</h2>
+        <p className="mt-2 text-center text-[var(--text-secondary)] text-sm">Custom printed products shipped worldwide</p>
         <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;

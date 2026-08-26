@@ -1,9 +1,9 @@
 export type CommerceCategory =
-  | "jewellery"
-  | "hair-style"
-  | "beauty-tools"
+  | "apparel"
+  | "wall-art"
   | "accessories"
-  | "gifts";
+  | "home-living"
+  | "stationery";
 
 export type CommerceProduct = {
   id: string;
@@ -12,7 +12,7 @@ export type CommerceProduct = {
   description: string;
   price: number;
   compareAtPrice?: number;
-  currency: "INR";
+  currency: "INR" | "USD" | "EUR" | "GBP";
   images: string[];
   category: CommerceCategory | string;
   categoryLabel: string;
@@ -61,9 +61,9 @@ export type CartState = {
 };
 
 export const CATEGORY_MAP: Record<CommerceCategory, string> = {
-  jewellery: "Jewellery",
-  "hair-style": "Hair & Style",
-  "beauty-tools": "Beauty Tools",
+  apparel: "Apparel",
+  "wall-art": "Wall Art",
   accessories: "Accessories",
-  gifts: "Gifts",
+  "home-living": "Home & Living",
+  stationery: "Stationery",
 };

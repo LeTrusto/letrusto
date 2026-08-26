@@ -72,7 +72,7 @@ export async function getPublicProduct(productId: string) {
   return normalizeProduct(await apiRequest<Product>(`/products/${encodeURIComponent(productId)}`));
 }
 
-const COMMERCE_CATEGORIES = new Set<CommerceCategory>(["jewellery", "hair-style", "beauty-tools", "accessories", "gifts"]);
+const COMMERCE_CATEGORIES = new Set<CommerceCategory>(["apparel", "wall-art", "accessories", "home-living", "stationery"]);
 
 function categoryLabel(slug: string) {
   return slug.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
@@ -92,7 +92,7 @@ export function toCommerceProduct(product: Product): CommerceProduct {
     name: product.name,
     description: product.description,
     price: product.priceValue,
-    currency: "INR",
+    currency: "USD",
     images: product.images.length > 0 ? product.images : ["/images/products/placeholder.svg"],
     category,
     categoryLabel: categoryLabel(product.category),
