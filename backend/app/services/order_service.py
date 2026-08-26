@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
@@ -100,6 +100,19 @@ class OrderService:
             "economics_status": "COMPLETE" if not missing else "PARTIAL" if supplier_cost is not None or shipping_cost is not None else "UNKNOWN",
             "economics_missing": missing,
         }
+
+    @staticmethod
+    def _currency_for_country(country: str) -> str:
+        return "INR" if country.strip().upper() in {"IN", "INDIA"} else "USD"
+
+    @staticmethod
+    def _price_for_currency(price: Decimal, currency: str) -> Decimal:
+        if currency == "INR":
+            return price
+        rate = get_settings().PRICING_FX_RATE
+        if rate <= 0:
+            raise BadRequestError("Currency conversion is not configured")
+        return (price / rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def get_cart(self, user: User) -> CartDTO:
         return self._cart_dto(self._cart(user))
@@ -225,7 +238,8 @@ class OrderService:
             if preflight.status != "FULFILLABLE":
                 self.db.rollback()
                 raise BadRequestError("Product variant is unavailable for the selected destination")
-        subtotal = sum((variant.selling_price * quantity for _, variant, quantity in resolved), Decimal("0"))
+            currency = self._currency_for_country(payload.shipping_address.country)
+            subtotal = sum((self._price_for_currency(variant.selling_price, currency) * quantity for _, variant, quantity in resolved), Decimal("0"))
         now = datetime.now(timezone.utc)
         order = Order(
             order_number=f"LT-{now.strftime('%Y%m%d')}-{uuid4().hex[:8].upper()}",
@@ -236,6 +250,7 @@ class OrderService:
             subtotal=subtotal,
             shipping_amount=Decimal("0"),
             total=subtotal,
+            currency=currency,
             customer_name=payload.customer.name,
             customer_email=str(payload.customer.email),
             customer_phone=payload.customer.phone,
@@ -243,7 +258,7 @@ class OrderService:
             idempotency_key=payload.idempotency_key,
         )
         order.items = [
-            OrderItem(product_id=product.id, variant_id=variant.id, product_name=product.name, product_image_url=product.images[0].url if product.images else None, variant_name=variant.name or variant.attributes, quantity=quantity, unit_price=variant.selling_price, line_total=variant.selling_price * quantity, **self._economics_snapshot(product, variant))
+            OrderItem(product_id=product.id, variant_id=variant.id, product_name=product.name, product_image_url=product.images[0].url if product.images else None, variant_name=variant.name or variant.attributes, quantity=quantity, unit_price=self._price_for_currency(variant.selling_price, currency), line_total=self._price_for_currency(variant.selling_price, currency) * quantity, **self._economics_snapshot(product, variant))
             for product, variant, quantity in resolved
         ]
         try:

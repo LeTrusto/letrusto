@@ -88,6 +88,12 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
 
+    # Stripe Checkout for non-India orders. Keep credentials server-side only.
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_SUCCESS_URL: str = "http://localhost:3000/orders/{order_id}?payment=success"
+    STRIPE_CANCEL_URL: str = "http://localhost:3000/checkout?payment=cancelled"
+
     # Rate limiting (requests per minute per IP)
     RATE_LIMIT_AUTH: int = 10
     RATE_LIMIT_DEFAULT: int = 120

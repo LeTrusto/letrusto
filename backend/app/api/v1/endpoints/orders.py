@@ -2,15 +2,16 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request
 
-from app.api.deps import get_cancellation_service, get_cashfree_service, get_current_admin, get_current_user, get_order_service, get_razorpay_service
+from app.api.deps import get_cancellation_service, get_cashfree_service, get_current_admin, get_current_user, get_order_service, get_razorpay_service, get_stripe_service
 from app.models.entities import User
 from app.schemas.cancellation import AdminCancelRequest, CancelOrderRequest, CancellationStatusDTO, RefundDTO
 from app.schemas.orders import CartDTO, CartItemRequest, CreateOrderRequest, OrderDTO
 from app.services.order_service import OrderService
-from app.schemas.payments import PaymentSessionDTO, PaymentStatusDTO, RazorpayOrderDTO, RazorpayPaymentVerification
+from app.schemas.payments import PaymentSessionDTO, PaymentStatusDTO, RazorpayOrderDTO, RazorpayPaymentVerification, StripeCheckoutSessionDTO
 from app.services.cancellation_service import CancellationService
 from app.services.cashfree_service import CashfreeService
 from app.services.razorpay_service import RazorpayService
+from app.services.stripe_service import StripeService
 
 router = APIRouter(tags=["orders"])
 
@@ -68,6 +69,17 @@ async def verify_razorpay_payment_status(order_id: UUID, current_user: User = De
 @router.post("/payments/razorpay/webhook", status_code=200)
 async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = Header(default=None), service: RazorpayService = Depends(get_razorpay_service)) -> dict[str, str]:
     await service.process_webhook(await request.body(), x_razorpay_signature)
+    return {"status": "ok"}
+
+
+@router.post("/orders/{order_id}/stripe-session", response_model=StripeCheckoutSessionDTO)
+def create_stripe_session(order_id: UUID, current_user: User = Depends(get_current_user), service: StripeService = Depends(get_stripe_service)) -> StripeCheckoutSessionDTO:
+    return service.create_session(current_user, order_id)
+
+
+@router.post("/payments/stripe/webhook", status_code=200)
+async def stripe_webhook(request: Request, stripe_signature: str | None = Header(default=None, alias="stripe-signature"), service: StripeService = Depends(get_stripe_service)) -> dict[str, str]:
+    await service.process_webhook(await request.body(), stripe_signature)
     return {"status": "ok"}
 
 

@@ -45,7 +45,7 @@ export type Order = {
   shipping_address: ShippingAddress;
   items: OrderItem[];
   created_at: string;
-  payment_provider?: "CASHFREE" | "RAZORPAY" | null;
+  payment_provider?: "CASHFREE" | "RAZORPAY" | "STRIPE" | null;
   tracking_number?: string | null;
   tracking_carrier?: string | null;
   shipped_at?: string | null;
@@ -93,6 +93,15 @@ export type RazorpayOrder = {
   razorpay_order_id: string;
   amount: number;
   currency: "INR";
+};
+
+export type StripeCheckoutSession = {
+  order_id: string;
+  provider: "STRIPE";
+  provider_order_id: string;
+  checkout_url: string;
+  amount: number;
+  currency: string;
 };
 
 export type PaymentStatus = {

@@ -20,7 +20,8 @@ dependencies = [
   "email-validator>=2.0.0",
   "faker>=37.5.3",
   "resend>=2.14.0",
-  "pytest>=8.4.1"
+  "pytest>=8.4.1",
+  "stripe>=12.0.0"
 ]
 
 [tool.setuptools.packages.find]

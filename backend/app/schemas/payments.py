@@ -28,6 +28,15 @@ class RazorpayPaymentVerification(BaseModel):
     razorpay_signature: str
 
 
+class StripeCheckoutSessionDTO(BaseModel):
+    order_id: UUID
+    provider: str
+    provider_order_id: str
+    checkout_url: str
+    amount: Decimal
+    currency: str
+
+
 class PaymentStatusDTO(BaseModel):
     order_id: UUID
     payment_status: str

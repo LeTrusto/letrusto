@@ -1,4 +1,5 @@
 from decimal import Decimal
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -50,12 +51,12 @@ def make_order_fixture(db):
     return user, product, variant
 
 
-def order_payload(product_slug: str, *, quantity: int = 2, key: str = "order-test-key-001"):
+def order_payload(product_slug: str, *, quantity: int = 2, key: str = "order-test-key-001", country: str = "IN"):
     return CreateOrderRequest(
         items=[CartItemRequest(product_id=product_slug, variant_id="variant-1", quantity=quantity)],
         customer=CustomerDetails(name="Test Buyer", email="buyer@example.com", phone="9876543210"),
         shipping_address=ShippingAddress(
-            address="1 Test Street", city="Bengaluru", state="Karnataka", postal_code="560001", country="IN"
+            address="1 Test Street", city="Bengaluru", state="Karnataka", postal_code="560001", country=country
         ),
         idempotency_key=key,
     )
@@ -113,5 +114,22 @@ def test_order_revalidates_active_status_and_zero_sellable_inventory():
         db.commit()
         with pytest.raises(Exception, match="Active product"):
             service.create_order(user, order_payload(product.slug, key="order-test-key-002"))
+    finally:
+        cleanup(db, user, product)
+
+
+def test_international_order_uses_usd_conversion():
+    db = SessionLocal()
+    user, product, _ = make_order_fixture(db)
+    try:
+        async def international_preflight(**_kwargs):
+            return SimpleNamespace(status="FULFILLABLE")
+
+        service = OrderService(db, fulfillment_preflight_service=SimpleNamespace(check=international_preflight))
+        result = service.create_order(user, order_payload(product.slug, country="US", key="order-test-usd-001"))
+        assert result.currency == "USD"
+        assert result.subtotal == Decimal("2.04")
+        assert result.total == Decimal("2.04")
+        assert result.items[0].unit_price == Decimal("1.02")
     finally:
         cleanup(db, user, product)

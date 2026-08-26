@@ -1,5 +1,5 @@
 import { buildApiUrl } from "@/services/api";
-import type { CancellationStatus, CreateOrderPayload, Order, OrderList, PaymentSession, PaymentStatus, RazorpayOrder } from "@/types/orders";
+import type { CancellationStatus, CreateOrderPayload, Order, OrderList, PaymentSession, PaymentStatus, RazorpayOrder, StripeCheckoutSession } from "@/types/orders";
 
 async function orderRequest<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(buildApiUrl(path), {
@@ -61,4 +61,8 @@ export function verifyPendingOrderPayment(token: string, order: Pick<Order, "id"
   if (order.payment_provider === "RAZORPAY") return verifyRazorpayPaymentStatus(token, order.id);
   if (order.payment_provider === "CASHFREE") return verifyCashfreePayment(token, order.id);
   return Promise.resolve(null);
+}
+
+export function createStripeSession(token: string, orderId: string) {
+  return orderRequest<StripeCheckoutSession>(`/orders/${orderId}/stripe-session`, token, { method: "POST" });
 }
