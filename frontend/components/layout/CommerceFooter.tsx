@@ -3,11 +3,11 @@ import BrandMark from "./BrandMark";
 
 const SHOP_LINKS = [
   { label: "All Products", href: "/shop" },
-  { label: "Jewellery", href: "/shop?category=jewellery" },
-  { label: "Hair & Style", href: "/shop?category=hair-style" },
-  { label: "Beauty Tools", href: "/shop?category=beauty-tools" },
+  { label: "Apparel", href: "/shop?category=apparel" },
+  { label: "Wall Art", href: "/shop?category=wall-art" },
   { label: "Accessories", href: "/shop?category=accessories" },
-  { label: "Gifts", href: "/shop?category=gifts" },
+  { label: "Home & Living", href: "/shop?category=home-living" },
+  { label: "Stationery", href: "/shop?category=stationery" },
 ];
 
 const COMPANY_LINKS = [
@@ -32,8 +32,8 @@ export default function CommerceFooter() {
           <div>
             <BrandMark footer />
             <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
-              Trending finds. Everyday prices.<br />
-              Curated beauty, jewellery &amp; style.
+              Original designs, printed fresh.<br />
+              Made to order and shipped worldwide.
             </p>
           </div>
 

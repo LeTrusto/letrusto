@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Heart, LogIn, LogOut, Search, Sparkles, Scale, LayoutDashboard, User, Menu, X, ChevronDown } from "lucide-react";
+import { Bell, Heart, LogIn, LogOut, Search, LayoutDashboard, User, Menu, X, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,7 +9,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
-import { AI_TOOLS_PUBLIC_CATEGORIES } from "@/config/aiTools";
+
+const POD_CATEGORIES = [
+  { id: "apparel", name: "Apparel", href: "/shop?category=apparel" },
+  { id: "wall-art", name: "Wall Art", href: "/shop?category=wall-art" },
+  { id: "accessories", name: "Accessories", href: "/shop?category=accessories" },
+  { id: "home-living", name: "Home & Living", href: "/shop?category=home-living" },
+  { id: "stationery", name: "Stationery", href: "/shop?category=stationery" },
+];
 
 function isActive(pathname: string, href: string, prefixes?: string[]): boolean {
   if (href === "/") return pathname === "/";
@@ -75,7 +82,7 @@ export default function Navbar() {
     };
   }, []);
 
-  const aiToolsActive = isActive(pathname, "/ai-tools", ["/ai-tools", "/category/"]);
+  const shopActive = isActive(pathname, "/shop");
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-white/95 shadow-[var(--shadow-sm)] backdrop-blur-xl">
@@ -99,9 +106,9 @@ export default function Navbar() {
               aria-expanded={categoriesMenuVisible}
               aria-haspopup="menu"
               aria-controls="desktop-categories-menu"
-              className={`${navItemBase} gap-1.5 ${aiToolsActive ? navItemActive : ""}`}
+              className={`${navItemBase} gap-1.5 ${shopActive ? navItemActive : ""}`}
             >
-              AI Tools
+              Shop by Category
               <ChevronDown className={`h-3.5 w-3.5 transition ${categoriesMenuVisible ? "rotate-180" : ""}`} />
             </button>
             <AnimatePresence>
@@ -115,10 +122,10 @@ export default function Navbar() {
                   transition={{ duration: 0.18, ease: "easeOut" }}
                   className="absolute left-0 top-14 z-50 w-[28rem] rounded-[var(--radius-2xl)] border border-[var(--border)] bg-white p-5 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.35)]"
                 >
-                  <p className="lt-label mb-1">Browse AI tool categories</p>
-                  <p className="mb-4 text-sm text-slate-500">Find the right tool category before committing budget.</p>
+                  <p className="lt-label mb-1">Browse printed products</p>
+                  <p className="mb-4 text-sm text-slate-500">Find a design for your wardrobe, home, or everyday carry.</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {AI_TOOLS_PUBLIC_CATEGORIES.map((cat) => (
+                    {POD_CATEGORIES.map((cat) => (
                       <Link
                         key={cat.id}
                         href={cat.href}
@@ -126,40 +133,37 @@ export default function Navbar() {
                         role="menuitem"
                         className="flex items-center gap-3 rounded-[var(--radius-lg)] px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-[var(--lt-gradient-soft)] hover:text-[var(--lt-purple)]"
                       >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-slate-100 text-base">{cat.icon}</span>
+                        <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-slate-100 text-base">{cat.id === "apparel" ? "T" : cat.id === "wall-art" ? "A" : cat.id === "accessories" ? "C" : cat.id === "home-living" ? "H" : "N"}</span>
                         <span>{cat.name}</span>
                       </Link>
                     ))}
                   </div>
                   <Link
-                    href="/ai-tools"
+                    href="/shop"
                     onClick={() => setCategoriesOpen(false)}
                     className="lt-btn lt-btn-md lt-btn-primary mt-4 w-full justify-center"
                   >
-                    View all AI tool categories
+                    View all designs
                   </Link>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          <Link href="/compare" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/compare") ? navItemActive : ""}`}>
-            <Scale className="h-4 w-4" /> Compare
+          <Link href="/shop" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/shop") ? navItemActive : ""}`}>
+            Shop
           </Link>
-          <Link href="/guides" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/guides", ["/guides", "/articles"]) ? navItemActive : ""}`}>
-            Guides
+          <Link href="/how-it-works" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/how-it-works") ? navItemActive : ""}`}>
+            How It Works
           </Link>
           <Link href="/about" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/about") ? navItemActive : ""}`}>
             About
-          </Link>
-          <Link href="/ai" onClick={closeAllMenus} className={`${navItemBase} ${isActive(pathname, "/ai") ? navItemActive : ""}`}>
-            <Sparkles className="h-4 w-4" /> Ask AI
           </Link>
         </nav>
 
         {/* Right actions */}
         <div className="flex items-center gap-2.5">
-          <Link href="/search" onClick={closeAllMenus} className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border)] text-slate-500 transition hover:border-[var(--lt-purple-light)] hover:text-[var(--lt-purple)] xl:hidden" aria-label="Search AI tools">
+          <Link href="/shop" onClick={closeAllMenus} className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border)] text-slate-500 transition hover:border-[var(--lt-purple-light)] hover:text-[var(--lt-purple)] xl:hidden" aria-label="Search products">
             <Search className="h-[1.125rem] w-[1.125rem]" />
           </Link>
 
@@ -172,8 +176,8 @@ export default function Navbar() {
             )}
           </Link>
 
-          <Link href="/ai" onClick={closeAllMenus} className="lt-btn lt-btn-md lt-btn-brand hidden sm:inline-flex">
-            <Sparkles className="h-4 w-4" /> Ask LeTrusto
+          <Link href="/shop" onClick={closeAllMenus} className="lt-btn lt-btn-md lt-btn-brand hidden sm:inline-flex">
+            Shop Designs
           </Link>
 
           {!isLoading && (
@@ -249,11 +253,8 @@ export default function Navbar() {
             <nav className="mt-3 flex flex-col gap-0.5">
               {[
                 { href: "/", label: "Home" },
-                { href: "/ai-tools", label: "AI Tools" },
-                { href: "/search", label: "Search" },
-                { href: "/ai", label: "Ask AI" },
-                { href: "/guides", label: "Buying Guides" },
-                { href: "/compare", label: "Compare" },
+                { href: "/shop", label: "Shop Designs" },
+                { href: "/how-it-works", label: "How It Works" },
                 { href: "/about", label: "About" },
                 { href: "/favorites", label: `Favorites (${favoriteIds.length})` },
               ].map(({ href, label }) => (

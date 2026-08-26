@@ -63,7 +63,7 @@ function CommerceNavbarContent() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search beauty, jewellery, style..."
+              placeholder="Search designs, apparel, wall art..."
               className="lt-input flex-1"
               autoFocus
             />
@@ -82,17 +82,17 @@ function CommerceNavbarContent() {
             <Link href="/shop" className={navClass(pathname === "/shop" && !activeCategory)}>
               Shop
             </Link>
-            <Link href="/shop?category=jewellery" className={navClass(activeCategory === "jewellery")}>
-              Jewellery
+            <Link href="/shop?category=apparel" className={navClass(activeCategory === "apparel")}>
+              Apparel
             </Link>
-            <Link href="/shop?category=hair-style" className={navClass(activeCategory === "hair-style")}>
-              Hair & Style
+            <Link href="/shop?category=wall-art" className={navClass(activeCategory === "wall-art")}>
+              Wall Art
             </Link>
-            <Link href="/shop?category=beauty-tools" className={navClass(activeCategory === "beauty-tools")}>
-              Beauty Tools
+            <Link href="/shop?category=accessories" className={navClass(activeCategory === "accessories")}>
+              Accessories
             </Link>
-            <Link href="/deals" className={navClass(pathname === "/deals")}>
-              Offers
+            <Link href="/shop?category=home-living" className={navClass(activeCategory === "home-living")}>
+              Home & Living
             </Link>
           </nav>
         </div>

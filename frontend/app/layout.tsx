@@ -100,7 +100,7 @@ export default function RootLayout({
             "@id": "https://letrusto.com/#website",
             name: "LeTrusto",
             url: "https://letrusto.com",
-            description: "Curated discovery commerce for beauty, jewellery and style finds in India.",
+            description: "Original designs printed on demand and shipped worldwide.",
             potentialAction: {
               "@type": "SearchAction",
               target: "https://letrusto.com/search?q={search_term_string}",

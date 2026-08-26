@@ -48,7 +48,7 @@ function buildCategoryShowcase(categoryCounts: Map<string, number>): HomeCategor
     return {
       ...entry,
       productCount,
-      productCountText: productCount > 0 ? `${productCount} tools indexed` : "Ready for content",
+      productCountText: productCount > 0 ? `${productCount} products` : "Coming soon",
     };
   });
 }

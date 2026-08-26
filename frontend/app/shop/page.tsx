@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import ShopPageView from "./ShopPageView";
 
 export const metadata: Metadata = {
-  title: "Shop Beauty, Jewellery & Style Finds",
-  description: "Browse trending beauty, jewellery, hair accessories, and style finds at everyday prices.",
+  title: "Shop Unique Designs Printed On Demand",
+  description: "Browse original apparel, wall art, accessories, home goods, and stationery shipped worldwide.",
   alternates: { canonical: "/shop" },
   openGraph: {
-    title: "Shop Beauty, Jewellery & Style Finds | LeTrusto",
-    description: "Browse trending beauty, jewellery, hair accessories, and style finds at everyday prices.",
+    title: "Shop Unique Designs Printed On Demand | LeTrusto",
+    description: "Browse original apparel, wall art, accessories, home goods, and stationery shipped worldwide.",
     url: "/shop",
     siteName: "LeTrusto",
     type: "website",
@@ -15,8 +15,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Shop Beauty, Jewellery & Style Finds | LeTrusto",
-    description: "Browse trending beauty, jewellery, hair accessories, and style finds at everyday prices.",
+    title: "Shop Unique Designs Printed On Demand | LeTrusto",
+    description: "Browse original apparel, wall art, accessories, home goods, and stationery shipped worldwide.",
     images: ["/images/og-default.svg"],
   },
 };

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { BookOpen, Frame, Home, Shirt, ShoppingBag } from "lucide-react";
 
 import { AI_CATEGORY_ARTWORK, AI_TOOLS_PUBLIC_CATEGORIES } from "@/config/aiTools";
 
@@ -98,9 +99,27 @@ const LEGACY_ART_LAYOUTS: Record<
   },
 };
 
+const POD_ARTWORK: Record<string, { icon: typeof Shirt; panelBackground: string }> = {
+  apparel: { icon: Shirt, panelBackground: "bg-gradient-to-br from-rose-100 via-orange-50 to-amber-100" },
+  "wall-art": { icon: Frame, panelBackground: "bg-gradient-to-br from-sky-100 via-cyan-50 to-teal-100" },
+  accessories: { icon: ShoppingBag, panelBackground: "bg-gradient-to-br from-violet-100 via-fuchsia-50 to-pink-100" },
+  "home-living": { icon: Home, panelBackground: "bg-gradient-to-br from-amber-100 via-yellow-50 to-lime-100" },
+  stationery: { icon: BookOpen, panelBackground: "bg-gradient-to-br from-emerald-100 via-green-50 to-cyan-100" },
+};
+
 export default function CategoryArtwork({ id, className }: CategoryArtworkProps) {
+  const podArtwork = POD_ARTWORK[id];
   const aiCategory = AI_TOOLS_PUBLIC_CATEGORIES.find((category) => category.id === id);
   const aiArtwork = aiCategory ? AI_CATEGORY_ARTWORK[aiCategory.artworkKey] : null;
+
+  if (podArtwork) {
+    const Icon = podArtwork.icon;
+    return (
+      <div className={`relative flex h-[152px] items-center justify-center overflow-hidden rounded-[1.35rem] border border-slate-200 ${podArtwork.panelBackground} ${className ?? ""}`}>
+        <Icon className="h-20 w-20 text-slate-900/70" strokeWidth={1} aria-hidden="true" />
+      </div>
+    );
+  }
 
   const imageSrc = aiArtwork?.src ?? LEGACY_ART_IMAGES[id] ?? LEGACY_ART_IMAGES.electronics;
   const layout = aiArtwork ?? LEGACY_ART_LAYOUTS[id] ?? LEGACY_ART_LAYOUTS.electronics;

@@ -1,5 +1,3 @@
-import { AI_TOOLS_PUBLIC_CATEGORIES } from "@/config/aiTools";
-
 export type HomeSectionComponent =
   | "hero"
   | "categoryShowcase"
@@ -77,15 +75,53 @@ export type HomeTrendingSearch = {
   note: string;
 };
 
-export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = AI_TOOLS_PUBLIC_CATEGORIES.map((category) => ({
-  id: category.id,
-  name: category.name,
-  description: category.description,
-  href: category.href,
-  eyebrow: category.eyebrow,
-  featuredBullets: category.featuredBullets,
-  categoryHints: category.categoryHints,
-}));
+export const HOMEPAGE_CATEGORY_CONFIG: HomepageCategoryConfig[] = [
+  {
+    id: "apparel",
+    name: "Apparel",
+    description: "Wearable designs printed fresh on tees, sweatshirts, and more.",
+    href: "/shop?category=apparel",
+    eyebrow: "Wear it",
+    featuredBullets: ["T-shirts", "Sweatshirts", "Everyday layers"],
+    categoryHints: ["apparel", "clothing", "shirts"],
+  },
+  {
+    id: "wall-art",
+    name: "Wall Art",
+    description: "Original prints that give your space a point of view.",
+    href: "/shop?category=wall-art",
+    eyebrow: "Make space",
+    featuredBullets: ["Art prints", "Posters", "Gallery walls"],
+    categoryHints: ["wall art", "prints", "posters"],
+  },
+  {
+    id: "accessories",
+    name: "Accessories",
+    description: "Small daily essentials finished with designs worth carrying.",
+    href: "/shop?category=accessories",
+    eyebrow: "Carry it",
+    featuredBullets: ["Phone cases", "Totes", "Everyday essentials"],
+    categoryHints: ["accessories", "phone cases", "bags"],
+  },
+  {
+    id: "home-living",
+    name: "Home & Living",
+    description: "Useful home pieces made more personal with fresh artwork.",
+    href: "/shop?category=home-living",
+    eyebrow: "Live with it",
+    featuredBullets: ["Mugs", "Cushions", "Home accents"],
+    categoryHints: ["home", "mugs", "decor"],
+  },
+  {
+    id: "stationery",
+    name: "Stationery",
+    description: "Thoughtful paper goods for notes, plans, gifts, and ideas.",
+    href: "/shop?category=stationery",
+    eyebrow: "Put it down",
+    featuredBullets: ["Notebooks", "Cards", "Desk goods"],
+    categoryHints: ["stationery", "notebooks", "paper goods"],
+  },
+];
 
 export const HOMEPAGE_TRUST_SIGNALS: TrustSignal[] = [
   {

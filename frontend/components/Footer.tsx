@@ -3,20 +3,18 @@ import Link from "next/link";
 
 const FOOTER_LINKS = {
   Product: [
-    { label: "Ask LeTrusto", href: "/ai" },
-    { label: "AI Tools", href: "/ai-tools" },
-    { label: "Buying Guides", href: "/guides" },
-    { label: "Search", href: "/search" },
-    { label: "Compare", href: "/compare" },
+    { label: "Shop all designs", href: "/shop" },
+    { label: "How it works", href: "/how-it-works" },
+    { label: "Search products", href: "/shop" },
+    { label: "Cart", href: "/cart" },
     { label: "Favourites", href: "/favorites" },
   ],
   Categories: [
-    { label: "AI Assistants", href: "/category/ai-assistants" },
-    { label: "AI Writing", href: "/category/ai-writing" },
-    { label: "AI Image & Design", href: "/category/ai-image-design" },
-    { label: "AI Video & Audio", href: "/category/ai-video-audio" },
-    { label: "AI Coding & Developer Tools", href: "/category/ai-coding-developer-tools" },
-    { label: "Marketing & Automation", href: "/category/marketing-automation" },
+    { label: "Apparel", href: "/shop?category=apparel" },
+    { label: "Wall Art", href: "/shop?category=wall-art" },
+    { label: "Accessories", href: "/shop?category=accessories" },
+    { label: "Home & Living", href: "/shop?category=home-living" },
+    { label: "Stationery", href: "/shop?category=stationery" },
   ],
   Company: [
     { label: "About", href: "/about" },
@@ -41,7 +39,7 @@ export default function Footer() {
               <Image src="/LeTrusto%20Brand%20Logo.png" alt="LeTrusto - Discover. Choose. Trust." width={1774} height={887} priority unoptimized className="h-auto w-40" />
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
-              Research-backed AI tool and software recommendations, comparisons, and buying guidance for teams that want clarity before they pay.
+              Original designs printed fresh on products you can wear, carry, and live with. Made to order and shipped worldwide.
             </p>
             <div className="mt-5 flex gap-3">
               {[
@@ -82,12 +80,12 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Affiliate disclosure */}
+        {/* Store disclosure */}
         <div className="mt-12 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] px-5 py-4 text-xs leading-relaxed text-[var(--text-muted)]">
-          <strong className="font-semibold text-[var(--text-secondary)]">Affiliate Disclosure:</strong>{" "}
-          LeTrusto may earn a commission when you click affiliate links and make a purchase. This does not change the price you pay. We only recommend products we genuinely evaluate.{" "}
-          <Link href="/affiliate-disclosure" className="underline transition hover:text-[var(--lt-purple)]">
-            Full disclosure
+          <strong className="font-semibold text-[var(--text-secondary)]">Made to order:</strong>{" "}
+          Each product is created after you order, helping us avoid unnecessary inventory while keeping every design intentional.{" "}
+          <Link href="/how-it-works" className="underline transition hover:text-[var(--lt-purple)]">
+            Learn how it works
           </Link>
         </div>
 
@@ -97,7 +95,7 @@ export default function Footer() {
             © {new Date().getFullYear()} LeTrusto. All rights reserved.
           </p>
           <p className="text-xs text-[var(--text-muted)]">
-            Built for clearer, more confident buying decisions
+            Designed for more personal everyday goods
           </p>
         </div>
       </div>
