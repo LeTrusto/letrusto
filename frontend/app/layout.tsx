@@ -72,10 +72,6 @@ export const metadata: Metadata = {
     title: "LeTrusto",
     statusBarStyle: "default",
   },
-  icons: {
-    icon: [{ url: "/letrusto-icon.svg", type: "image/svg+xml", sizes: "any" }],
-    shortcut: ["/letrusto-icon.svg"],
-  },
   robots: { index: true, follow: true },
 };
 

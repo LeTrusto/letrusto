@@ -11,11 +11,11 @@ export default function ReturnsPolicyPage() {
       <h1 className="lt-heading-1">Returns &amp; Refunds</h1>
       <div className="mt-6 lt-body space-y-4">
         <h2 className="lt-heading-3 mt-6">Return Window</h2>
-        <p>Products may be returned within 7 days of delivery, provided they are unused and in original packaging.</p>
+        <p>Because our products are made to order, we do not accept returns for change of mind, incorrect size selection, or incorrect address details. Please review the product information and delivery address carefully before paying.</p>
         <h2 className="lt-heading-3 mt-6">Refund Process</h2>
-        <p>Refunds will be processed to the original payment method within 5–7 business days of receiving the returned item.</p>
+        <p>If an item arrives damaged, defective, or materially different from the order, contact us within 7 days of delivery. After review, an approved refund or replacement will be arranged using the original payment method where applicable.</p>
         <h2 className="lt-heading-3 mt-6">Non-Returnable Items</h2>
-        <p>Certain items such as earrings and personal care products may not be eligible for return due to hygiene reasons.</p>
+        <p>Personalized, printed, and made-to-order items are not returnable unless they arrive damaged, defective, or incorrectly fulfilled.</p>
         <h2 className="lt-heading-3 mt-6">Contact</h2>
         <p>For return requests, please contact us through the Contact page.</p>
         <h2 className="lt-heading-3 mt-6">Return Review</h2>
