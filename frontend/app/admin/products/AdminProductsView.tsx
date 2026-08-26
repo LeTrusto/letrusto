@@ -271,6 +271,7 @@ export default function AdminProductsView() {
   const [rejectingProductId, setRejectingProductId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [calculatingProductId, setCalculatingProductId] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [pricingInputs, setPricingInputs] = useState<Record<string, PricingInputs>>({});
   const [priceCalculations, setPriceCalculations] = useState<Record<string, PriceCalculation | VariantPriceCalculation>>({});
   const [error, setError] = useState("");
@@ -488,6 +489,26 @@ export default function AdminProductsView() {
       setError(err instanceof Error ? err.message : "Unable to sync inventory");
     } finally {
       setSyncingProductId(null);
+    }
+  }
+
+  async function deleteProduct(product: Product) {
+    if (!window.confirm(`Permanently delete ${product.name}? This cannot be undone.`)) return;
+    setDeletingProductId(product.id);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/products/${product.id}`, {
+        method: "DELETE",
+        headers: apiHeaders(),
+      });
+      if (!response.ok) throw new Error(await apiError(response));
+      setMessage(`${product.name} deleted.`);
+      await loadProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to delete product");
+    } finally {
+      setDeletingProductId(null);
     }
   }
 
@@ -723,6 +744,10 @@ export default function AdminProductsView() {
                     <ClipboardCheck size={16} aria-hidden="true" />
                     Trust
                   </Link>
+                  <button type="button" disabled={deletingProductId !== null} onClick={() => void deleteProduct(product)} className="lt-btn lt-btn-secondary text-sm inline-flex items-center gap-2" title="Permanently delete product" aria-label={`Delete ${product.name}`}>
+                    <Trash2 size={16} aria-hidden="true" />
+                    {deletingProductId === product.id ? "Deleting..." : "Delete"}
+                  </button>
                 </div>
               </div>
               {rejectingProductId === product.id && (

@@ -11,7 +11,7 @@ from app.schemas.payments import AdminFulfillmentOrderDTO
 from app.services.cancellation_service import is_fulfillable
 from app.services.inventory_reservation_service import InventoryReservationService
 from app.services.cj_supplier_payment_service import CJSupplierPaymentService, SupplierPaymentRecord, apply_payment_record_to_order
-from app.suppliers.base import SupplierTrackingResult
+from app.suppliers.base import SupplierAdapter, SupplierTrackingResult
 from app.suppliers.factory import build_supplier_adapter
 
 
@@ -29,7 +29,16 @@ class FulfillmentService:
         return order
 
     @staticmethod
-    def _address(order: Order) -> dict:
+    def _supplier(order: Order) -> str:
+        suppliers = {str(item.product.supplier or "").strip().lower() for item in order.items if item.product}
+        if not suppliers or "" in suppliers:
+            raise BadRequestError("Order item traceability is incomplete")
+        if len(suppliers) > 1:
+            raise BadRequestError("Orders with multiple suppliers are not supported")
+        return suppliers.pop()
+
+    @staticmethod
+    def _address(order: Order, supplier: str) -> dict:
         address = order.shipping_address or {}
         required = {"address", "city", "state", "postal_code", "country"}
         missing = sorted(field for field in required if not str(address.get(field, "")).strip())
@@ -39,7 +48,7 @@ class FulfillmentService:
             missing.append("phone")
         if missing:
             raise BadRequestError(f"Shipping address is missing: {', '.join(missing)}")
-        if str(address["country"]).upper() != "IN":
+        if supplier == "cj" and str(address["country"]).upper() != "IN":
             raise BadRequestError("CJ fulfillment currently supports India addresses only")
         return address
 
@@ -64,14 +73,15 @@ class FulfillmentService:
             raise BadRequestError("Order has no CJ order ID; tracking was not requested")
         if order.fulfillment_status in {"DELIVERED", "CANCELLED"}:
             return order
+        supplier = self._supplier(order)
         settings = get_settings()
         order.last_supplier_sync_at = datetime.now(timezone.utc)
-        if not settings.CJ_API_KEY:
+        if supplier == "cj" and not getattr(settings, "CJ_API_KEY", ""):
             order.fulfillment_failure_reason = "CJ_API_KEY is not configured; tracking was not synchronized"
             self.db.commit()
             return order
         try:
-            adapter = build_supplier_adapter("cj")
+            adapter: SupplierAdapter = build_supplier_adapter(supplier)
             result: SupplierTrackingResult = await adapter.get_tracking(order.supplier_order_id)
         except Exception as exc:
             order.fulfillment_failure_reason = str(exc)[:500]
@@ -118,7 +128,8 @@ class FulfillmentService:
             raise BadRequestError("Fulfillment submission is already in progress")
         if not order.items:
             raise BadRequestError("Order has no items")
-        address = self._address(order)
+        supplier = self._supplier(order)
+        address = self._address(order, supplier)
         payload_items = []
         for item in order.items:
             product = item.product
@@ -128,11 +139,11 @@ class FulfillmentService:
             if not product.supplier_product_id:
                 raise BadRequestError(f"Product {product.name} has no supplier product ID")
             if not variant.supplier_variant_id:
-                raise BadRequestError(f"Variant for {product.name} has no CJ variant ID")
+                raise BadRequestError(f"Variant for {product.name} has no supplier variant ID")
             payload_items.append({"pid": product.supplier_product_id, "vid": variant.supplier_variant_id, "quantity": item.quantity})
 
         settings = get_settings()
-        if not settings.CJ_API_KEY:
+        if supplier == "cj" and not getattr(settings, "CJ_API_KEY", ""):
             order.fulfillment_status = "FAILED"
             order.fulfillment_failure_reason = "CJ_API_KEY is not configured; no supplier order was created"
             self.db.commit()
@@ -142,7 +153,7 @@ class FulfillmentService:
         order.fulfillment_failure_reason = None
         self.db.commit()
         try:
-            adapter = build_supplier_adapter("cj")
+            adapter: SupplierAdapter = build_supplier_adapter(supplier)
             result = await adapter.create_order({
                 "orderNumber": order.order_number,
                 "shippingCustomerName": order.customer_name,

@@ -15,6 +15,7 @@ from app.core.catalog_readiness import resolve_cj_category
 from app.models.entities import Brand, Category
 from app.services.catalog_readiness_service import CatalogReadinessService
 from app.models.entities import (
+    CartItem,
     Product,
     ProductFeature,
     ProductImage,
@@ -88,6 +89,19 @@ class AdminProductService:
 
     def get_product(self, product_id: UUID) -> AdminProductDTO:
         return self._dto(self._get(product_id))
+
+    def delete_product(self, product_id: UUID) -> None:
+        product = self.db.scalar(select(Product).where(Product.id == product_id).with_for_update())
+        if product is None:
+            raise NotFoundError("Product not found")
+        order_count = self.db.scalar(select(func.count()).select_from(OrderItem).where(OrderItem.product_id == product_id)) or 0
+        cart_count = self.db.scalar(select(func.count()).select_from(CartItem).where(CartItem.product_id == product_id)) or 0
+        if order_count or cart_count:
+            raise BadRequestError(
+                f"Product cannot be deleted because it is referenced by {order_count} order item(s) and {cart_count} cart item(s)"
+            )
+        self.db.delete(product)
+        self.db.commit()
 
     def get_inventory(self, product_id: UUID) -> AdminProductInventoryResponse:
         product = self.db.scalar(

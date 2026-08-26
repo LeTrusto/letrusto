@@ -99,6 +99,22 @@ def test_paid_order_maps_stored_cj_ids_and_is_idempotent(monkeypatch):
     finally: cleanup(db, user, product)
 
 
+def test_international_supplier_routing_allows_pod_destination_without_provider_call(monkeypatch):
+    db = SessionLocal(); user, product, order = make_paid_order(db); fake = FakeCJ(); fake.calls = []
+    product.supplier = "printful"
+    order.shipping_address = {**order.shipping_address, "country": "US"}
+    db.commit()
+    providers = []
+    monkeypatch.setattr("app.services.fulfillment_service.build_supplier_adapter", lambda provider: providers.append(provider) or fake)
+    monkeypatch.setattr("app.services.fulfillment_service.get_settings", lambda: SimpleNamespace())
+    try:
+        result = asyncio.run(FulfillmentService(db).submit(order.id))
+        assert result.fulfillment_status == "SUBMITTED"
+        assert providers == ["printful"]
+        assert fake.calls[0]["shippingCountryCode"] == "US"
+    finally: cleanup(db, user, product)
+
+
 def test_missing_address_fails_without_cj_call(monkeypatch):
     db = SessionLocal(); user, product, order = make_paid_order(db); order.shipping_address = {"city": "Bengaluru"}; db.commit(); fake = FakeCJ(); fake.calls = []
     monkeypatch.setattr("app.services.fulfillment_service.build_supplier_adapter", lambda _: fake)

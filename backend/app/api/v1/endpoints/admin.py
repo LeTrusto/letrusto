@@ -485,6 +485,16 @@ def get_catalog_product(
     return service.get_product(product_id)
 
 
+@router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_catalog_product(
+    product_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> Response:
+    service.delete_product(product_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/products/{product_id}/inventory", response_model=AdminProductInventoryResponse)
 def get_catalog_product_inventory(
     product_id: UUID,

@@ -70,7 +70,7 @@ class MarketEvidenceResponse(BaseModel):
 
 
 class ProductImportRequest(BaseModel):
-    supplier: Literal["cj"]
+    supplier: Literal["cj", "printful"]
     supplier_product_id: str
     destination: str = "IN"
 

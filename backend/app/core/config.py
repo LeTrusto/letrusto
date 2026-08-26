@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     # Supplier integration (Phase 2 validation)
     SUPPLIER_PROVIDER: str = "cj"
     CJ_API_KEY: str = ""
+    PRINTFUL_API_KEY: str = ""
 
     # Approved Phase 3.3.3 prepaid launch pricing policy
     PRICING_FX_RATE: Decimal = Decimal("98.00")

@@ -314,6 +314,49 @@ def test_import_is_draft_and_preserves_supplier_data(monkeypatch):
         db.close()
 
 
+def test_printful_import_uses_shared_catalog_persistence(monkeypatch):
+    import app.services.admin_product_service as module
+    from app.schemas.admin_products import ProductImportRequest
+
+    class PrintfulImportAdapter(FakeAdapter):
+        supplier_name = "printful"
+
+        async def get_product(self, product_id: str) -> RawSupplierProduct:
+            product = await super().get_product(product_id)
+            product.supplier_id = "printful"
+            product.variants[0].supplier_variant_id = "101"
+            product.variants[0].supplier_variant_sku = "PF-TSHIRT-RED"
+            product.images = ["https://example.com/printful-mockup.jpg"]
+            return product
+
+        async def calculate_shipping(self, *args, **kwargs) -> ShippingResult:
+            return ShippingResult(
+                can_ship=True,
+                validation=ShippingValidation.VERIFIED,
+                options=[ShippingOption(carrier="Printful", method="Standard", cost_usd=6.5, estimated_days="5-8")],
+                origin_country="US",
+                destination_country="US",
+            )
+
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: PrintfulImportAdapter())
+    db = SessionLocal()
+    service = AdminProductService(db)
+    product_id = "printful-stage2-test"
+    try:
+        result = asyncio.run(service.import_product(ProductImportRequest(
+            supplier="printful", supplier_product_id=product_id, destination="US"
+        )))
+        assert result.status == "DRAFT"
+        assert result.supplier == "printful"
+        assert result.supplier_product_id == product_id
+        assert result.images[0] == "https://example.com/printful-mockup.jpg"
+        assert result.variants[0].supplier_variant_id == "101"
+    finally:
+        db.query(Product).filter(Product.supplier_product_id == product_id).delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
 class VariantOnlyCostAdapter(FakeAdapter):
     async def get_product(self, product_id: str) -> RawSupplierProduct:
         product = await super().get_product(product_id)
