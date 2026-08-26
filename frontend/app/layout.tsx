@@ -120,7 +120,7 @@ export default function RootLayout({
               width: 1774,
               height: 887,
             },
-            description: "Curated discovery commerce for beauty, jewellery and style finds in India.",
+            description: "Original designs printed on demand and shipped worldwide.",
             sameAs: ["https://x.com/letrusto", "https://instagram.com/letrusto"],
           }}
         />

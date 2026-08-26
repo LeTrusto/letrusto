@@ -24,16 +24,16 @@ export default function NotFound() {
           Back to Home
         </Link>
         <Link
-          href="/search"
+          href="/shop"
           className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-700 transition hover:border-purple-300 hover:text-purple-700"
         >
           Browse Products
         </Link>
         <Link
-          href="/ai"
+          href="/how-it-works"
           className="rounded-xl border border-purple-200 bg-purple-50 px-6 py-3 text-sm font-semibold text-purple-700 transition hover:bg-purple-100"
         >
-          ✨ Open Buying Assistant
+          How it works
         </Link>
       </div>
     </main>

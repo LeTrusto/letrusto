@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Heart, Sparkles } from "lucide-react";
+import { Heart } from "lucide-react";
 
 import ProductCard from "@/components/ProductCard";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -44,12 +44,12 @@ export default function FavoritesPage() {
     <main className="min-h-screen bg-[var(--surface-soft)] px-6 py-16">
       <div className="mx-auto max-w-7xl">
         <div className="lt-card mb-10 rounded-[var(--radius-2xl)] p-8">
-          <p className="lt-label text-[var(--lt-purple)]">Saved Tools</p>
+            <p className="lt-label text-[var(--lt-purple)]">Saved Designs</p>
           <h1 className="lt-heading-1 mt-3">Favorites</h1>
           <p className="lt-body mt-3">
             {favoriteProducts.length > 0
               ? `You have ${favoriteProducts.length} saved item${favoriteProducts.length === 1 ? "" : "s"}.`
-              : "Save AI tools you want to compare or revisit."}
+              : "Save designs and products you want to revisit."}
           </p>
 
           {favoriteProducts.length > 0 && (
@@ -84,14 +84,11 @@ export default function FavoritesPage() {
             </div>
             <h2 className="lt-heading-2">No favorites yet</h2>
             <p className="lt-body mx-auto mt-3 max-w-md">
-              Tap the heart on any tool or product card to save it here for easy comparison later.
+              Tap the heart on any product card to save it here for later.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link href="/ai-tools" className="lt-btn lt-btn-md lt-btn-primary">
-                Browse AI Tools
-              </Link>
-              <Link href="/ai" className="lt-btn lt-btn-md lt-btn-secondary">
-                <Sparkles className="h-4 w-4" /> Ask LeTrusto
+              <Link href="/shop" className="lt-btn lt-btn-md lt-btn-primary">
+                Browse Designs
               </Link>
             </div>
           </div>

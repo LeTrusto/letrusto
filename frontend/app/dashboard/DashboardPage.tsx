@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, GitCompare, Heart, Loader2, LogIn, Scale, Sparkles, TrendingDown, User } from "lucide-react";
+import { Bell, Heart, Loader2, LogIn, TrendingDown, User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -94,7 +94,6 @@ export default function DashboardPage() {
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           { icon: Heart, label: "Favourites", value: data?.favorites_count ?? 0, href: "/favorites", color: "text-pink-600" },
-          { icon: Scale, label: "Saved Comparisons", value: data?.saved_comparisons.length ?? 0, href: "/compare", color: "text-purple-600" },
           { icon: TrendingDown, label: "Price Alerts", value: data?.price_alerts.length ?? 0, href: "#alerts", color: "text-green-600" },
           { icon: Bell, label: "Notifications", value: data?.unread_notifications ?? 0, href: "/notifications", color: "text-orange-600" },
         ].map(({ icon: Icon, label, value, href, color }) => (
@@ -111,38 +110,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Saved Comparisons */}
-        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">Saved Comparisons</h2>
-            <Link href="/compare" className="text-sm font-semibold text-purple-700 hover:underline">
-              View all
-            </Link>
-          </div>
-          {data && data.saved_comparisons.length > 0 ? (
-            <ul className="space-y-3">
-              {data.saved_comparisons.slice(0, 5).map((c) => (
-                <li key={c.id} className="rounded-xl bg-gray-50 px-4 py-3">
-                  <div className="font-semibold text-sm text-slate-800">
-                    {c.label || `Comparison ${c.id}`}
-                  </div>
-                  <div className="mt-0.5 text-xs text-gray-500">
-                    {c.product_ids.length} products · {new Date(c.created_at).toLocaleDateString()}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="py-8 text-center text-sm text-gray-400">
-              <GitCompare className="mx-auto mb-2 h-8 w-8 opacity-30" />
-              No saved comparisons yet.{" "}
-              <Link href="/compare" className="text-[var(--lt-purple)] hover:underline">
-                Try comparing AI tools
-              </Link>
-            </div>
-          )}
-        </section>
-
         {/* Price Alerts */}
         <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm" id="alerts">
           <div className="mb-4 flex items-center justify-between">
@@ -173,36 +140,14 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* AI Conversations */}
-        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">AI Conversations</h2>
-            <Link href="/ai" className="text-sm font-semibold text-purple-700 hover:underline">
-              Start new
-            </Link>
-          </div>
-          <div className="py-6 text-center text-sm text-gray-400">
-            <Sparkles className="mx-auto mb-2 h-8 w-8 opacity-30" />
-            {data?.recent_conversations_count
-              ? `${data.recent_conversations_count} conversation${data.recent_conversations_count > 1 ? "s" : ""} saved`
-              : "No conversations yet."}
-            <br />
-            <Link href="/ai" className="mt-2 inline-block text-purple-600 hover:underline">
-              Ask the AI assistant
-            </Link>
-          </div>
-        </section>
-
         {/* Quick Links */}
         <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-bold text-slate-900">Quick Links</h2>
           <div className="grid grid-cols-2 gap-3">
             {[
               { href: "/favorites", label: "My Favourites", icon: Heart },
-              { href: "/compare", label: "Compare Tools", icon: Scale },
-              { href: "/ai", label: "AI Assistant", icon: Sparkles },
+              { href: "/shop", label: "Shop Designs", icon: Heart },
               { href: "/notifications", label: "Notifications", icon: Bell },
-              { href: "/guides", label: "Buying Guides", icon: TrendingDown },
               { href: "/support", label: "Support", icon: User },
             ].map(({ href, label, icon: Icon }) => (
               <Link

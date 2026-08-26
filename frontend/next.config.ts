@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
       { source: "/category/:path*", destination: "/shop", permanent: true },
       { source: "/categories", destination: "/shop", permanent: true },
       { source: "/search", destination: "/shop", permanent: true },
+      { source: "/methodology", destination: "/how-it-works", permanent: true },
     ];
   },
   images: {
