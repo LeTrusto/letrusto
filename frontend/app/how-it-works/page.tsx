@@ -33,7 +33,7 @@ const STEPS = [
 
 export default function HowItWorksPage() {
   return (
-    <main className="bg-[#f8f7ea]">
+    <main className="bg-[var(--background)]">
       <section className="max-w-4xl mx-auto px-4 md:px-6 py-14 md:py-20">
         <h1 className="text-3xl md:text-5xl font-black tracking-tight text-[var(--text-primary)] text-center">
           How It Works

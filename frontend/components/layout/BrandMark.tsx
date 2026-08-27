@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 type Props = {
   compact?: boolean;
@@ -6,13 +7,24 @@ type Props = {
 };
 
 export default function BrandMark({ compact = false, footer = false }: Props) {
+  const height = compact ? 40 : footer ? 48 : 56;
+  const width = compact ? 140 : footer ? 160 : 200;
+  const className = footer ? "brightness-0 invert" : "";
+
   return (
     <Link
       href="/"
       aria-label="LeTrusto home"
-      className={`inline-flex shrink-0 items-center font-black tracking-[-0.04em] text-[var(--lt-primary)] ${compact ? "text-2xl" : footer ? "text-3xl text-white" : "text-4xl"}`}
+      className="inline-flex shrink-0 items-center"
     >
-      LeTrusto
+      <Image
+        src="/images/logo/LeTrusto_Logo_Master_Transparent_300dpi.png"
+        alt="LeTrusto"
+        width={width}
+        height={height}
+        priority
+        className={`h-auto w-auto ${className}`}
+      />
     </Link>
   );
 }

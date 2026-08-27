@@ -32,22 +32,22 @@ function CommerceNavbarContent() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#e9e4dc] bg-[#faf9f7] shadow-[0_1px_8px_rgba(24,24,27,0.035)]">
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)] shadow-[0_2px_8px_rgba(107,33,168,0.08)]">
       {/* Mobile header */}
       <div className="flex h-[72px] items-center justify-between px-4 lg:hidden">
         <BrandMark compact />
         <div className="flex items-center gap-2">
           <button
             onClick={() => setSearchOpen(!searchOpen)}
-            className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[rgba(212,165,116,0.16)] hover:text-[var(--text-primary)]"
+            className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[var(--lt-purple)]/10 hover:text-[var(--lt-primary)]"
             aria-label="Search"
           >
             <Search size={26} strokeWidth={2} />
           </button>
-          <Link href="/cart" className="relative flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[rgba(212,165,116,0.16)] hover:text-[var(--text-primary)]" aria-label="Cart">
+          <Link href="/cart" className="relative flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[var(--lt-pink)]/10 hover:text-[var(--lt-accent)]" aria-label="Cart">
             <ShoppingBag size={26} strokeWidth={2} />
             {itemCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-[var(--lt-primary)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-[var(--lt-accent)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                 {itemCount > 9 ? "9+" : itemCount}
               </span>
             )}
@@ -105,21 +105,21 @@ function CommerceNavbarContent() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search..."
-              className="h-12 w-[248px] rounded-lg border-[#ded8cf] bg-[#fcfaf8] pl-10 text-[15px] shadow-none"
+              className="h-12 w-[248px] rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] pl-10 text-[15px] shadow-none placeholder-[var(--text-muted)]"
             />
           </form>
-          <Link href="/favorites" className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[rgba(225,29,72,0.1)] hover:text-[var(--lt-rose)]" aria-label="Wishlist">
+          <Link href="/favorites" className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[var(--lt-pink)]/10 hover:text-[var(--lt-accent)]" aria-label="Wishlist">
             <Heart size={27} strokeWidth={2} />
           </Link>
-          <Link href="/cart" className="relative flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[rgba(212,165,116,0.16)] hover:text-[var(--text-primary)]" aria-label="Cart">
+          <Link href="/cart" className="relative flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[var(--lt-pink)]/10 hover:text-[var(--lt-accent)]" aria-label="Cart">
             <ShoppingBag size={27} strokeWidth={2} />
             {itemCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 w-4.5 h-4.5 bg-[var(--lt-primary)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute top-0.5 right-0.5 w-4.5 h-4.5 bg-[var(--lt-accent)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                 {itemCount > 9 ? "9+" : itemCount}
               </span>
             )}
           </Link>
-          <Link href="/account" className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[rgba(212,165,116,0.16)] hover:text-[var(--text-primary)]" aria-label="Account">
+          <Link href="/account" className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors duration-200 hover:bg-[var(--lt-purple)]/10 hover:text-[var(--lt-primary)]" aria-label="Account">
             <User size={27} strokeWidth={2} />
           </Link>
         </div>
@@ -130,7 +130,7 @@ function CommerceNavbarContent() {
 
 function NavbarFallback() {
   return (
-    <header className="sticky top-0 z-50 border-b border-[#e9e4dc] bg-[#faf9f7] shadow-[0_1px_8px_rgba(24,24,27,0.035)]">
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)] shadow-[0_2px_8px_rgba(107,33,168,0.08)]">
       <div className="flex h-[72px] items-center justify-between px-4 lg:hidden"><BrandMark compact /></div>
       <div className="mx-auto hidden h-[130px] max-w-7xl items-center px-6 xl:max-w-[1440px] xl:px-8 lg:flex"><BrandMark /></div>
     </header>
@@ -140,7 +140,7 @@ function NavbarFallback() {
 function navClass(active: boolean) {
   return `relative rounded-md px-3 py-2.5 transition-colors ${
     active
-      ? "bg-[rgba(212,165,116,0.15)] font-semibold text-[var(--lt-accent-dark)] after:absolute after:inset-x-3 after:-bottom-[1px] after:h-0.5 after:rounded-full after:bg-[var(--lt-accent-dark)]"
-      : "text-[var(--text-secondary)] hover:bg-[rgba(212,165,116,0.1)] hover:text-[var(--text-primary)] hover:font-semibold"
+      ? "bg-[var(--lt-purple)]/15 font-semibold text-[var(--lt-primary)] after:absolute after:inset-x-3 after:-bottom-[1px] after:h-0.5 after:rounded-full after:bg-[var(--lt-accent)]"
+      : "text-[var(--text-secondary)] hover:bg-[var(--lt-purple)]/10 hover:text-[var(--text-primary)] hover:font-semibold"
   }`;
 }

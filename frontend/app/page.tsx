@@ -33,7 +33,7 @@ export default async function Home() {
   }
 
   return (
-    <main className="bg-[#f8f7ea]">
+    <main className="bg-[var(--background)]">
       <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Unique Designs. Freshly Printed.", url: "https://letrusto.com", description: "Custom apparel, wall art and accessories — printed on demand and shipped worldwide." }} />
       <Hero />
       {products.length > 0 ? (

@@ -2,31 +2,33 @@
 
 /* ── LeTrusto Commerce Design Tokens ─────────────────────── */
 :root {
-  /* Brand palette */
-  --lt-primary: #18181b;
-  --lt-accent: #d4a574;
-  --lt-accent-dark: #b8915e;
-  --lt-rose: #e11d48;
+  /* Brand palette - from finalized LeTrusto logo */
+  --lt-primary: #6B21A8;
+  --lt-accent: #EC4899;
+  --lt-accent-dark: #BE185D;
+  --lt-rose: #EC4899;
   --lt-success: #16a34a;
+  --lt-purple: #8B5CF6;
+  --lt-pink: #EC4899;
 
-  /* Surfaces */
-  --background: #ffffff;
-  --foreground: #18181b;
-  --surface: #ffffff;
-  --surface-soft: #fafaf9;
-  --surface-muted: #f5f5f4;
+  /* Surfaces - light lavender foundation */
+  --background: #ECECFC;
+  --foreground: #3F0E4C;
+  --surface: #F5F3FF;
+  --surface-soft: #F8F5FF;
+  --surface-muted: #EEE9FF;
 
   /* Text */
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-muted: #a1a1aa;
+  --text-primary: #3F0E4C;
+  --text-secondary: #6B4C8A;
+  --text-muted: #9B7FB0;
 
   /* Borders */
-  --border: #e4e4e7;
-  --border-hover: #d4d4d8;
+  --border: #DDD4F0;
+  --border-hover: #CFC0E0;
 
   /* Focus */
-  --ring: #d4a574;
+  --ring: #8B5CF6;
 
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.05);
@@ -93,10 +95,49 @@ body {
 }
 
 .lt-btn-md {
-  padding: 0.625rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
   border-radius: var(--radius-lg);
+}
+
+.lt-btn-lg {
+  padding: 0.875rem 2rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+}
+
+.lt-btn-xl {
+  padding: 1rem 2.5rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+}
+
+.lt-btn-primary {
+  background: linear-gradient(135deg, var(--lt-primary) 0%, var(--lt-purple) 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.lt-btn-primary:hover {
+  background: linear-gradient(135deg, #581c87 0%, #7c3aed 100%);
+  box-shadow: 0 8px 24px rgba(107, 33, 168, 0.25);
+}
+
+.lt-btn-secondary {
+  background: transparent;
+  color: var(--lt-primary);
+  border-color: var(--lt-primary);
+}
+
+.lt-btn-secondary:hover {
+  background: var(--surface-soft);
+  border-color: var(--lt-accent);
+  color: var(--lt-accent);
 }
 
 .lt-btn-lg {

@@ -60,7 +60,7 @@ export default function ProductDetailView({ product, related }: Props) {
   const productDescription = product.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-[var(--background)]">
       <SchemaOrg
         type="Product"
         data={{
