@@ -68,6 +68,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Keep legacy customer-facing panels on the same light-lavender canvas. */
+.bg-white {
+  background-color: var(--surface) !important;
+}
+
+.bg-white\/90 {
+  background-color: color-mix(in srgb, var(--surface) 90%, transparent) !important;
+}
+
+.bg-white\/80 {
+  background-color: color-mix(in srgb, var(--surface) 80%, transparent) !important;
+}
+
 /* ── Focus ───────────────────────────────────────────────── */
 *:focus-visible {
   outline: 2px solid var(--ring);

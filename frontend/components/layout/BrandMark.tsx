@@ -7,9 +7,8 @@ type Props = {
 };
 
 export default function BrandMark({ compact = false, footer = false }: Props) {
-  const height = compact ? 48 : footer ? 48 : 64;
-  const width = compact ? 160 : footer ? 160 : 200;
-  const className = footer ? "brightness-0 invert" : "";
+  const width = compact ? 165 : footer ? 180 : 205;
+  const height = Math.round(width * (1825 / 2795));
 
   return (
     <Link
@@ -23,7 +22,7 @@ export default function BrandMark({ compact = false, footer = false }: Props) {
         width={width}
         height={height}
         priority
-        className={`w-auto h-auto ${className}`}
+        className="object-contain"
       />
     </Link>
   );

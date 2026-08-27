@@ -1,12 +1,12 @@
 {
   "name": "LeTrusto",
   "short_name": "LeTrusto",
-  "description": "AI buying advisor for trusted product comparisons and recommendations.",
+  "description": "Original designs printed on demand and shipped worldwide.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#ECECFC",
+  "theme_color": "#ECECFC",
   "icons": [
     {
       "src": "/letrusto-icon.svg",

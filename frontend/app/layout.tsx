@@ -67,6 +67,11 @@ export const metadata: Metadata = {
   creator: "LeTrusto",
   publisher: "LeTrusto",
   manifest: "/site.webmanifest",
+  icons: {
+    icon: "/letrusto-icon.svg",
+    shortcut: "/letrusto-icon.svg",
+    apple: "/letrusto-icon.svg",
+  },
   appleWebApp: {
     capable: true,
     title: "LeTrusto",
@@ -76,7 +81,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: "#ECECFC",
 };
 
 export default function RootLayout({
@@ -89,7 +94,7 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
-        <body className="min-h-full flex flex-col bg-[var(--surface-soft)] text-[var(--text-primary)]">
+        <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--text-primary)]">
         <SchemaOrg
           type="WebSite"
           data={{

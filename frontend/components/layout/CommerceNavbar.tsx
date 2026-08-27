@@ -32,9 +32,9 @@ function CommerceNavbarContent() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)] shadow-[0_2px_8px_rgba(107,33,168,0.08)]">
+    <header className="sticky top-0 z-50 bg-[var(--background)] shadow-[0_4px_18px_rgba(60,35,100,0.06)]">
       {/* Mobile header */}
-      <div className="flex h-[68px] items-center justify-between px-4 lg:hidden">
+      <div className="flex min-h-[102px] items-center justify-between gap-3 px-4 lg:hidden">
         <BrandMark compact />
         <div className="flex items-center gap-2">
           <button
@@ -75,7 +75,7 @@ function CommerceNavbarContent() {
       )}
 
       {/* Desktop header */}
-      <div className="mx-auto hidden h-[88px] max-w-[1280px] items-center justify-between px-6 lg:flex">
+      <div className="mx-auto hidden min-h-[136px] max-w-[1280px] items-center justify-between gap-6 px-6 lg:flex">
         <div className="flex min-w-0 items-center gap-4 xl:gap-5">
           <BrandMark />
           <nav className="flex items-center gap-0.5 text-[16px] font-medium" aria-label="Primary navigation">
@@ -130,9 +130,9 @@ function CommerceNavbarContent() {
 
 function NavbarFallback() {
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)] shadow-[0_2px_8px_rgba(107,33,168,0.08)]">
-      <div className="flex h-[68px] items-center justify-between px-4 lg:hidden"><BrandMark compact /></div>
-      <div className="mx-auto hidden h-[88px] max-w-[1280px] items-center px-6 lg:flex"><BrandMark /></div>
+    <header className="sticky top-0 z-50 bg-[var(--background)] shadow-[0_4px_18px_rgba(60,35,100,0.06)]">
+      <div className="flex min-h-[102px] items-center justify-between px-4 lg:hidden"><BrandMark compact /></div>
+      <div className="mx-auto hidden min-h-[136px] max-w-[1280px] items-center px-6 lg:flex"><BrandMark /></div>
     </header>
   );
 }
