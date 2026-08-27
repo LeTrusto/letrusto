@@ -31,6 +31,9 @@
   --ring: #8B5CF6;
 
   /* Shadows */
+  /* Shadows - soft, low opacity, purple-tinted */
+  --shadow-header: 0 1px 3px rgba(107, 33, 168, 0.08);
+  --shadow-card: 0 2px 6px rgba(107, 33, 168, 0.06);
   --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.05);
   --shadow-md: 0 4px 16px -4px rgba(24, 24, 27, 0.1);
   --shadow-lg: 0 12px 40px -12px rgba(24, 24, 27, 0.15);
@@ -118,14 +121,15 @@ body {
 }
 
 .lt-btn-primary {
-  background: linear-gradient(135deg, var(--lt-primary) 0%, var(--lt-purple) 100%);
+  background: var(--lt-primary);
   color: white;
   border-color: transparent;
+  box-shadow: none;
 }
 
-.lt-btn-primary:hover {
-  background: linear-gradient(135deg, #581c87 0%, #7c3aed 100%);
-  box-shadow: 0 8px 24px rgba(107, 33, 168, 0.25);
+.lt-btn-primary:hover:not(:disabled) {
+  background: #581c87;
+  box-shadow: 0 4px 12px rgba(107, 33, 168, 0.2);
 }
 
 .lt-btn-secondary {
@@ -134,9 +138,9 @@ body {
   border-color: var(--lt-primary);
 }
 
-.lt-btn-secondary:hover {
+.lt-btn-secondary:hover:not(:disabled) {
   background: var(--surface-soft);
-  border-color: var(--lt-accent);
+  border-color: var(--lt-primary);
   color: var(--lt-accent);
 }
 
@@ -154,35 +158,6 @@ body {
   border-radius: var(--radius-md);
 }
 
-.lt-btn-primary {
-  background: var(--lt-primary);
-  color: #ffffff;
-  border-color: var(--lt-primary);
-}
-.lt-btn-primary:hover:not(:disabled) {
-  background: #27272a;
-}
-
-.lt-btn-accent {
-  background: var(--lt-accent);
-  color: var(--lt-primary);
-  border-color: transparent;
-  font-weight: 700;
-}
-.lt-btn-accent:hover:not(:disabled) {
-  background: var(--lt-accent-dark);
-}
-
-.lt-btn-secondary {
-  background: var(--surface);
-  color: var(--text-primary);
-  border-color: var(--border);
-}
-.lt-btn-secondary:hover:not(:disabled) {
-  border-color: var(--border-hover);
-  background: var(--surface-soft);
-}
-
 .lt-btn-ghost {
   background: transparent;
   color: var(--text-secondary);
@@ -198,6 +173,17 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   padding: 1.5rem;
+  box-shadow: var(--shadow-card);
+}
+
+.lt-card-hover {
+  transition: all 150ms ease;
+}
+
+.lt-card-hover:hover {
+  box-shadow: var(--shadow-card);
+  border-color: var(--lt-accent);
+  transform: translateY(-1px);
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
@@ -253,7 +239,7 @@ body {
 .lt-input:focus {
   outline: none;
   border-color: var(--lt-accent);
-  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.2);
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
 }
 
 .lt-select {
@@ -272,7 +258,7 @@ body {
 .lt-select:focus {
   outline: none;
   border-color: var(--lt-accent);
-  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.2);
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
 }
 
 /* ── Typography helpers ──────────────────────────────────── */
@@ -354,4 +340,16 @@ body {
 /* ── Safe area for mobile bottom nav ─────────────────────── */
 .safe-area-pb {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Accent Button ───────────────────────────────────────── */
+.lt-btn-accent {
+  background: var(--lt-accent);
+  color: white;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.lt-btn-accent:hover:not(:disabled) {
+  background: var(--lt-accent-dark);
 }

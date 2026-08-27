@@ -39,9 +39,11 @@ export default async function Home() {
       {products.length > 0 ? (
         <ProductRail title="Fresh prints" subtitle="Custom designs printed on demand" products={products.slice(0, 8)} href="/shop" />
       ) : (
-        <section className="mx-auto max-w-7xl px-4 py-14 text-center md:px-6">
-          <h2 className="lt-heading-2">Our catalog is being prepared</h2>
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">Unique printed products will appear here soon.</p>
+        <section className="bg-[var(--background)] px-4 py-16 md:py-20 text-center md:px-6">
+          <div className="max-w-[1280px] mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-2">Our catalog is being prepared</h2>
+            <p className="text-[var(--text-secondary)] font-medium">Unique printed products will appear here soon.</p>
+          </div>
         </section>
       )}
       <ShopByStyle />

@@ -12,23 +12,25 @@ const CATEGORIES: { id: CommerceCategory; icon: typeof Shirt }[] = [
 
 export default function ShopByStyle() {
   return (
-    <section className="py-12 md:py-16">
+    <section className="bg-[var(--background)] py-16 md:py-20">
       <div className="max-w-7xl mx-auto px-4 md:px-6">
-        <h2 className="lt-heading-2 text-center">Shop by Category</h2>
-        <p className="mt-2 text-center text-[var(--text-secondary)] text-sm">Custom printed products shipped worldwide</p>
-        <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl md:text-5xl font-black text-[var(--text-primary)] mb-2">Shop by Category</h2>
+          <p className="text-[var(--text-secondary)] font-medium">Find unique printed products across all collections</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             return (
               <Link
                 key={cat.id}
                 href={`/shop?category=${cat.id}`}
-                className="lt-card lt-card-hover flex flex-col items-center gap-3 py-6 text-center"
+                className="lt-card lt-card-hover flex flex-col items-center justify-center gap-4 py-8 px-4 text-center min-h-[220px]"
               >
-                <div className="w-12 h-12 rounded-full bg-[var(--surface-muted)] flex items-center justify-center">
-                  <Icon size={22} strokeWidth={1.5} className="text-[var(--text-secondary)]" />
+                <div className="w-16 h-16 rounded-full bg-[var(--lt-primary)]/15 flex items-center justify-center">
+                  <Icon size={44} strokeWidth={1.5} className="text-[var(--lt-primary)]" />
                 </div>
-                <span className="text-sm font-semibold text-[var(--text-primary)]">
+                <span className="text-base font-bold text-[var(--text-primary)]">
                   {CATEGORY_MAP[cat.id]}
                 </span>
               </Link>

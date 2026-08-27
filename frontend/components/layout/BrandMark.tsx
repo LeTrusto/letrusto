@@ -7,15 +7,15 @@ type Props = {
 };
 
 export default function BrandMark({ compact = false, footer = false }: Props) {
-  const height = compact ? 40 : footer ? 48 : 56;
-  const width = compact ? 140 : footer ? 160 : 200;
+  const height = compact ? 48 : footer ? 48 : 64;
+  const width = compact ? 160 : footer ? 160 : 200;
   const className = footer ? "brightness-0 invert" : "";
 
   return (
     <Link
       href="/"
       aria-label="LeTrusto home"
-      className="inline-flex shrink-0 items-center"
+      className="inline-flex shrink-0 items-center justify-center"
     >
       <Image
         src="/images/logo/LeTrusto_Logo_Master_Transparent_300dpi.png"
@@ -23,7 +23,7 @@ export default function BrandMark({ compact = false, footer = false }: Props) {
         width={width}
         height={height}
         priority
-        className={`h-auto w-auto ${className}`}
+        className={`w-auto h-auto ${className}`}
       />
     </Link>
   );

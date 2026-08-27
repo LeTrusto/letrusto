@@ -13,11 +13,11 @@ type Props = {
 
 export default function ProductRail({ title, subtitle, products, href, ctaLabel }: Props) {
   return (
-    <section className="py-10 md:py-14">
+    <section className="bg-[var(--background)] py-12 md:py-16">
       <div className="max-w-7xl mx-auto px-4 md:px-6">
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h2 className="lt-heading-2">{title}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)]">{title}</h2>
             {subtitle && <p className="mt-1 text-sm text-[var(--text-secondary)]">{subtitle}</p>}
           </div>
           {href && (
