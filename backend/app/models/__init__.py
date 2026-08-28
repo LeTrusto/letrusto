@@ -22,6 +22,7 @@ from app.models.entities import (
     TrustClaimEvidence,
     TrustEvidence,
     TrustVerification,
+    PasswordResetToken,
 )
 
 __all__ = [

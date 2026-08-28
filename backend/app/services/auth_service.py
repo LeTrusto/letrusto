@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import uuid
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
@@ -15,7 +17,7 @@ from app.core.security import (
     hash_refresh_token,
     verify_password,
 )
-from app.models.entities import RefreshToken, User
+from app.models.entities import PasswordResetToken, RefreshToken, User
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import AuthResponse, TokenIntrospectionResponse, TokenResponse
 
@@ -52,6 +54,7 @@ class AuthService:
 
     # ── Real user auth ─────────────────────────────────────────────────────────
     def register(self, email: str, password: str, full_name: str) -> AuthResponse:
+        email = email.lower().strip()
         if self.user_repo.get_by_email(email):
             raise BadRequestError("Email already registered")
         hashed = hash_password(password)
@@ -59,6 +62,36 @@ class AuthService:
         self.db.commit()
         self.db.refresh(user)
         return self._build_auth_response(user)
+
+    def create_password_reset_token(self, email: str) -> tuple[str, str] | None:
+        user = self.user_repo.get_by_email(email.lower().strip())
+        if not user or not user.email or not user.password_hash:
+            return None
+        raw_token = secrets.token_urlsafe(48)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        now = datetime.now(timezone.utc)
+        self.db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used_at.is_(None),
+        ).update({PasswordResetToken.used_at: now})
+        self.db.add(PasswordResetToken(user_id=user.id, token_hash=token_hash, expires_at=now + timedelta(minutes=30)))
+        self.db.commit()
+        return raw_token, user.email
+
+    def reset_password(self, token: str, password: str) -> None:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        record = self.db.query(PasswordResetToken).filter(
+            PasswordResetToken.token_hash == token_hash,
+            PasswordResetToken.used_at.is_(None),
+        ).first()
+        if not record or _as_utc(record.expires_at) < datetime.now(timezone.utc):
+            raise UnauthorizedError("This reset link is invalid or expired")
+        user = self.user_repo.get_by_id(record.user_id)
+        if not user or not user.is_active:
+            raise UnauthorizedError("This reset link is invalid or expired")
+        user.password_hash = hash_password(password)
+        record.used_at = datetime.now(timezone.utc)
+        self.db.commit()
 
     def login(self, email: str, password: str) -> AuthResponse:
         user = self.user_repo.get_by_email(email)

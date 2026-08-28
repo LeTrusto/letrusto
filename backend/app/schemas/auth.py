@@ -28,6 +28,15 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=64)
 
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str = Field(min_length=20, max_length=255)
+    password: str = Field(min_length=8, max_length=64)
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str = Field(min_length=10)
 

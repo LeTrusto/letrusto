@@ -8,8 +8,8 @@ import React, {
   useState,
 } from "react";
 
-import { loginUser, logoutUser, refreshAccessToken, registerUser, verifyOtp } from "@/services/auth.service";
-import type { AuthResponse, AuthState, AuthUser, LoginPayload, OtpVerifyPayload, RegisterPayload } from "@/types/auth";
+import { loginUser, logoutUser, refreshAccessToken, registerUser } from "@/services/auth.service";
+import type { AuthResponse, AuthState, AuthUser, LoginPayload, RegisterPayload } from "@/types/auth";
 
 const ACCESS_TOKEN_KEY = "lt_access_token";
 const REFRESH_TOKEN_KEY = "lt_refresh_token";
@@ -17,7 +17,6 @@ const REFRESH_TOKEN_KEY = "lt_refresh_token";
 type AuthContextValue = AuthState & {
   register: (payload: RegisterPayload) => Promise<void>;
   login: (payload: LoginPayload) => Promise<void>;
-  loginWithOtp: (payload: OtpVerifyPayload) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -97,14 +96,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applyAuth]
   );
 
-  const loginWithOtp = useCallback(
-    async (payload: OtpVerifyPayload) => {
-      const r = await verifyOtp(payload);
-      applyAuth(r);
-    },
-    [applyAuth]
-  );
-
   const logout = useCallback(async () => {
     const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (refresh) await logoutUser(refresh);
@@ -114,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, register, login, loginWithOtp, logout }}>
+    <AuthContext.Provider value={{ ...state, register, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

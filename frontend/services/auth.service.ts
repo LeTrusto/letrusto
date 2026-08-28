@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "@/services/api";
-import type { AuthResponse, LoginPayload, OtpRequestPayload, OtpVerifyPayload, RegisterPayload } from "@/types/auth";
+import type { AuthResponse, LoginPayload, RegisterPayload } from "@/types/auth";
 
 const AUTH_BASE = `${API_BASE_URL}/api/v1/auth`;
 
@@ -39,30 +39,26 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
   return (await res.json()) as AuthResponse;
 }
 
-export async function requestOtp(payload: OtpRequestPayload): Promise<{ message: string }> {
-  const res = await fetch(`${AUTH_BASE}/otp/request`, {
+export async function requestPasswordReset(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${AUTH_BASE}/password-reset/request`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ email }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { detail?: string }).detail ?? "Unable to send OTP");
-  }
-  return (await res.json()) as { message: string };
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { detail?: string }).detail ?? "Something went wrong. Please try again.");
+  return data as { message: string };
 }
 
-export async function verifyOtp(payload: OtpVerifyPayload): Promise<AuthResponse> {
-  const res = await fetch(`${AUTH_BASE}/otp/verify`, {
+export async function confirmPasswordReset(token: string, password: string): Promise<{ message: string }> {
+  const res = await fetch(`${AUTH_BASE}/password-reset/confirm`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ token, password }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { detail?: string }).detail ?? "OTP verification failed");
-  }
-  return (await res.json()) as AuthResponse;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { detail?: string }).detail ?? "This reset link is invalid or expired.");
+  return data as { message: string };
 }
 
 export async function refreshAccessToken(refreshToken: string): Promise<AuthResponse> {

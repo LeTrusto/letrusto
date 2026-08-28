@@ -1,149 +1,59 @@
 "use client";
 
 import { Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
+import BrandMark from "@/components/layout/BrandMark";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function RegisterPage() {
   const { register, isAuthenticated } = useAuth();
   const [form, setForm] = useState({ full_name: "", email: "", password: "", confirm: "" });
-  const [showPwd, setShowPwd] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   if (isAuthenticated) return null;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     setError("");
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-    if (form.password.length > 64) {
-      setError("Password must be at most 64 characters");
-      return;
-    }
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match");
-      return;
-    }
+    if (form.password.length < 8) return setError("Password must be at least 8 characters");
+    if (form.password !== form.confirm) return setError("Passwords do not match");
     setLoading(true);
     try {
       await register({ email: form.email, password: form.password, full_name: form.full_name });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-white px-4 py-16">
-      <div className="w-full max-w-md">
-        <div className="rounded-3xl border border-white/80 bg-white/90 p-8 shadow-2xl backdrop-blur-xl">
-          <div className="mb-8 text-center">
-            <Image src="/LeTrusto%20Brand%20Logo.png" alt="LeTrusto - Discover. Choose. Trust." width={1774} height={887} priority unoptimized className="mx-auto h-auto w-48" />
-            <h1 className="mt-5 text-3xl font-black text-slate-900">Create your account</h1>
-            <p className="mt-2 text-gray-500">Create your free account</p>
-          </div>
-
-          {error && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Full name</label>
-              <input
-                type="text"
-                required
-                autoComplete="name"
-                value={form.full_name}
-                onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100"
-                placeholder="Rahul Sharma"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Email address</label>
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100"
-                placeholder="hello@letrusto.com"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Password</label>
-              <div className="relative">
-                <input
-                  type={showPwd ? "text" : "password"}
-                  required
-                  autoComplete="new-password"
-                  value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-12 text-sm outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100"
-                  placeholder="Min. 8, max. 64 characters"
-                  minLength={8}
-                  maxLength={64}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd((s) => !s)}
-                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600"
-                  aria-label={showPwd ? "Hide password" : "Show password"}
-                >
-                  {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Confirm password</label>
-              <input
-                type="password"
-                required
-                autoComplete="new-password"
-                value={form.confirm}
-                onChange={(e) => setForm((f) => ({ ...f, confirm: e.target.value }))}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100"
-                placeholder="Repeat password"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-3.5 text-sm font-bold text-white transition hover:scale-[1.02] disabled:opacity-60"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <UserPlus className="h-4 w-4" />
-              )}
-              {loading ? "Creating account…" : "Create Account"}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-gray-500">
-            Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-purple-700 hover:underline">
-              Sign in
-            </Link>
-          </p>
+    <main className="flex flex-1 items-center justify-center bg-[var(--background)] px-4 py-12 sm:py-16">
+      <section className="w-full max-w-[460px] rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_8px_28px_rgba(107,33,168,0.08)] sm:p-9">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <BrandMark />
+          <h1 className="mt-7 text-3xl font-black text-[var(--text-primary)]">Create your LeTrusto account</h1>
+          <p className="mt-2 text-[var(--text-secondary)]">Join us for fresh designs, printed on demand.</p>
         </div>
-      </div>
+        {error && <p role="alert" className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+        <form onSubmit={(event) => { void handleSubmit(event); }} className="space-y-4">
+          <div><label htmlFor="register-name" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">Full name</label><input id="register-name" type="text" required autoComplete="name" value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} placeholder="Your full name" className="lt-input h-[52px]" /></div>
+          <div><label htmlFor="register-email" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">Email address</label><input id="register-email" type="email" required autoComplete="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="Enter your email" className="lt-input h-[52px]" /></div>
+          <PasswordField id="register-password" label="Password" value={form.password} visible={showPassword} onChange={(value) => setForm((current) => ({ ...current, password: value }))} onToggle={() => setShowPassword((visible) => !visible)} autoComplete="new-password" placeholder="At least 8 characters" />
+          <PasswordField id="register-confirm" label="Confirm password" value={form.confirm} visible={showConfirm} onChange={(value) => setForm((current) => ({ ...current, confirm: value }))} onToggle={() => setShowConfirm((visible) => !visible)} autoComplete="new-password" placeholder="Repeat your password" />
+          <button type="submit" disabled={loading} className="lt-btn lt-btn-primary mt-2 flex h-[52px] w-full rounded-lg text-base">{loading ? <Loader2 size={20} className="animate-spin" /> : <UserPlus size={20} />}{loading ? "Creating account..." : "Create account"}</button>
+        </form>
+        <p className="mt-7 text-center text-sm text-[var(--text-secondary)]">Already have an account? <Link href="/login" className="font-bold text-[var(--lt-primary)] hover:text-[var(--lt-accent-dark)]">Sign in</Link></p>
+      </section>
     </main>
   );
+}
+
+function PasswordField({ id, label, value, visible, onChange, onToggle, autoComplete, placeholder }: { id: string; label: string; value: string; visible: boolean; onChange: (value: string) => void; onToggle: () => void; autoComplete: string; placeholder: string }) {
+  return <div><label htmlFor={id} className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">{label}</label><div className="relative"><input id={id} type={visible ? "text" : "password"} required autoComplete={autoComplete} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} minLength={8} maxLength={64} className="lt-input h-[52px] pr-12" /><button type="button" onClick={onToggle} className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--lt-primary)]" aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}>{visible ? <EyeOff size={21} /> : <Eye size={21} />}</button></div></div>;
 }

@@ -1,99 +1,74 @@
 "use client";
 
-import { Eye, EyeOff, Loader2, LogIn, Smartphone } from "lucide-react";
-import Image from "next/image";
+import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
+import BrandMark from "@/components/layout/BrandMark";
 import { useAuth } from "@/hooks/useAuth";
-import { requestOtp } from "@/services/auth.service";
 
 export default function LoginPage() {
-  const { login, loginWithOtp, isAuthenticated } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/dashboard";
-  const [mode, setMode] = useState<"mobile" | "email">(() => searchParams.get("method") === "email" ? "email" : "mobile");
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [mobile, setMobile] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [showPwd, setShowPwd] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [cooldown, setCooldown] = useState(0);
-
-  useEffect(() => {
-    if (!cooldown) return;
-    const timer = window.setInterval(() => setCooldown((value) => Math.max(0, value - 1)), 1000);
-    return () => window.clearInterval(timer);
-  }, [cooldown]);
 
   if (isAuthenticated) return null;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     setError("");
     setLoading(true);
     try {
-      if (mode === "mobile") {
-        await loginWithOtp({ mobile_number: mobile, otp });
-        window.location.assign(redirectTo);
-      } else {
-        await login({ email: form.email, password: form.password }, redirectTo);
-      }
+      await login({ email, password }, redirectTo);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRequestOtp() {
-    setError("");
-    setLoading(true);
-    try {
-      await requestOtp({ mobile_number: mobile });
-      setOtpSent(true);
-      setOtp("");
-      setCooldown(60);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to send OTP");
+      setError(err instanceof Error ? err.message : "Incorrect email or password");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-white px-4 py-16">
-      <div className="w-full max-w-md">
-        <div className="rounded-3xl border border-white/80 bg-white/90 p-8 shadow-2xl backdrop-blur-xl">
-          <div className="mb-8 text-center">
-            <Image src="/LeTrusto%20Brand%20Logo.png" alt="LeTrusto - Discover. Choose. Trust." width={1774} height={887} priority unoptimized className="mx-auto h-auto w-48" />
-            <h1 className="mt-5 text-3xl font-black text-slate-900">Welcome back</h1>
-            <p className="mt-2 text-gray-500">Login / Sign up</p>
-          </div>
-          <div className="mb-6 grid grid-cols-2 rounded-xl bg-gray-100 p-1">
-            <button type="button" onClick={() => { setMode("mobile"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold ${mode === "mobile" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500"}`}>Login with Mobile</button>
-            <button type="button" onClick={() => { setMode("email"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold ${mode === "email" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500"}`}>Login with Email</button>
-          </div>
-          {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-          {mode === "mobile" ? (
-            <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">
-              <div><label className="mb-1.5 block text-sm font-semibold text-gray-700">Mobile number</label><input type="tel" required autoComplete="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100" placeholder="+91 98765 43210" /></div>
-              {otpSent && <div><label className="mb-1.5 block text-sm font-semibold text-gray-700">Enter 4-digit OTP</label><input type="text" required inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm tracking-[0.35em] outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100" placeholder="0000" maxLength={4} /></div>}
-              {!otpSent ? <button type="button" disabled={loading} onClick={() => { void handleRequestOtp(); }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-3.5 text-sm font-bold text-white transition hover:scale-[1.02] disabled:opacity-60">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}Send OTP</button> : <><button type="submit" disabled={loading || otp.length !== 4} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-3.5 text-sm font-bold text-white transition hover:scale-[1.02] disabled:opacity-60">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}Verify OTP</button><button type="button" disabled={loading || cooldown > 0} onClick={() => { void handleRequestOtp(); }} className="w-full text-sm font-semibold text-purple-700 disabled:text-gray-400">{cooldown > 0 ? `Resend OTP in ${cooldown}s` : "Resend OTP"}</button></>}
-            </form>
-          ) : (
-            <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">
-              <div><label className="mb-1.5 block text-sm font-semibold text-gray-700">Email address</label><input type="email" required autoComplete="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100" placeholder="hello@letrusto.com" /></div>
-              <div><label className="mb-1.5 block text-sm font-semibold text-gray-700">Password</label><div className="relative"><input type={showPwd ? "text" : "password"} required autoComplete="current-password" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-12 text-sm outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100" placeholder="••••••••" maxLength={64} /><button type="button" onClick={() => setShowPwd((s) => !s)} className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600" aria-label={showPwd ? "Hide password" : "Show password"}>{showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
-              <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-3.5 text-sm font-bold text-white transition hover:scale-[1.02] disabled:opacity-60">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}{loading ? "Signing in…" : "Sign In"}</button>
-            </form>
-          )}
-          <p className="mt-6 text-center text-sm text-gray-500">Don&apos;t have an account? <Link href="/register" className="font-semibold text-purple-700 hover:underline">Create one free</Link></p>
+    <main className="flex flex-1 items-center justify-center bg-[var(--background)] px-4 py-12 sm:py-16">
+      <section className="w-full max-w-[460px] rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_8px_28px_rgba(107,33,168,0.08)] sm:p-9">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <BrandMark />
+          <h1 className="mt-7 text-3xl font-black text-[var(--text-primary)]">Welcome back</h1>
+          <p className="mt-2 text-[var(--text-secondary)]">Sign in to your LeTrusto account</p>
         </div>
-      </div>
+
+        {error && <p role="alert" className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+
+        <form onSubmit={(event) => { void handleSubmit(event); }} className="space-y-5">
+          <div>
+            <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-[var(--text-primary)]">Email address</label>
+            <input id="login-email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email" className="lt-input h-[52px]" />
+          </div>
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label htmlFor="login-password" className="block text-sm font-semibold text-[var(--text-primary)]">Password</label>
+              <Link href="/forgot-password" className="text-sm font-semibold text-[var(--lt-accent-dark)] hover:text-[var(--lt-primary)]">Forgot password?</Link>
+            </div>
+            <div className="relative">
+              <input id="login-password" type={showPassword ? "text" : "password"} required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" maxLength={64} className="lt-input h-[52px] pr-12" />
+              <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--lt-primary)]" aria-label={showPassword ? "Hide password" : "Show password"}>
+                {showPassword ? <EyeOff size={21} /> : <Eye size={21} />}
+              </button>
+            </div>
+          </div>
+          <button type="submit" disabled={loading} className="lt-btn lt-btn-primary flex h-[52px] w-full rounded-lg text-base">
+            {loading ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
+
+        <p className="mt-7 text-center text-sm text-[var(--text-secondary)]">Don&apos;t have an account? <Link href="/register" className="font-bold text-[var(--lt-primary)] hover:text-[var(--lt-accent-dark)]">Create account</Link></p>
+      </section>
     </main>
   );
 }

@@ -7,6 +7,8 @@ from app.schemas.auth import (
     AuthResponse,
     LinkEmailRequest,
     LoginRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     OtpRequest,
     OtpRequestResponse,
     OtpVerifyRequest,
@@ -19,6 +21,8 @@ from app.schemas.auth import (
 from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
 from app.services.otp_auth_service import OtpAuthService
+from app.services.email_service import EmailService
+from app.core.config import get_settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -31,6 +35,28 @@ def register(payload: RegisterRequest, service: AuthService = Depends(get_auth_s
 @router.post("/login", response_model=AuthResponse)
 def login(payload: LoginRequest, service: AuthService = Depends(get_auth_service)) -> AuthResponse:
     return service.login(email=payload.email, password=payload.password)
+
+
+@router.post("/password-reset/request", response_model=MessageResponse)
+def request_password_reset(payload: PasswordResetRequest, service: AuthService = Depends(get_auth_service)) -> MessageResponse:
+    result = service.create_password_reset_token(str(payload.email))
+    if result:
+        token, email = result
+        reset_url = f"https://letrusto.com/reset-password?token={token}"
+        EmailService.from_settings(get_settings())._send(
+            to=email,
+            subject="Reset your LeTrusto password",
+            html=f"<p>We received a request to reset your LeTrusto password.</p><p><a href='{reset_url}'>Reset your password</a></p><p>This link expires in 30 minutes.</p>",
+            text=f"Reset your LeTrusto password: {reset_url}\nThis link expires in 30 minutes.",
+            template_name="password_reset",
+        )
+    return MessageResponse(message="If an account exists for that email, a reset link has been sent.")
+
+
+@router.post("/password-reset/confirm", response_model=MessageResponse)
+def confirm_password_reset(payload: PasswordResetConfirm, service: AuthService = Depends(get_auth_service)) -> MessageResponse:
+    service.reset_password(payload.token, payload.password)
+    return MessageResponse(message="Your password has been reset. You can now sign in.")
 
 
 @router.post("/otp/request", response_model=OtpRequestResponse)

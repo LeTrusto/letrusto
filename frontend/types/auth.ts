@@ -38,5 +38,3 @@ export type LoginPayload = {
   password: string;
 };
 
-export type OtpRequestPayload = { mobile_number: string };
-export type OtpVerifyPayload = { mobile_number: string; otp: string };
