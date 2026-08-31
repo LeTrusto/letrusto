@@ -171,7 +171,7 @@ def _analytics_period(period: str, start_date: date | None, end_date: date | Non
     try:
         return AdminAnalyticsService.resolve_period(period, start_date, end_date)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Invalid analytics period") from exc
 
 
 @router.get("/analytics/summary", response_model=AnalyticsSummary)
@@ -211,7 +211,7 @@ def analytics_order_profitability(
     try:
         return AdminAnalyticsService(db).order_profitability(order_id)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=404, detail="Order profitability not found") from exc
 
 
 @router.get("/analytics/sales-trend", response_model=list[SalesTrendPoint])

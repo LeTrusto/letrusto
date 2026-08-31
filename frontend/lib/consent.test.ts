@@ -40,13 +40,13 @@ describe("cookie consent", () => {
   });
 
   it("does not send analytics events without affirmative consent", () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     trackEvent("checkout_started");
     expect(window.gtag).not.toHaveBeenCalled();
   });
 
   it("sends analytics events only after analytics consent", () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     saveConsent(true, false);
     trackEvent("checkout_started", { value: 1 });
     expect(window.gtag).toHaveBeenCalledWith("event", "checkout_started", { value: 1 });

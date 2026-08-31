@@ -134,7 +134,7 @@ class CashfreeService:
         return hmac.compare_digest(expected, signature)
 
     async def process_webhook(self, raw_body: bytes, timestamp: str | None, signature: str | None) -> None:
-        secret = self.settings.CASHFREE_WEBHOOK_SECRET or self.settings.CASHFREE_SECRET_KEY
+        secret = self.settings.CASHFREE_WEBHOOK_SECRET
         if not self.verify_webhook_signature(raw_body, timestamp, signature, secret):
             raise BadRequestError("Invalid Cashfree webhook signature")
         body = __import__("json").loads(raw_body)
@@ -197,7 +197,7 @@ class CashfreeService:
             await self.process_webhook(
                 __import__("json").dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": successful}}).encode(),
                 "server-verification",
-                base64.b64encode(hmac.new((self.settings.CASHFREE_WEBHOOK_SECRET or self.settings.CASHFREE_SECRET_KEY).encode(), b"server-verification" + __import__("json").dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": successful}}).encode(), hashlib.sha256).digest()).decode(),
+                base64.b64encode(hmac.new(self.settings.CASHFREE_WEBHOOK_SECRET.encode(), b"server-verification" + __import__("json").dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": successful}}).encode(), hashlib.sha256).digest()).decode(),
             )
         return PaymentStatusDTO(order_id=order.id, payment_status=order.payment_status, order_status=order.status, fulfillment_status=order.fulfillment_status, provider_reference=order.provider_reference)
 
@@ -224,6 +224,6 @@ class CashfreeService:
         status = str(payment.get("payment_status"))
         body = __import__("json").dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": payment}}).encode()
         timestamp = "reconciliation"
-        signature = base64.b64encode(hmac.new((self.settings.CASHFREE_WEBHOOK_SECRET or self.settings.CASHFREE_SECRET_KEY).encode(), timestamp.encode() + body, hashlib.sha256).digest()).decode()
+        signature = base64.b64encode(hmac.new(self.settings.CASHFREE_WEBHOOK_SECRET.encode(), timestamp.encode() + body, hashlib.sha256).digest()).decode()
         await self.process_webhook(body, timestamp, signature)
         return {"state": status, "failure": None}

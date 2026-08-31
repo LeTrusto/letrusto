@@ -128,4 +128,6 @@ def get_settings() -> Settings:
         raise RuntimeError("Production app requires CASHFREE_ENV=production")
     if s.RAZORPAY_ENV not in {"sandbox", "production"}:
         raise ValueError("RAZORPAY_ENV must be sandbox or production")
+    if s.APP_ENV == "production" and (s.RAZORPAY_KEY_ID or s.RAZORPAY_KEY_SECRET) and not s.RAZORPAY_WEBHOOK_SECRET:
+        raise RuntimeError("FATAL: RAZORPAY_WEBHOOK_SECRET is required when Razorpay credentials are configured in production.")
     return s

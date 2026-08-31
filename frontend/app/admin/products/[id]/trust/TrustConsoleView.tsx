@@ -6,7 +6,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, Lock, Plus, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
+import { API_BASE_URL } from "@/services/api";
+
+const API_BASE = API_BASE_URL;
 const VERIFICATION_STATUSES = ["PENDING", "VERIFIED", "REJECTED"] as const;
 
 type Status = "UNVERIFIED" | "PENDING" | "VERIFIED" | "REJECTED" | "EXPIRED";

@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
-from app.main import app
+from app.main import _build_cors_origins, app
 
 
 def test_production_rejects_default_jwt_secret(monkeypatch):
@@ -49,3 +49,26 @@ def test_credentialed_cors_allows_only_configured_origins():
     )
     assert allowed.headers["access-control-allow-origin"] == "https://letrusto.com"
     assert "access-control-allow-origin" not in blocked.headers
+
+
+def test_production_cors_filters_localhost_and_wildcard():
+    origins = _build_cors_origins("*, http://localhost:3000, https://shop.example.com", "production")
+    assert "*" not in origins
+    assert "http://localhost:3000" not in origins
+    assert "https://shop.example.com" in origins
+
+
+def test_production_requires_razorpay_webhook_secret_when_credentials_are_configured(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")
+    monkeypatch.setenv("JWT_SECRET_KEY", "12345678901234567890123456789012")
+    monkeypatch.setenv("CASHFREE_ENV", "production")
+    monkeypatch.setenv("RAZORPAY_KEY_ID", "rzp_test_configured")
+    monkeypatch.setenv("RAZORPAY_KEY_SECRET", "configured-secret")
+    monkeypatch.delenv("RAZORPAY_WEBHOOK_SECRET", raising=False)
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(RuntimeError, match="RAZORPAY_WEBHOOK_SECRET"):
+            get_settings()
+    finally:
+        get_settings.cache_clear()

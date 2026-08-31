@@ -105,3 +105,15 @@ def test_webhook_signature_and_duplicate_success_are_idempotent():
         with pytest.raises(BadRequestError, match="signature"):
             asyncio.run(service.process_webhook(body, timestamp, "bad"))
     finally: cleanup(db, user, product)
+
+
+def test_webhook_does_not_fallback_to_cashfree_api_secret():
+    db = SessionLocal()
+    try:
+        service = CashfreeService(db, settings(CASHFREE_WEBHOOK_SECRET=""))
+        body = b'{"data": {}}'
+        signature = base64.b64encode(hmac.new(b"secret", b"timestamp" + body, hashlib.sha256).digest()).decode()
+        with pytest.raises(BadRequestError, match="Invalid Cashfree webhook signature"):
+            asyncio.run(service.process_webhook(body, "timestamp", signature))
+    finally:
+        db.close()

@@ -21,21 +21,24 @@ from app.core.security import TokenPayloadError
 
 settings = get_settings()
 
-def _build_cors_origins(raw_origins: str) -> list[str]:
+def _build_cors_origins(raw_origins: str, app_env: str) -> list[str]:
     configured = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
-    defaults = [
-        "https://letrusto.com",
-        "https://www.letrusto.com",
-        "https://letrusto.vercel.app",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ]
+    defaults = ["https://letrusto.com", "https://www.letrusto.com", "https://letrusto.vercel.app"]
+    if app_env != "production":
+        defaults.extend(["http://localhost:3000", "http://127.0.0.1:3000"])
+
+    origins = [*configured, *defaults]
+    if app_env == "production":
+        origins = [
+            origin for origin in origins
+            if origin != "*" and not origin.lower().startswith(("http://localhost", "http://127.0.0.1"))
+        ]
 
     # Keep order stable while removing duplicates.
-    return list(OrderedDict.fromkeys([*configured, *defaults]))
+    return list(OrderedDict.fromkeys(origins))
 
 
-_cors_origins = _build_cors_origins(settings.CORS_ORIGINS)
+_cors_origins = _build_cors_origins(settings.CORS_ORIGINS, settings.APP_ENV)
 
 print(f"[LeTrusto] APP_ENV={settings.APP_ENV}")
 print(f"[LeTrusto] DATABASE_URL configured={bool(settings.DATABASE_URL)}")
@@ -54,8 +57,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin"],
 )
 
 app.add_middleware(
@@ -63,6 +66,18 @@ app.add_middleware(
     default_limit=0 if settings.APP_ENV == "development" else settings.RATE_LIMIT_DEFAULT,
     auth_limit=settings.RATE_LIMIT_AUTH,
 )
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if settings.APP_ENV == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
