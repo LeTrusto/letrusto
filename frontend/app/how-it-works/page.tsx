@@ -17,7 +17,7 @@ const STEPS = [
   {
     icon: ShoppingCart,
     title: "Place Your Order",
-    description: "Pick your product, size and colour. Pay securely with Stripe (global) or Razorpay (India).",
+    description: "Pick your product, size and colour. Pay securely with Razorpay.",
   },
   {
     icon: Package,

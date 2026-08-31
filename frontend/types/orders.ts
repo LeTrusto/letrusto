@@ -95,15 +95,6 @@ export type RazorpayOrder = {
   currency: "INR";
 };
 
-export type StripeCheckoutSession = {
-  order_id: string;
-  provider: "STRIPE";
-  provider_order_id: string;
-  checkout_url: string;
-  amount: number;
-  currency: string;
-};
-
 export type PaymentStatus = {
   order_id: string;
   payment_status: string;

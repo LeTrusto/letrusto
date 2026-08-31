@@ -42,7 +42,6 @@ export default function CheckoutPage() {
   const [working, setWorking] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [razorpayOrder, setRazorpayOrder] = useState<RazorpayOrder | null>(null);
-  const stripeSession = legacyPaymentSession();
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [razorpayReady, setRazorpayReady] = useState(false);
   const idempotencyKey = useRef<string | null>(null);
@@ -80,6 +79,10 @@ export default function CheckoutPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!accessToken || working || createdOrder) return;
+    if (!isIndia) {
+      setError("Razorpay checkout currently supports INR orders only. Please use an India shipping address.");
+      return;
+    }
     setWorking(true); setError(""); setPaymentState("creating");
     try {
       idempotencyKey.current ??= `checkout-${crypto.randomUUID()}`;
@@ -117,18 +120,6 @@ export default function CheckoutPage() {
       setPaymentState("failed");
       setError(err instanceof Error ? err.message : "Unable to prepare payment");
     }
-  }
-
-  async function prepareLegacyPaymentSession(orderId: string) {
-    await prepareRazorpayOrder(orderId);
-  }
-
-  async function prepareStripeSession(orderId: string) {
-    await prepareLegacyPaymentSession(orderId);
-  }
-
-  function legacyPaymentSession(): { checkout_url: string } | null {
-    return null;
   }
 
   const update = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,7 +170,7 @@ export default function CheckoutPage() {
 
   const razorpayScript = <Script src={RAZORPAY_CHECKOUT_SCRIPT_URL} strategy="afterInteractive" onLoad={() => setRazorpayReady(true)} onError={() => setError("Payment checkout is unavailable. Please try again later.")} />;
 
-  if (createdOrder) return <>{razorpayScript}<main className="mx-auto max-w-2xl px-4 py-16 text-center md:py-20"><div className="lt-card p-6 md:p-8"><CheckCircle2 className="mx-auto text-[var(--lt-success)]" size={38} /><p className="lt-label mt-4">{paymentState === "success" ? "Payment successful" : "Order created"}</p><h1 className="lt-heading-2 mt-2">{paymentState === "success" ? "Thank you for your order" : "Ready for payment"}</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Order {createdOrder.order_number} · {money(createdOrder.total, createdOrder.currency)}<br />Your order is confirmed only after the payment provider verifies it.</p>{paymentState === "success" ? <p className="mt-6 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">Payment verified by LeTrusto. Fulfillment will continue from your order record.</p> : stripeSession ? <button type="button" disabled={paymentState === "opening"} onClick={() => { setPaymentState("opening"); window.location.assign(stripeSession.checkout_url); }} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "opening" ? <><Loader2 size={16} className="animate-spin" /> Opening secure checkout...</> : "Continue to secure payment"}</button> : razorpayOrder ? <button type="button" disabled={paymentState === "opening" || paymentState === "verifying"} onClick={openRazorpay} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "opening" ? <><Loader2 size={16} className="animate-spin" /> Opening Razorpay...</> : paymentState === "verifying" ? <><Loader2 size={16} className="animate-spin" /> Verifying payment...</> : "Continue to secure payment"}</button> : <button type="button" disabled={paymentState === "creating"} onClick={() => { void (isIndia ? prepareRazorpayOrder(createdOrder.id) : prepareStripeSession(createdOrder.id)); }} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "creating" ? <><Loader2 size={16} className="animate-spin" /> Creating payment...</> : "Retry payment setup"}</button>}{error && <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}<Link href={`/orders/${createdOrder.id}`} className="lt-btn lt-btn-ghost mt-3 inline-flex">View order details</Link></div></main></>;
+  if (createdOrder) return <>{razorpayScript}<main className="mx-auto max-w-2xl px-4 py-16 text-center md:py-20"><div className="lt-card p-6 md:p-8"><CheckCircle2 className="mx-auto text-[var(--lt-success)]" size={38} /><p className="lt-label mt-4">{paymentState === "success" ? "Payment successful" : "Order created"}</p><h1 className="lt-heading-2 mt-2">{paymentState === "success" ? "Thank you for your order" : "Ready for payment"}</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Order {createdOrder.order_number} · {money(createdOrder.total, createdOrder.currency)}<br />Your order is confirmed only after the payment provider verifies it.</p>{paymentState === "success" ? <p className="mt-6 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">Payment verified by LeTrusto. Fulfillment will continue from your order record.</p> : razorpayOrder ? <button type="button" disabled={paymentState === "opening" || paymentState === "verifying"} onClick={openRazorpay} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "opening" ? <><Loader2 size={16} className="animate-spin" /> Opening Razorpay...</> : paymentState === "verifying" ? <><Loader2 size={16} className="animate-spin" /> Verifying payment...</> : "Continue to secure payment"}</button> : <button type="button" disabled={paymentState === "creating"} onClick={() => { void prepareRazorpayOrder(createdOrder.id); }} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "creating" ? <><Loader2 size={16} className="animate-spin" /> Creating payment...</> : "Retry payment setup"}</button>}{error && <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}<Link href={`/orders/${createdOrder.id}`} className="lt-btn lt-btn-ghost mt-3 inline-flex">View order details</Link></div></main></>;
 
   return <>{razorpayScript}<main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
     <header><p className="lt-label">Secure checkout</p><h1 className="lt-heading-2 mt-1">Checkout</h1><p className="mt-2 text-sm text-[var(--text-muted)]">Review your details before continuing to payment.</p></header>
