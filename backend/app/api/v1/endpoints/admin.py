@@ -24,6 +24,8 @@ from app.schemas.admin_products import (
     ProductImportRequest,
     PrintfulConnectionResponse,
     PrintfulProductsResponse,
+    PrintfulPricingResponse,
+    PrintfulPricingUpdate,
     LegacyArchiveResponse,
     ProductRejectionRequest,
     ProductStatusUpdate,
@@ -558,6 +560,16 @@ def calculate_catalog_product_price(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> PriceCalculationResponse:
     return service.calculate_price(product_id, payload)
+
+
+@router.post("/products/{product_id}/printful-pricing", response_model=PrintfulPricingResponse)
+def update_printful_product_pricing(
+    product_id: UUID,
+    payload: PrintfulPricingUpdate,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> PrintfulPricingResponse:
+    return service.update_printful_pricing(product_id, payload)
 
 
 @router.post(

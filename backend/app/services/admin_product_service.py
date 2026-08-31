@@ -48,6 +48,8 @@ from app.schemas.admin_products import (
     PrintfulConnectionResponse,
     PrintfulProductSummary,
     PrintfulProductsResponse,
+    PrintfulPricingResponse,
+    PrintfulPricingUpdate,
     ProductImportRequest,
     ProductRejectionRequest,
     ProductStatusUpdate,
@@ -1123,6 +1125,8 @@ class AdminProductService:
         product = self._get(product_id)
         if not product.supplier:
             raise BadRequestError("Catalog product has no supplier")
+        if product.supplier == "printful":
+            raise BadRequestError("Legacy margin pricing is not available for Printful products")
         if product.supplier_cost is None:
             raise BadRequestError("Supplier cost is missing")
         if product.shipping_cost is None:
@@ -1138,10 +1142,32 @@ class AdminProductService:
         self.db.commit()
         return PriceCalculationResponse(product_id=product.id, **calculation.__dict__)
 
+    def update_printful_pricing(self, product_id: UUID, payload: PrintfulPricingUpdate) -> PrintfulPricingResponse:
+        product = self._get(product_id)
+        if product.supplier != "printful":
+            raise BadRequestError("Printful pricing applies only to Printful products")
+        details = dict(product.supplier_validation_details or {})
+        details["printful_customer_pricing"] = {
+            "india_price_inr": str(payload.india_price_inr),
+            "international_price_usd": str(payload.international_price_usd),
+            "shipping_reviewed": payload.shipping_reviewed,
+        }
+        product.supplier_validation_details = details
+        product.selling_price = payload.india_price_inr
+        product.price_value = payload.india_price_inr
+        product.currency = "INR"
+        for variant in product.variants:
+            if variant.active:
+                variant.selling_price = payload.india_price_inr
+        self.db.commit()
+        return PrintfulPricingResponse(product_id=product.id, **payload.model_dump())
+
     def calculate_variant_prices(self, product_id: UUID) -> VariantPriceCalculationResponse:
         product = self._get(product_id)
         if not product.supplier:
             raise BadRequestError("Catalog product has no supplier")
+        if product.supplier == "printful":
+            raise BadRequestError("Legacy variant pricing is not available for Printful products")
         if not product.variants:
             raise BadRequestError("Catalog product has no stored supplier variants")
         if product.shipping_cost is None:
@@ -1186,6 +1212,8 @@ class AdminProductService:
 
     def commercial_review(self, product_id: UUID) -> CommercialReviewResponse:
         product = self._get(product_id)
+        if product.supplier == "printful":
+            raise BadRequestError("Legacy commercial review is not available for Printful products")
         if product.commercial_status in {"APPROVED", "REJECTED"}:
             raise BadRequestError("Final commercial decision already exists")
         result = evaluate_commercial_product(product, self.launch_pricing_policy)
@@ -1204,6 +1232,8 @@ class AdminProductService:
         product = self._get(product_id)
         if not product.supplier or not product.supplier_product_id:
             raise BadRequestError("Final approval requires a supplier-backed catalog product")
+        if product.supplier == "printful":
+            raise BadRequestError("Legacy commercial approval is not available for Printful products")
         if product.status == "ACTIVE":
             raise BadRequestError("Active product is already past the approval gate")
 
@@ -1241,6 +1271,8 @@ class AdminProductService:
         product = self._get(product_id)
         if not product.supplier or not product.supplier_product_id:
             raise BadRequestError("Final rejection requires a supplier-backed catalog product")
+        if product.supplier == "printful":
+            raise BadRequestError("Legacy commercial rejection is not available for Printful products")
         if product.status == "ACTIVE":
             raise BadRequestError("Pause active product before rejection")
         if product.commercial_status == "DRAFT":
@@ -1274,6 +1306,13 @@ class AdminProductService:
             return self._dto(product)
         if product.status not in {"DRAFT", "PAUSED"}:
             raise BadRequestError(f"Cannot activate product from catalog status {product.status}")
+        if product.supplier == "printful":
+            blockers = self._printful_publish_blockers(product)
+            if blockers:
+                raise BadRequestError(f"Printful publish checklist failed: {', '.join(blockers)}")
+            product.status = "ACTIVE"
+            self.db.commit()
+            return self._dto(self._get(product.id))
         if product.commercial_status != "APPROVED":
             raise BadRequestError("Product must have commercial status APPROVED before activation")
         readiness = CatalogReadinessService.validate_activation(product)
@@ -1282,6 +1321,34 @@ class AdminProductService:
         product.status = "ACTIVE"
         self.db.commit()
         return self._dto(self._get(product.id))
+
+    @staticmethod
+    def _printful_publish_blockers(product: Product) -> list[str]:
+        details = product.supplier_validation_details or {}
+        pricing = details.get("printful_customer_pricing") if isinstance(details, dict) else None
+        blockers: list[str] = []
+        if product.supplier != "printful":
+            blockers.append("SUPPLIER_NOT_PRINTFUL")
+        if not product.supplier_product_id:
+            blockers.append("PRINTFUL_PRODUCT_ID_MISSING")
+        active_variants = [variant for variant in product.variants if variant.active]
+        if not active_variants:
+            blockers.append("NO_ACTIVE_VARIANTS")
+        if any(not variant.supplier_variant_id or not variant.supplier_variant_sku for variant in active_variants):
+            blockers.append("VARIANT_SKU_OR_ID_MISSING")
+        if not product.images:
+            blockers.append("MOCKUPS_MISSING")
+        if not product.name.strip():
+            blockers.append("TITLE_MISSING")
+        if not product.description.strip():
+            blockers.append("DESCRIPTION_MISSING")
+        if not isinstance(pricing, dict) or not pricing.get("india_price_inr"):
+            blockers.append("INDIA_PRICE_MISSING")
+        if not isinstance(pricing, dict) or not pricing.get("international_price_usd"):
+            blockers.append("INTERNATIONAL_USD_PRICE_MISSING")
+        if not isinstance(pricing, dict) or pricing.get("shipping_reviewed") is not True:
+            blockers.append("SHIPPING_NOT_REVIEWED")
+        return blockers
 
     def pause(self, product_id: UUID) -> AdminProductDTO:
         product = self._get(product_id)

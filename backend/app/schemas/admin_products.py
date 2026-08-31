@@ -297,6 +297,20 @@ class ProductRejectionRequest(BaseModel):
         return normalized or None
 
 
+class PrintfulPricingUpdate(BaseModel):
+    india_price_inr: Decimal = Field(gt=0, allow_inf_nan=False, max_digits=12, decimal_places=2)
+    international_price_usd: Decimal = Field(gt=0, allow_inf_nan=False, max_digits=12, decimal_places=2)
+    shipping_reviewed: bool = False
+
+
+class PrintfulPricingResponse(BaseModel):
+    product_id: UUID
+    india_price_inr: Decimal
+    international_price_usd: Decimal
+    shipping_reviewed: bool
+    currency: Literal["INR", "USD"] = "INR"
+
+
 class PriceCalculationRequest(BaseModel):
     supplier_cost_usd: Decimal = Field(ge=0, allow_inf_nan=False)
     shipping_cost_usd: Decimal = Field(ge=0, allow_inf_nan=False)

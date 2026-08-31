@@ -57,7 +57,7 @@ type Product = {
   factory_inventory: number | null;
   verified_warehouse: string | null;
   images: string[];
-  reference_data: Record<string, unknown>;
+  supplier_validation_details: Record<string, unknown> | null;
   variants: Variant[];
 };
 
@@ -241,8 +241,30 @@ const inrFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
 });
 
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 function formatInr(value: number) {
   return `₹${inrFormatter.format(value)}`;
+}
+
+function formatUsd(value: number) {
+  return usdFormatter.format(value);
+}
+
+function printfulPricing(product: Product) {
+  const pricing = product.supplier_validation_details?.printful_customer_pricing;
+  if (!pricing || typeof pricing !== "object") return { india_price_inr: "", international_price_usd: "", shipping_reviewed: false };
+  const data = pricing as { india_price_inr?: string; international_price_usd?: string; shipping_reviewed?: boolean };
+  return {
+    india_price_inr: data.india_price_inr ?? "",
+    international_price_usd: data.international_price_usd ?? "",
+    shipping_reviewed: data.shipping_reviewed === true,
+  };
 }
 
 async function apiError(response: Response): Promise<string> {
@@ -432,6 +454,30 @@ export default function AdminProductsView() {
       await loadProducts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to archive legacy supplier products");
+    } finally {
+      setPrintfulWorking(false);
+    }
+  }
+
+  async function savePrintfulPricing(product: Product, payload: { india_price_inr: string; international_price_usd: string; shipping_reviewed: boolean }) {
+    setPrintfulWorking(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/products/${product.id}/printful-pricing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...apiHeaders() },
+        body: JSON.stringify({
+          india_price_inr: payload.india_price_inr,
+          international_price_usd: payload.international_price_usd,
+          shipping_reviewed: payload.shipping_reviewed,
+        }),
+      });
+      if (!response.ok) throw new Error(await apiError(response));
+      setMessage(`Printful pricing saved for ${product.name}.`);
+      await loadProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save Printful pricing");
     } finally {
       setPrintfulWorking(false);
     }
@@ -831,24 +877,30 @@ export default function AdminProductsView() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  {product.commercial_status !== "APPROVED" && product.commercial_status !== "REJECTED" && (
+                  {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && product.commercial_status !== "APPROVED" && product.commercial_status !== "REJECTED" && (
                     <button type="button" disabled={reviewingProductId !== null || decidingProductId !== null} onClick={() => void runCommercialReview(product)} className="lt-btn lt-btn-secondary text-sm inline-flex items-center gap-2">
                       <ClipboardCheck size={16} aria-hidden="true" />
                       {reviewingProductId === product.id ? "Reviewing..." : "Run Commercial Review"}
                     </button>
                   )}
-                  {product.commercial_status === "REVIEW" && product.status !== "ACTIVE" && (
+                  {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && product.commercial_status === "REVIEW" && product.status !== "ACTIVE" && (
                     <button type="button" disabled={decidingProductId !== null} onClick={() => void runFinalAction(product, "approve")} className="lt-btn lt-btn-primary text-sm inline-flex items-center gap-2">
                       <Check size={16} aria-hidden="true" />
                       {decidingProductId === product.id ? "Working..." : "Approve"}
                     </button>
                   )}
-                  {(product.commercial_status === "REVIEW" || product.commercial_status === "APPROVED") && product.status !== "ACTIVE" && (
+                  {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && (product.commercial_status === "REVIEW" || product.commercial_status === "APPROVED") && product.status !== "ACTIVE" && (
                     <button type="button" disabled={decidingProductId !== null} onClick={() => { setRejectingProductId(product.id); setRejectionReason(""); }} className="lt-btn lt-btn-secondary text-sm inline-flex items-center gap-2">
                       <X size={16} aria-hidden="true" /> Reject
                     </button>
                   )}
-                  {product.commercial_status === "APPROVED" && (product.status === "DRAFT" || product.status === "PAUSED") && (
+                  {product.supplier === "printful" && (product.status === "DRAFT" || product.status === "PAUSED") && (
+                    <button type="button" disabled={decidingProductId !== null} onClick={() => void runFinalAction(product, "activate")} className="lt-btn lt-btn-primary text-sm inline-flex items-center gap-2">
+                      <Play size={16} aria-hidden="true" />
+                      {decidingProductId === product.id ? "Working..." : "Publish"}
+                    </button>
+                  )}
+                  {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && product.commercial_status === "APPROVED" && (product.status === "DRAFT" || product.status === "PAUSED") && (
                     <button type="button" disabled={decidingProductId !== null} onClick={() => void runFinalAction(product, "activate")} className="lt-btn lt-btn-primary text-sm inline-flex items-center gap-2">
                       <Play size={16} aria-hidden="true" />
                       {decidingProductId === product.id ? "Working..." : "Activate"}
@@ -860,9 +912,9 @@ export default function AdminProductsView() {
                       {decidingProductId === product.id ? "Working..." : "Pause"}
                     </button>
                   )}
-                  <button type="button" disabled={syncingProductId !== null} onClick={() => void syncInventory(product)} className="lt-btn lt-btn-secondary text-sm">
+                  {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && <button type="button" disabled={syncingProductId !== null} onClick={() => void syncInventory(product)} className="lt-btn lt-btn-secondary text-sm">
                     {syncingProductId === product.id ? "Syncing..." : "Sync Inventory"}
-                  </button>
+                  </button>}
                   <Link href={`/admin/products/${product.id}/trust`} className="lt-btn lt-btn-secondary text-sm inline-flex items-center gap-2">
                     <ClipboardCheck size={16} aria-hidden="true" />
                     Trust
@@ -873,7 +925,7 @@ export default function AdminProductsView() {
                   </button>
                 </div>
               </div>
-              {rejectingProductId === product.id && (
+              {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && rejectingProductId === product.id && (
                 <form onSubmit={(event) => { event.preventDefault(); void runFinalAction(product, "reject"); }} className="mt-4 border-t border-[var(--border)] pt-4 flex flex-col sm:flex-row items-end gap-3">
                   <label className="text-xs text-[var(--text-muted)] flex-1 w-full">
                     <span>Rejection reason (optional)</span>
@@ -887,32 +939,33 @@ export default function AdminProductsView() {
                 <Metric label="Status" value={product.status} />
                 <Metric label="POD availability" value={product.verified_warehouse ?? "Review"} />
                 <Metric label="Inventory" value={product.total_inventory ?? "On demand"} />
-                <Metric label="Supplier cost (INR)" value={product.supplier_cost == null ? "-" : formatInr(product.supplier_cost)} />
-                <Metric label="Shipping (INR)" value={product.shipping_cost == null ? "-" : formatInr(product.shipping_cost)} />
+                <Metric label="Supplier cost" value={product.supplier_cost == null ? "-" : formatInr(product.supplier_cost)} />
+                <Metric label="Shipping" value={product.shipping_cost == null ? "Not configured" : formatInr(product.shipping_cost)} />
                 <Metric label="Selling price" value={product.selling_price == null ? "-" : formatInr(product.selling_price)} />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4 border-t border-[var(--border)] pt-4 text-sm">
+              {product.supplier === "printful" && <PrintfulProductWorkflow product={product} working={printfulWorking} onSave={(payload) => void savePrintfulPricing(product, payload)} />}
+              {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4 border-t border-[var(--border)] pt-4 text-sm">
                 <Metric label="Commercial status" value={product.commercial_status} />
                 <Metric label="Target margin" value={product.commercial_target_margin_percent == null ? "-" : `${product.commercial_target_margin_percent}%`} />
                 <Metric label="CAC target" value={product.commercial_target_cac_inr == null ? "-" : formatInr(product.commercial_target_cac_inr)} />
                 <Metric label="CAC supported" value={product.commercial_cac_supported == null ? "NOT REVIEWED" : product.commercial_cac_supported ? "YES" : "NO"} />
                 <Metric label="Market price" value={product.market_price_status} />
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4 border-t border-[var(--border)] pt-4 text-sm">
+              </div>}
+              {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4 border-t border-[var(--border)] pt-4 text-sm">
                 <Metric label="Supplier validation" value={product.supplier_validation_status ?? "NOT AVAILABLE"} />
                 <Metric label="Validation score" value={product.supplier_validation_score ?? "-"} />
                 <Metric label="Validated" value={product.supplier_validated_at ? new Date(product.supplier_validated_at).toLocaleString("en-IN") : "-"} />
-              </div>
-              {(product.supplier_validation_notes ?? []).length > 0 && (
+              </div>}
+              {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && (product.supplier_validation_notes ?? []).length > 0 && (
                 <p className="mt-3 text-xs text-[var(--text-muted)]">Validation issues: {(product.supplier_validation_notes ?? []).join(", ")}</p>
               )}
-              {product.commercial_reasons.length > 0 && (
+              {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && product.commercial_reasons.length > 0 && (
                 <p className="mt-3 text-xs text-[var(--text-muted)]">Reasons: {product.commercial_reasons.join(", ")}</p>
               )}
               {product.approval_rejection_reason && (
                 <p className="mt-3 text-xs text-[var(--text-muted)]">Rejection reason: {product.approval_rejection_reason}</p>
               )}
-              <details className="mt-4 border-t border-[var(--border)] pt-4">
+              {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && <details className="mt-4 border-t border-[var(--border)] pt-4">
                 <summary className="cursor-pointer text-sm font-semibold">Calculate Price</summary>
                 <form onSubmit={(event) => void calculatePrice(event, product)} className="mt-3">
                   {product.supplier_cost != null && (
@@ -966,8 +1019,8 @@ export default function AdminProductsView() {
                     </table>
                   </div>
                 )}
-              </details>
-              <MarketEvidenceSection product={product} onError={setError} onMessage={setMessage} />
+              </details>}
+              {product.supplier !== "printful" && LEGACY_CJ_WORKFLOW_ENABLED && <MarketEvidenceSection product={product} onError={setError} onMessage={setMessage} />}
               {product.variants.length > 0 && (
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full text-xs">
@@ -986,6 +1039,71 @@ export default function AdminProductsView() {
 
 function Metric({ label, value }: { label: string; value: string | number }) {
   return <div><p className="text-[10px] uppercase text-[var(--text-muted)]">{label}</p><p className="font-semibold mt-1">{value}</p></div>;
+}
+
+function PrintfulProductWorkflow({ product, working, onSave }: { product: Product; working: boolean; onSave: (payload: { india_price_inr: string; international_price_usd: string; shipping_reviewed: boolean }) => void }) {
+  const savedPricing = printfulPricing(product);
+  const [indiaPrice, setIndiaPrice] = useState(savedPricing.india_price_inr);
+  const [internationalPrice, setInternationalPrice] = useState(savedPricing.international_price_usd);
+  const [shippingReviewed, setShippingReviewed] = useState(savedPricing.shipping_reviewed);
+  const activeVariants = product.variants.filter((variant) => variant.active);
+  const baseCost = activeVariants[0]?.supplier_cost_usd ?? product.supplier_cost;
+  const highestCost = activeVariants.reduce<number | null>((max, variant) => {
+    if (variant.supplier_cost_usd == null) return max;
+    return max == null ? variant.supplier_cost_usd : Math.max(max, variant.supplier_cost_usd);
+  }, null);
+  const checklist = [
+    ["Printful product ID exists", Boolean(product.supplier_product_id)],
+    ["At least one valid variant", activeVariants.length > 0],
+    ["Active variants have SKU", activeVariants.every((variant) => Boolean(variant.supplier_variant_id && variant.supplier_variant_sku))],
+    ["Product images/mockups available", product.images.length > 0],
+    ["Product title exists", Boolean(product.name.trim())],
+    ["Product description exists", Boolean(product.description.trim())],
+    ["India price configured", Boolean(savedPricing.india_price_inr)],
+    ["International USD price configured", Boolean(savedPricing.international_price_usd)],
+    ["Shipping configuration reviewed", savedPricing.shipping_reviewed],
+    ["Supplier = Printful", product.supplier === "printful"],
+    ["Product status ready for publication", product.status === "DRAFT" || product.status === "PAUSED" || product.status === "ACTIVE"],
+  ] as const;
+
+  return <section className="mt-4 border-t border-[var(--border)] pt-4">
+    <div className="grid gap-4 lg:grid-cols-3">
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+        <h3 className="font-semibold text-[var(--text-primary)]">Printful Cost</h3>
+        <div className="mt-3 space-y-2 text-sm">
+          <Metric label="Base fulfillment cost" value={baseCost == null ? "Not available" : formatUsd(Number(baseCost))} />
+          <Metric label="Highest variant cost" value={highestCost == null ? "Not available" : formatUsd(highestCost)} />
+          <Metric label="Supplier product ID" value={product.supplier_product_id ?? "-"} />
+        </div>
+      </div>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+        <h3 className="font-semibold text-[var(--text-primary)]">Shipping</h3>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+          {['India', 'United States', 'United Kingdom', 'European Union', 'Rest of World'].map((region) => <Metric key={region} label={region} value="Not configured" />)}
+        </div>
+        <label className="mt-4 flex items-center gap-2 text-sm text-[var(--text-secondary)]"><input type="checkbox" checked={shippingReviewed} onChange={(event) => setShippingReviewed(event.target.checked)} /> Shipping reviewed</label>
+      </div>
+      <form onSubmit={(event) => { event.preventDefault(); onSave({ india_price_inr: indiaPrice, international_price_usd: internationalPrice, shipping_reviewed: shippingReviewed }); }} className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+        <h3 className="font-semibold text-[var(--text-primary)]">LeTrusto Customer Price</h3>
+        <div className="mt-3 space-y-3">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)]">India<input type="number" min="0" step="0.01" required value={indiaPrice} onChange={(event) => setIndiaPrice(event.target.value)} className="lt-input mt-1 h-11" placeholder="INR" /></label>
+          <label className="block text-xs font-semibold text-[var(--text-secondary)]">International<input type="number" min="0" step="0.01" required value={internationalPrice} onChange={(event) => setInternationalPrice(event.target.value)} className="lt-input mt-1 h-11" placeholder="USD" /></label>
+          <button type="submit" disabled={working} className="lt-btn lt-btn-primary h-11 w-full">{working ? "Saving..." : "Save prices"}</button>
+        </div>
+      </form>
+    </div>
+    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+        <h3 className="font-semibold text-[var(--text-primary)]">Variants</h3>
+        <div className="mt-3 overflow-x-auto"><table className="w-full text-xs"><thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2 pr-3">Variant</th><th className="pr-3">SKU</th><th className="pr-3">Cost</th><th>Options</th></tr></thead><tbody>{product.variants.map((variant) => <tr key={variant.id} className="border-t border-[var(--border)]"><td className="py-2 pr-3">{variant.supplier_variant_id}</td><td className="pr-3">{variant.supplier_variant_sku}</td><td className="pr-3">{variant.supplier_cost_usd == null ? "-" : formatUsd(variant.supplier_cost_usd)}</td><td>{variant.attributes || variant.name}</td></tr>)}</tbody></table></div>
+      </div>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+        <h3 className="font-semibold text-[var(--text-primary)]">Publish Checklist</h3>
+        <ul className="mt-3 space-y-2 text-sm">{checklist.map(([label, passed]) => <li key={label} className="flex items-center gap-2"><span className={passed ? "text-green-700" : "text-[var(--text-muted)]"}>{passed ? "OK" : "TODO"}</span><span>{label}</span></li>)}</ul>
+      </div>
+    </div>
+    {product.images.length > 0 && <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4"><h3 className="font-semibold text-[var(--text-primary)]">Mockups</h3><div className="mt-3 flex gap-3 overflow-x-auto">{product.images.map((image) => <Image key={image} src={image} alt="" width={96} height={96} className="h-24 w-24 rounded-lg object-cover" unoptimized />)}</div></div>}
+  </section>;
 }
 
 function PriceInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

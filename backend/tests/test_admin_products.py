@@ -419,8 +419,60 @@ def test_printful_admin_connection_and_hoodie_import(monkeypatch):
         assert imported.variants[0].supplier_variant_id == "sync-variant-1"
         assert "catalog_variant_id: 5530" in imported.variants[0].attributes
         assert imported.supplier_validation_details["reference_data"]["sync_variants"][0]["variant_id"] == 5530
+        stored = db.get(Product, imported.id)
+        assert stored.status == "DRAFT"
+        with pytest.raises(BadRequestError, match="INDIA_PRICE_MISSING"):
+            service.activate(stored.id)
     finally:
         db.query(Product).filter(Product.supplier == "printful", Product.supplier_product_id == "pf-hoodie").delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+def test_printful_pricing_and_activation_do_not_require_legacy_commercial_approval():
+    from app.schemas.admin_products import PriceCalculationRequest, PrintfulPricingUpdate
+
+    db = SessionLocal()
+    service = AdminProductService(db)
+    suffix = str(uuid4())[:8]
+    product = Product(
+        id=uuid4(),
+        slug=f"printful-ready-{suffix}",
+        name="Unisex Hoodie",
+        description="Ready hoodie",
+        status="DRAFT",
+        supplier="printful",
+        supplier_product_id=f"pf-ready-{suffix}",
+        commercial_status="DRAFT",
+        supplier_validation_status="REVIEW",
+        supplier_validation_score=None,
+        supplier_validation_details={"source": "PRINTFUL_SYNC_PRODUCT_IMPORT"},
+    )
+    product.images = [ProductImage(url="https://img/hoodie.jpg", position=1)]
+    product.variants = [ProductVariant(supplier_variant_id=f"sync-{suffix}", supplier_variant_sku=f"PF-HOODIE-{suffix}", name="Black / M", active=True, position=1, supplier_cost_usd=Decimal("33.50"))]
+    db.add(product)
+    db.commit()
+    try:
+        with pytest.raises(BadRequestError, match="Legacy margin pricing"):
+            service.calculate_price(product.id, PriceCalculationRequest(
+                supplier_cost_usd=Decimal("33.50"), shipping_cost_usd=Decimal("0"), usd_to_inr_exchange_rate=Decimal("98"),
+                platform_fee_percent=Decimal("0"), payment_fee_percent=Decimal("0"), rto_reserve_percent=Decimal("0"), target_margin_percent=Decimal("20"),
+            ))
+        with pytest.raises(BadRequestError, match="Legacy variant pricing"):
+            service.calculate_variant_prices(product.id)
+        with pytest.raises(BadRequestError, match="Legacy commercial review"):
+            service.commercial_review(product.id)
+        pricing = service.update_printful_pricing(product.id, PrintfulPricingUpdate(india_price_inr=Decimal("3499.00"), international_price_usd=Decimal("59.00"), shipping_reviewed=True))
+        activated = service.activate(product.id)
+
+        assert pricing.india_price_inr == Decimal("3499.00")
+        assert pricing.international_price_usd == Decimal("59.00")
+        assert activated.status == "ACTIVE"
+        assert activated.commercial_status == "DRAFT"
+        assert activated.commercial_target_margin_percent == service.launch_pricing_policy.target_contribution_margin_pct
+        assert db.get(Product, product.id).supplier_validation_details["printful_customer_pricing"]["international_price_usd"] == "59.00"
+    finally:
+        db.delete(db.get(Product, product.id))
         db.commit()
         db.close()
 
