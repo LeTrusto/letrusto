@@ -173,3 +173,27 @@ def test_printful_india_without_verified_shipping_blocks_order(monkeypatch):
             OrderService(db).create_order(user, order_payload(product.slug, key="order-test-india-001"))
     finally:
         cleanup(db, user, product)
+
+
+def test_printful_india_estimate_is_included_in_server_order_total(monkeypatch):
+    db = SessionLocal()
+    user, product, _ = make_order_fixture(db)
+    product.supplier = "printful"
+    product.name = "Unisex Hoodie"
+    db.commit()
+    monkeypatch.setattr(
+        "app.services.order_service.PrintfulShippingService.estimate",
+        lambda *_args, **_kwargs: {"status": "AVAILABLE", "currency": "INR", "shipping_price": Decimal("299")},
+    )
+    try:
+        async def india_preflight(**_kwargs):
+            return SimpleNamespace(status="FULFILLABLE")
+
+        service = OrderService(db, fulfillment_preflight_service=SimpleNamespace(check=india_preflight))
+        result = service.create_order(user, order_payload(product.slug, quantity=1, key="order-test-india-estimate-001"))
+        assert result.currency == "INR"
+        assert result.subtotal == Decimal("100.00")
+        assert result.shipping_amount == Decimal("299.00")
+        assert result.total == Decimal("399.00")
+    finally:
+        cleanup(db, user, product)

@@ -321,6 +321,7 @@ class PrintfulShippingRateDTO(BaseModel):
     currency: str
     country_codes: list[str]
     source: str
+    rate_source: str
     effective_at: datetime | None
     updated_at: datetime | None
     active: bool
@@ -333,18 +334,23 @@ class PrintfulShippingUpdate(BaseModel):
     shipping_method: str = Field(default="Standard", min_length=1, max_length=120)
     single_product_rate: Decimal | None = Field(default=None, ge=0, decimal_places=2)
     additional_product_rate: Decimal | None = Field(default=None, ge=0, decimal_places=2)
-    currency: Literal["USD"] = "USD"
+    currency: Literal["INR", "USD"] = "USD"
+    rate_source: Literal["PRINTFUL_PUBLISHED", "LETRUSTO_ESTIMATE"] = "PRINTFUL_PUBLISHED"
     effective_at: datetime | None = None
     active: bool = True
     requires_verification: bool = False
 
     @model_validator(mode="after")
     def validate_destination_mapping(self) -> "PrintfulShippingUpdate":
-        if self.requires_verification:
-            if self.region != "IN":
-                raise ValueError("Verification-only shipping is supported for India")
-            if self.single_product_rate is not None or self.additional_product_rate is not None:
-                raise ValueError("India verification rows must not include shipping rates")
+        if self.requires_verification and self.region != "IN":
+            raise ValueError("Verification-only shipping is supported for India")
+        if self.region == "IN":
+            if self.currency != "INR":
+                raise ValueError("India shipping must use INR")
+            if self.rate_source != "LETRUSTO_ESTIMATE" and self.requires_verification:
+                raise ValueError("Unverified India shipping must be a LeTrusto estimate")
+            if self.single_product_rate is None or self.additional_product_rate is None:
+                raise ValueError("India shipping estimate requires both rates")
         elif not self.country_codes:
             raise ValueError("At least one country code is required")
         return self

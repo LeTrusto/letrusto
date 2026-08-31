@@ -15,7 +15,7 @@ def configured_rates() -> list[PrintfulShippingRate]:
     values = {"US": ("8.79", "2.50"), "GB": ("7.29", "2.40"), "EU": ("7.29", "2.40"), "CA": ("10.59", "2.35"), "AU_NZ": ("12.49", "2.25"), "JP": ("7.89", "2.60"), "BR": ("17.69", "8.00"), "WORLDWIDE": ("17.69", "8.00")}
     now = datetime.now(timezone.utc)
     country_codes = {"EU": ["DE", "FR"], "AU_NZ": ["AU", "NZ"], "WORLDWIDE": ["CH"]}
-    return [PrintfulShippingRate(source="printful", destination_region=region, category_key="hoodies-sweatshirts", country_codes=country_codes.get(region, [region]), shipping_method="Standard", single_product_rate=Decimal(single), additional_product_rate=Decimal(additional), currency="USD", effective_at=now, updated_at=now, active=True) for region, (single, additional) in values.items()] + [PrintfulShippingRate(source="printful", destination_region="IN", category_key="hoodies-sweatshirts", country_codes=[], shipping_method="Standard", currency="USD", effective_at=now, updated_at=now, active=True, requires_verification=True)]
+    return [PrintfulShippingRate(source="printful", rate_source="PRINTFUL_PUBLISHED", destination_region=region, category_key="hoodies-sweatshirts", country_codes=country_codes.get(region, [region]), shipping_method="Standard", single_product_rate=Decimal(single), additional_product_rate=Decimal(additional), currency="USD", effective_at=now, updated_at=now, active=True) for region, (single, additional) in values.items()] + [PrintfulShippingRate(source="printful", rate_source="LETRUSTO_ESTIMATE", destination_region="IN", category_key="hoodies-sweatshirts", country_codes=[], shipping_method="Standard", single_product_rate=Decimal("299"), additional_product_rate=Decimal("100"), currency="INR", effective_at=now, updated_at=now, active=True, requires_verification=True)]
 
 
 def test_printful_hoodie_rates_and_destination_mapping():
@@ -31,8 +31,11 @@ def test_printful_hoodie_rates_and_destination_mapping():
 
     assert region_for_country("IN") == "IN"
     india = service.estimate(product, "IN")
-    assert india["status"] == "REQUIRES_VERIFICATION"
-    assert india["message"] == "Shipping rate requires Printful verification"
+    assert india["status"] == "AVAILABLE"
+    assert india["shipping_price"] == Decimal("299")
+    assert india["currency"] == "INR"
+    assert india["rate_source"] == "LETRUSTO_ESTIMATE"
+    assert india["estimated"] is True
 
 
 def test_printful_additional_rate_and_review_blockers():
@@ -40,6 +43,8 @@ def test_printful_additional_rate_and_review_blockers():
     service._rows = lambda _: configured_rates()  # type: ignore[method-assign]
     product = shipping_product()
     assert service.estimate(product, "US", quantity=3)["shipping_price"] == Decimal("13.79")
+    assert service.estimate(product, "IN", quantity=2)["shipping_price"] == Decimal("399")
+    assert service.estimate(product, "IN", quantity=3)["shipping_price"] == Decimal("499")
     assert service.review(product) == (True, [])
 
     incomplete = configured_rates()
@@ -50,9 +55,9 @@ def test_printful_additional_rate_and_review_blockers():
     assert "SHIPPING_RATE_MISSING_JP" in blockers
 
 
-def test_india_verification_update_has_no_rate_or_mapping():
-    payload = PrintfulShippingUpdate(region="IN", requires_verification=True)
+def test_india_estimate_update_requires_inr_rates_and_source():
+    payload = PrintfulShippingUpdate(region="IN", currency="INR", rate_source="LETRUSTO_ESTIMATE", single_product_rate=Decimal("299"), additional_product_rate=Decimal("100"), requires_verification=True)
 
     assert payload.country_codes == []
-    assert payload.single_product_rate is None
-    assert payload.additional_product_rate is None
+    assert payload.single_product_rate == Decimal("299")
+    assert payload.additional_product_rate == Decimal("100")

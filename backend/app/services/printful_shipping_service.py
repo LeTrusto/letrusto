@@ -54,11 +54,9 @@ class PrintfulShippingService:
                 continue
             if row.source != "printful" or (not row.country_codes and not (region == "IN" and row.requires_verification)):
                 blockers.append(f"SHIPPING_DESTINATION_MAPPING_INVALID_{region}")
-            if row.currency != "USD":
+            if row.currency not in {"USD", "INR"} or (region == "IN" and row.currency != "INR"):
                 blockers.append(f"SHIPPING_CURRENCY_INVALID_{region}")
-            if row.requires_verification:
-                if region != "IN": blockers.append(f"SHIPPING_VERIFICATION_REQUIRED_{region}")
-            elif row.single_product_rate is None or row.additional_product_rate is None:
+            if row.single_product_rate is None or row.additional_product_rate is None:
                 blockers.append(f"SHIPPING_RATE_INCOMPLETE_{region}")
             if row.effective_at > datetime.now(timezone.utc):
                 blockers.append(f"SHIPPING_EFFECTIVE_DATE_INVALID_{region}")
@@ -75,9 +73,9 @@ class PrintfulShippingService:
         if region is None:
             raise BadRequestError("Destination country is required")
         row = {item["region"]: item for item in self.list_for_product(product)}.get(region)
-        if not row or row["requires_verification"]:
+        if not row or row["single_product_rate"] is None or row["additional_product_rate"] is None:
             return {"country": country.upper(), "region": region, "status": "REQUIRES_VERIFICATION", "message": "Shipping rate requires Printful verification"}
-        return {"country": country.upper(), "region": region, "status": "AVAILABLE", "currency": row["currency"], "shipping_method": row["shipping_method"], "shipping_price": row["single_product_rate"] + max(quantity - 1, 0) * row["additional_product_rate"], "estimated_delivery": None}
+        return {"country": country.upper(), "region": region, "status": "AVAILABLE", "currency": row["currency"], "shipping_method": row["shipping_method"], "shipping_price": row["single_product_rate"] + max(quantity - 1, 0) * row["additional_product_rate"], "rate_source": row["rate_source"], "estimated": row["requires_verification"], "message": "Estimated shipping; pending Printful verification" if row["requires_verification"] else None, "estimated_delivery": None}
 
     @staticmethod
     def _serialize(row: PrintfulShippingRate | None, region: str) -> dict:
@@ -85,7 +83,7 @@ class PrintfulShippingService:
             "region": region, "label": REGION_LABELS[region], "status": "REQUIRES_VERIFICATION" if row and row.requires_verification else "AVAILABLE" if row else "MISSING",
             "shipping_method": row.shipping_method if row else None, "single_product_rate": row.single_product_rate if row else None,
             "additional_product_rate": row.additional_product_rate if row else None, "currency": row.currency if row else "USD",
-            "country_codes": row.country_codes if row else [], "source": row.source if row else "printful",
+            "country_codes": row.country_codes if row else [], "source": row.source if row else "printful", "rate_source": row.rate_source if row else "PRINTFUL_PUBLISHED",
             "effective_at": row.effective_at if row else None, "updated_at": row.updated_at if row else None,
             "active": row.active if row else False, "requires_verification": row.requires_verification if row else False,
         }
@@ -97,7 +95,7 @@ class PrintfulShippingService:
         if row is None:
             row = PrintfulShippingRate(category_key=self.category_for(product), destination_region=region)
             self.db.add(row)
-        row.source = "printful"; row.country_codes = [code.upper() for code in payload["country_codes"]]; row.shipping_method = payload["shipping_method"]
+        row.source = "printful"; row.rate_source = payload["rate_source"]; row.country_codes = [code.upper() for code in payload["country_codes"]]; row.shipping_method = payload["shipping_method"]
         row.single_product_rate = payload.get("single_product_rate"); row.additional_product_rate = payload.get("additional_product_rate"); row.currency = payload["currency"]; row.effective_at = payload.get("effective_at") or datetime.now(timezone.utc); row.active = payload["active"]; row.requires_verification = payload["requires_verification"]
         self.db.commit(); self.db.refresh(row)
         return self._serialize(row, region)

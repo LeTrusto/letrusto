@@ -98,7 +98,8 @@ class ProductService:
         product = self.repository.get_by_slug(product_slug)
         if not product:
             raise NotFoundError(f"Product '{product_slug}' not found")
-        return PrintfulShippingService(self.repository.db).estimate(product, country, quantity)
+        estimate = PrintfulShippingService(self.repository.db).estimate(product, country, quantity)
+        return ProductShippingEstimate(**estimate)
 
     def get_search(self, query: ProductSearchQuery) -> PaginatedProductsResponse:
         products = self.repository.search_candidates(query)

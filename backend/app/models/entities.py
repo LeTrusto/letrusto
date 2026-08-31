@@ -280,6 +280,7 @@ class PrintfulShippingRate(Base):
         ForeignKey("products.id", ondelete="CASCADE"), nullable=True, index=True
     )
     source: Mapped[str] = mapped_column(String(40), nullable=False, default="printful")
+    rate_source: Mapped[str] = mapped_column(String(40), nullable=False, default="PRINTFUL_PUBLISHED")
     category_key: Mapped[str] = mapped_column(String(80), nullable=False, default="hoodies-sweatshirts")
     destination_region: Mapped[str] = mapped_column(String(40), nullable=False)
     country_codes: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)

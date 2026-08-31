@@ -66,7 +66,7 @@ type ProductResponse = { products: Product[]; total: number };
 type PrintfulConnection = { connected: boolean; store: string | null; status: string; message: string | null };
 type PrintfulProduct = { supplier_product_id: string; name: string; thumbnail_url: string | null; finalized: boolean; imported_product_id: string | null };
 type PrintfulProductsResponse = { products: PrintfulProduct[]; total: number };
-type PrintfulShippingRate = { region: string; label: string; status: "AVAILABLE" | "REQUIRES_VERIFICATION" | "MISSING"; shipping_method: string | null; single_product_rate: number | null; additional_product_rate: number | null; currency: string; country_codes: string[]; source: string; effective_at: string | null; updated_at: string | null; active: boolean; requires_verification: boolean };
+type PrintfulShippingRate = { region: string; label: string; status: "AVAILABLE" | "REQUIRES_VERIFICATION" | "MISSING"; shipping_method: string | null; single_product_rate: number | null; additional_product_rate: number | null; currency: string; country_codes: string[]; source: string; rate_source: string; effective_at: string | null; updated_at: string | null; active: boolean; requires_verification: boolean };
 type LegacyArchiveResponse = { supplier: "cj"; archived_count: number; status: string };
 
 type FulfillmentOrder = {
@@ -1088,7 +1088,7 @@ function PrintfulProductWorkflow({ product, working, onSave }: { product: Produc
         <h3 className="font-semibold text-[var(--text-primary)]">Shipping</h3>
         <p className="mt-2 text-xs text-[var(--text-muted)]">Strategy: shipping charged separately</p>
         <div className="mt-3 space-y-2 text-sm">
-          {shippingRates.map((rate) => <div key={rate.region} className="flex items-start justify-between gap-3 border-t border-[var(--border)] pt-2"><span>{rate.label}</span><span className="text-right font-semibold">{rate.status === "REQUIRES_VERIFICATION" ? "Requires Printful rate verification" : rate.status === "MISSING" ? "Not configured" : `${rate.currency === "USD" ? "$" : ""}${Number(rate.single_product_rate).toFixed(2)}`}<span className="block text-xs font-normal text-[var(--text-muted)]">{rate.status === "AVAILABLE" ? `Additional: $${Number(rate.additional_product_rate).toFixed(2)}` : ""}</span></span></div>)}
+          {shippingRates.map((rate) => <div key={rate.region} className="flex items-start justify-between gap-3 border-t border-[var(--border)] pt-2"><span>{rate.label}</span><span className="text-right font-semibold">{rate.status === "MISSING" ? "Not configured" : `${rate.currency === "INR" ? "₹" : "$"}${Number(rate.single_product_rate).toFixed(2)}`}<span className="block text-xs font-normal text-[var(--text-muted)]">{rate.status === "AVAILABLE" ? `${rate.rate_source === "LETRUSTO_ESTIMATE" ? "Initial estimate · Needs Printful verification" : `Additional: ${rate.currency === "INR" ? "₹" : "$"}${Number(rate.additional_product_rate).toFixed(2)}`}` : ""}</span></span></div>)}
         </div>
         <label className="mt-4 flex items-center gap-2 text-sm text-[var(--text-secondary)]"><input type="checkbox" checked={shippingReviewed} readOnly disabled /> Shipping reviewed</label>
       </div>

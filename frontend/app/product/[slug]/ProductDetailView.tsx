@@ -29,6 +29,7 @@ type ShippingEstimate = {
   shipping_price?: number | string | null;
   message?: string | null;
   estimated_delivery?: string | null;
+  estimated?: boolean;
 };
 
 export default function ProductDetailView({ product, related }: Props) {
@@ -176,7 +177,7 @@ export default function ProductDetailView({ product, related }: Props) {
               <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 {!shippingEstimate && "Checking current shipping rate..."}
                 {shippingEstimate?.status === "REQUIRES_VERIFICATION" && (shippingEstimate.message ?? "Shipping rate requires Printful verification")}
-                {shippingEstimate?.status === "AVAILABLE" && `${shippingEstimate.currency === "USD" ? "$" : ""}${Number(shippingEstimate.shipping_price ?? 0).toFixed(2)} ${shippingEstimate.shipping_method ? `· ${shippingEstimate.shipping_method}` : ""}`}
+                {shippingEstimate?.status === "AVAILABLE" && `${shippingEstimate.estimated ? "Estimated shipping: " : ""}${shippingEstimate.currency === "INR" ? "₹" : "$"}${Number(shippingEstimate.shipping_price ?? 0).toFixed(2)}${shippingEstimate.shipping_method && !shippingEstimate.estimated ? ` · ${shippingEstimate.shipping_method}` : ""}`}
               </p>
               {shippingEstimate?.estimated_delivery && <p className="mt-1 text-xs text-[var(--text-muted)]">Estimated delivery: {shippingEstimate.estimated_delivery}</p>}
             </section>
