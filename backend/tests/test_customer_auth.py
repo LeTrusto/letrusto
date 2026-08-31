@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -8,7 +9,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.exceptions import BadRequestError, UnauthorizedError
-from app.models.entities import OtpChallenge, RefreshToken, User
+from app.core.security import hash_password, hash_refresh_token
+from app.models.entities import EmailVerificationToken, OtpChallenge, PasswordResetToken, RefreshToken, User
 from app.services.auth_service import AuthService
 from app.services.otp_auth_service import OtpAuthService, _hash_otp
 from app.services.sms_provider import MockSmsProvider
@@ -18,7 +20,7 @@ from app.services.sms_provider import get_sms_provider
 @pytest.fixture()
 def db():
     engine = create_engine("sqlite+pysqlite:///:memory:")
-    for model in (User, RefreshToken, OtpChallenge):
+    for model in (User, RefreshToken, OtpChallenge, EmailVerificationToken, PasswordResetToken):
         model.__table__.create(bind=engine)
     session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     session = session_factory()
@@ -171,6 +173,53 @@ def test_refresh_token_rotation_and_email_regression(db):
     assert refreshed.refresh_token != response.refresh_token
     with pytest.raises(UnauthorizedError):
         service.refresh(response.refresh_token)
+
+
+def test_email_verification_token_expires_and_is_single_use(db):
+    user = User(email="verify@example.com", full_name="Verify", password_hash=hash_password("password"))
+    db.add(user)
+    db.commit()
+    service = AuthService(db)
+
+    token = service.create_email_verification_token(user)
+    service.verify_email(token)
+    assert user.email_verified is True
+    with pytest.raises(UnauthorizedError, match="invalid or expired"):
+        service.verify_email(token)
+
+    second_token = service.create_email_verification_token(user)
+    record = db.query(EmailVerificationToken).filter(
+        EmailVerificationToken.token_hash == hashlib.sha256(second_token.encode()).hexdigest()
+    ).one()
+    record.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+    db.commit()
+    with pytest.raises(UnauthorizedError, match="invalid or expired"):
+        service.verify_email(second_token)
+
+
+def test_password_reset_expires_and_revokes_refresh_sessions(db):
+    user = User(email="reset@example.com", full_name="Reset", password_hash=hash_password("old-password"))
+    db.add(user)
+    db.commit()
+    service = AuthService(db)
+    auth = service.login(user.email, "old-password")
+    token, email = service.create_password_reset_token(user.email)
+    assert email == user.email
+    service.reset_password(token, "new-password")
+    assert service.login(user.email, "new-password").user_id == str(user.id)
+    assert db.query(RefreshToken).filter(RefreshToken.token_hash == hash_refresh_token(auth.refresh_token), RefreshToken.revoked.is_(True)).count() == 1
+    assert db.query(RefreshToken).filter(RefreshToken.user_id == user.id, RefreshToken.revoked.is_(False)).count() == 1
+    with pytest.raises(UnauthorizedError, match="invalid or expired"):
+        service.reset_password(token, "another-password")
+
+    expired_token, _ = service.create_password_reset_token(user.email)
+    record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token_hash == hashlib.sha256(expired_token.encode()).hexdigest()
+    ).one()
+    record.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+    db.commit()
+    with pytest.raises(UnauthorizedError, match="invalid or expired"):
+        service.reset_password(expired_token, "another-password")
 
 
 def test_admin_role_is_unchanged_by_customer_otp(db, sms):

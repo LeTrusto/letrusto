@@ -77,7 +77,12 @@ def _render_label_value(label: str, value: str) -> str:
     )
 
 
-def _html_document(preheader: str, body: str, logo_url: str = "https://letrusto.com/images/logo/logo.png") -> str:
+def _html_document(
+    preheader: str,
+    body: str,
+    logo_url: str = "https://letrusto.com/images/logo/logo.png",
+    website_url: str = "https://letrusto.com",
+) -> str:
     return (
         "<!doctype html>"
         '<html lang="en">'
@@ -100,7 +105,7 @@ def _html_document(preheader: str, body: str, logo_url: str = "https://letrusto.
         '            <tr>'
         '              <td style="padding:16px 12px 0 12px;text-align:center;color:#64748b;font-size:12px;line-height:1.6;">'
         '                This email was generated automatically by LeTrusto.<br />'
-        '                © LeTrusto • <a href="https://letrusto.com" style="color:#1d4ed8;text-decoration:none;">letrusto.com</a>'
+        f'                © LeTrusto • <a href="{escape(website_url)}" style="color:#1d4ed8;text-decoration:none;">LeTrusto</a>'
         '              </td>'
         '            </tr>'
         '          </table>'
@@ -153,6 +158,7 @@ def _support_admin_template(context: Mapping[str, Any]) -> RenderedEmail:
             '</div>'
         ),
         logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
+        website_url=str(context.get("website_url", "https://letrusto.com")),
     )
     text = _text_block(
         [
@@ -196,6 +202,7 @@ def _support_confirmation_template(context: Mapping[str, Any]) -> RenderedEmail:
             '</div>'
         ),
         logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
+        website_url=str(context.get("website_url", "https://letrusto.com")),
     )
     text = _text_block(
         [
@@ -211,6 +218,56 @@ def _support_confirmation_template(context: Mapping[str, Any]) -> RenderedEmail:
         ]
     )
     return RenderedEmail(subject=subject, html=html, text=text)
+
+
+def _email_verification_template(context: Mapping[str, Any]) -> RenderedEmail:
+    verification_url = str(context["verification_url"])
+    html = _html_document(
+        "Verify your LeTrusto email address",
+        (
+            '<h1 style="margin:0 0 10px 0;font-size:27px;line-height:1.2;color:#0f172a;">Verify your email address</h1>'
+            '<p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#475569;">Welcome to LeTrusto. Confirm your email address to finish setting up your account.</p>'
+            f'<a href="{escape(verification_url)}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 18px;border-radius:8px;">Verify email</a>'
+            '<p style="margin:22px 0 0 0;font-size:13px;line-height:1.7;color:#64748b;">This link expires in 30 minutes. If you did not create this account, you can ignore this email.</p>'
+        ),
+        logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
+        website_url=str(context.get("website_url", "https://letrusto.com")),
+    )
+    text = _text_block(
+        [
+            "Verify your LeTrusto email address",
+            "Welcome to LeTrusto. Confirm your email address to finish setting up your account.",
+            f"Verify your email: {verification_url}",
+            "This link expires in 30 minutes.",
+            "If you did not create this account, you can ignore this email.",
+        ]
+    )
+    return RenderedEmail(subject="Verify your LeTrusto email", html=html, text=text)
+
+
+def _password_reset_template(context: Mapping[str, Any]) -> RenderedEmail:
+    reset_url = str(context["reset_url"])
+    html = _html_document(
+        "Reset your LeTrusto password",
+        (
+            '<h1 style="margin:0 0 10px 0;font-size:27px;line-height:1.2;color:#0f172a;">Reset your password</h1>'
+            '<p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#475569;">We received a request to reset your LeTrusto password.</p>'
+            f'<a href="{escape(reset_url)}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 18px;border-radius:8px;">Reset password</a>'
+            '<p style="margin:22px 0 0 0;font-size:13px;line-height:1.7;color:#64748b;">This link expires in 30 minutes. If you did not request a reset, you can ignore this email.</p>'
+        ),
+        logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
+        website_url=str(context.get("website_url", "https://letrusto.com")),
+    )
+    text = _text_block(
+        [
+            "Reset your LeTrusto password",
+            "We received a request to reset your LeTrusto password.",
+            f"Reset your password: {reset_url}",
+            "This link expires in 30 minutes.",
+            "If you did not request a reset, you can ignore this email.",
+        ]
+    )
+    return RenderedEmail(subject="Reset your LeTrusto password", html=html, text=text)
 
 
 class EmailService:
@@ -248,6 +305,8 @@ class EmailService:
         registry = EmailTemplateRegistry()
         registry.register("support_ticket_admin", _support_admin_template)
         registry.register("support_ticket_customer_confirmation", _support_confirmation_template)
+        registry.register("email_verification", _email_verification_template)
+        registry.register("password_reset", _password_reset_template)
         return registry
 
     def register_template(self, name: str, renderer: Callable[[Mapping[str, Any]], RenderedEmail]) -> None:
@@ -301,7 +360,6 @@ class EmailService:
                     "Email sent",
                     extra={
                         "template": template_name,
-                        "to": to,
                         "from_email": sender,
                         "attempt": attempt,
                     },
@@ -313,7 +371,6 @@ class EmailService:
                         "Email delivery failed",
                         extra={
                             "template": template_name,
-                            "to": to,
                             "from_email": sender,
                             "attempt": attempt,
                         },
@@ -324,7 +381,6 @@ class EmailService:
                     "Email delivery attempt failed; retrying",
                     extra={
                         "template": template_name,
-                        "to": to,
                         "from_email": sender,
                         "attempt": attempt,
                         "max_attempts": attempts,

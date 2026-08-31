@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Header
 
 from app.api.deps import get_auth_service, get_current_user
@@ -18,25 +20,29 @@ from app.schemas.auth import (
 )
 from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
-from app.services.email_service import EmailService
+from app.services.email_service import EmailDeliveryError, EmailService
 from app.core.config import get_settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 def _send_verification_email(service: AuthService, user: User) -> None:
     settings = get_settings()
-    if not settings.RESEND_API_KEY or not user.email:
+    if not user.email:
         return
     token = service.create_email_verification_token(user)
     verification_url = f"{settings.PUBLIC_APP_URL.rstrip('/')}/verify-email?token={token}"
-    EmailService.from_settings(settings)._send(
-        to=user.email,
-        subject="Verify your LeTrusto email",
-        html=f"<p>Welcome to LeTrusto.</p><p><a href='{verification_url}'>Verify your email address</a></p><p>This link expires in 30 minutes.</p>",
-        text=f"Verify your LeTrusto email: {verification_url}\nThis link expires in 30 minutes.",
-        template_name="email_verification",
-    )
+    if not settings.RESEND_API_KEY:
+        return
+    try:
+        EmailService.from_settings(settings).send_template(
+            "email_verification",
+            to=user.email,
+            context={"verification_url": verification_url, "website_url": settings.PUBLIC_APP_URL},
+        )
+    except EmailDeliveryError:
+        logger.exception("Verification email delivery failed")
 
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
@@ -59,13 +65,16 @@ def request_password_reset(payload: PasswordResetRequest, service: AuthService =
     if result:
         token, email = result
         reset_url = f"{get_settings().PUBLIC_APP_URL.rstrip('/')}/reset-password?token={token}"
-        EmailService.from_settings(get_settings())._send(
-            to=email,
-            subject="Reset your LeTrusto password",
-            html=f"<p>We received a request to reset your LeTrusto password.</p><p><a href='{reset_url}'>Reset your password</a></p><p>This link expires in 30 minutes.</p>",
-            text=f"Reset your LeTrusto password: {reset_url}\nThis link expires in 30 minutes.",
-            template_name="password_reset",
-        )
+        settings = get_settings()
+        if settings.RESEND_API_KEY:
+            try:
+                EmailService.from_settings(settings).send_template(
+                    "password_reset",
+                    to=email,
+                    context={"reset_url": reset_url, "website_url": settings.PUBLIC_APP_URL},
+                )
+            except EmailDeliveryError:
+                logger.exception("Password reset email delivery failed")
     return MessageResponse(message="If an account exists for that email, a reset link has been sent.")
 
 

@@ -122,6 +122,13 @@ def get_settings() -> Settings:
         s.JWT_SECRET_KEY.startswith("change-this-") or len(s.JWT_SECRET_KEY) < 32
     ):
         raise RuntimeError("FATAL: JWT_SECRET_KEY must be a non-placeholder value of at least 32 characters in production.")
+    if s.APP_ENV == "production" and (
+        not s.RESEND_API_KEY
+        or not s.PUBLIC_APP_URL.startswith("https://")
+        or "localhost" in s.PUBLIC_APP_URL.lower()
+        or "127.0.0.1" in s.PUBLIC_APP_URL
+    ):
+        raise RuntimeError("FATAL: production email delivery requires RESEND_API_KEY and a non-local HTTPS PUBLIC_APP_URL.")
     if s.CASHFREE_ENV not in {"sandbox", "production"}:
         raise ValueError("CASHFREE_ENV must be sandbox or production")
     if s.APP_ENV == "production" and s.CASHFREE_ENV != "production":
