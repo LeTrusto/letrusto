@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import BrandMark from "./BrandMark";
+import { openCookiePreferences } from "@/components/CookieConsent";
 
 const SHOP_LINKS = [
   { label: "All Products", href: "/shop" },
@@ -48,6 +51,7 @@ export default function CommerceFooter() {
                   </Link>
                 </li>
               ))}
+              <li><button type="button" onClick={openCookiePreferences} className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--lt-accent)]">Cookie Preferences</button></li>
             </ul>
           </div>
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import CookiePreferencesLink from "@/components/CookiePreferencesLink";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -28,7 +29,12 @@ export default function PrivacyPolicyPage() {
           <p>We use service providers for hosting, authentication, analytics, email, payments, and order fulfillment. They receive only the information needed to provide their service. We do not sell personal information.</p>
         </section>
         <section>
-          <h2 className="text-lg font-bold text-gray-900">4. Contact</h2>
+          <h2 className="text-lg font-bold text-gray-900">4. Cookies</h2>
+          <p>Essential storage keeps sign-in, cart, checkout, payment, and security features working. Optional analytics is used only after permission. No marketing tools are currently configured.</p>
+          <CookiePreferencesLink />
+        </section>
+        <section>
+          <h2 className="text-lg font-bold text-gray-900">5. Contact</h2>
           <p>Questions about privacy or requests concerning your personal information can be sent through our <a className="underline" href="/contact">Contact page</a>.</p>
         </section>
       </div>

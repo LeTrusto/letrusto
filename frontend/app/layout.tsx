@@ -9,6 +9,8 @@ import GoogleAnalytics from "@/components/GoogleAnalytics";
 import SchemaOrg from "@/components/SchemaOrg";
 import { AuthProvider } from "@/lib/authContext";
 import { CartProvider } from "@/lib/cartContext";
+import { ConsentProvider } from "@/lib/consentContext";
+import CookieConsent from "@/components/CookieConsent";
 
 import "./globals.css";
 
@@ -125,14 +127,17 @@ export default function RootLayout({
             sameAs: ["https://x.com/letrusto", "https://instagram.com/letrusto"],
           }}
         />
-        <AuthProvider>
-          <CartProvider>
+        <ConsentProvider>
+          <AuthProvider>
+            <CartProvider>
             <CommerceNavbar />
             <main className="flex-1 pb-16 lg:pb-0">{children}</main>
             <CommerceFooter />
             <MobileNav />
-          </CartProvider>
-        </AuthProvider>
+            </CartProvider>
+          </AuthProvider>
+          <CookieConsent />
+        </ConsentProvider>
         <GoogleAnalytics />
       </body>
     </html>

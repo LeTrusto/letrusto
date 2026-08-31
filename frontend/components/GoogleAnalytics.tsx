@@ -5,13 +5,15 @@ import Script from "next/script";
 import { usePathname } from "next/navigation";
 
 import { GA_MEASUREMENT_ID, isAnalyticsEnabled, trackPageView } from "@/lib/analytics";
+import { useConsent } from "@/lib/consentContext";
 
 export default function GoogleAnalytics() {
 	const pathname = usePathname();
 	const lastTrackedUrlRef = useRef<string | null>(null);
+	const consent = useConsent();
 
 	useEffect(() => {
-		if (!isAnalyticsEnabled()) {
+		if (!isAnalyticsEnabled() || !consent?.analytics) {
 			return;
 		}
 
@@ -24,9 +26,9 @@ export default function GoogleAnalytics() {
 
 		trackPageView(currentUrl);
 		lastTrackedUrlRef.current = currentUrl;
-	}, [pathname]);
+	}, [pathname, consent?.analytics]);
 
-	if (process.env.NODE_ENV !== "production") {
+	if (process.env.NODE_ENV !== "production" || !consent?.analytics) {
 		return null;
 	}
 
