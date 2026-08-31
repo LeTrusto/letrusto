@@ -7,13 +7,16 @@ import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cartContext";
 import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
+const PLACEHOLDER_IMAGE = "/images/products/placeholder.svg";
+
 function formatPrice(value: number): string {
   return `₹${value.toLocaleString("en-IN")}`;
 }
 
 export default function CartPageView() {
-  const { items, updateQuantity, removeItem, clearCart, subtotal, savings, itemCount } = useCart();
+  const { items, updateQuantity, removeItem, clearCart, subtotal, savings, itemCount, cartReady, catalogReady, catalogError } = useCart();
   const [products, setProducts] = useState<Record<string, ReturnType<typeof toCommerceProduct>>>({});
+  const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     void getPublicProducts().then((catalog) => {
@@ -23,6 +26,26 @@ export default function CartPageView() {
       })));
     }).catch(() => {});
   }, []);
+
+  function imageSource(image: string | undefined) {
+    if (!image) return PLACEHOLDER_IMAGE;
+    return failedImages.has(image) ? PLACEHOLDER_IMAGE : image;
+  }
+
+  function markImageFailed(image: string | undefined) {
+    if (!image || image === PLACEHOLDER_IMAGE) return;
+    setFailedImages((current) => new Set(current).add(image));
+  }
+
+  if (!cartReady || (items.length > 0 && !catalogReady && !catalogError)) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-20 text-center" aria-live="polite">
+        <ShoppingBag size={48} strokeWidth={1} className="mx-auto text-[var(--text-muted)]" />
+        <h1 className="mt-4 text-xl font-bold text-[var(--text-primary)]">Loading your cart...</h1>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">Checking current product details and availability.</p>
+      </main>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -45,6 +68,7 @@ export default function CartPageView() {
           Clear Cart
         </button>
       </div>
+      {catalogError && <p role="alert" className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{catalogError}</p>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Items */}
@@ -53,17 +77,19 @@ export default function CartPageView() {
             const product = products[item.productId];
             if (!product) return null;
             const selectedVariant = product.catalogVariants?.find((variant) => variant.id === item.selectedVariantId);
+            const image = product.images[0];
 
             return (
               <div key={`${item.productId}-${item.selectedVariantId ?? "default"}`} className="lt-card flex gap-3 p-4 sm:gap-4">
                 <Link href={`/product/${product.slug}`} className="shrink-0">
                   <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-[var(--surface-muted)]">
                     <Image
-                      src={product.images[0] ?? "/images/products/placeholder.svg"}
+                      src={imageSource(image)}
                       alt={product.name}
                       fill
                       sizes="96px"
                       className="object-cover"
+                      onError={() => markImageFailed(image)}
                     />
                   </div>
                 </Link>
@@ -84,7 +110,8 @@ export default function CartPageView() {
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.productId, item.quantity - 1, item.selectedVariantId)}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-[var(--surface-muted)] transition-colors"
+                        disabled={item.quantity <= 1}
+                        className="w-8 h-8 flex items-center justify-center hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                         aria-label={`Decrease quantity for ${product.name}`}
                       >
                         <Minus size={14} />
@@ -96,7 +123,7 @@ export default function CartPageView() {
                         type="button"
                         onClick={() => updateQuantity(item.productId, item.quantity + 1, item.selectedVariantId)}
                         disabled={selectedVariant ? item.quantity >= selectedVariant.inventory : false}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-[var(--surface-muted)] transition-colors"
+                        className="w-8 h-8 flex items-center justify-center hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                         aria-label={`Increase quantity for ${product.name}`}
                       >
                         <Plus size={14} />

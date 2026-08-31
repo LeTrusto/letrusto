@@ -58,6 +58,9 @@ export type CartState = {
   itemCount: number;
   subtotal: number;
   savings: number;
+  cartReady: boolean;
+  catalogReady: boolean;
+  catalogError: string;
 };
 
 export const CATEGORY_MAP: Record<CommerceCategory, string> = {

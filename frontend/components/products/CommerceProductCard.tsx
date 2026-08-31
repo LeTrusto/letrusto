@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Plus } from "lucide-react";
+import { useState } from "react";
 import type { CommerceProduct } from "@/types/commerce";
 import { useCart } from "@/lib/cartContext";
 
@@ -14,19 +15,26 @@ function formatPrice(value: number): string {
   return `₹${value.toLocaleString("en-IN")}`;
 }
 
+const PLACEHOLDER_IMAGE = "/images/products/placeholder.svg";
+
 export default function CommerceProductCard({ product }: Props) {
   const { addItem } = useCart();
+  const [imageFailed, setImageFailed] = useState(false);
+  const selectedVariant = product.catalogVariants?.find((variant) => variant.available && variant.inventory > 0);
+  const canAdd = product.catalogVariants?.length ? Boolean(selectedVariant) : product.availability !== "out-of-stock";
+  const image = product.images[0];
 
   return (
     <div className="lt-card lt-card-hover group flex flex-col h-full p-0 overflow-hidden">
       {/* Image */}
       <Link href={`/product/${product.slug}`} className="relative aspect-square bg-[var(--surface-muted)] overflow-hidden">
         <Image
-          src={product.images[0] ?? "/images/products/placeholder.svg"}
+          src={imageFailed || !image ? PLACEHOLDER_IMAGE : image}
           alt={product.name}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="object-cover transition-transform duration-300 group-hover:scale-105"
+          onError={() => setImageFailed(true)}
         />
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
@@ -67,8 +75,9 @@ export default function CommerceProductCard({ product }: Props) {
             )}
           </div>
           <button
-            onClick={() => addItem(product.id, 1, product.catalogVariants?.find((variant) => variant.available)?.id)}
-            className="w-8 h-8 rounded-full bg-[var(--lt-primary)] text-white flex items-center justify-center hover:bg-zinc-700 transition-colors"
+            onClick={() => { if (canAdd) addItem(product.id, 1, selectedVariant?.id); }}
+            disabled={!canAdd}
+            className="w-8 h-8 rounded-full bg-[var(--lt-primary)] text-white flex items-center justify-center hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             aria-label={`Add ${product.name} to cart`}
           >
             <Plus size={16} strokeWidth={2} />

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { CartItem } from "@/types/commerce";
+import { addCartItem, cartItemsEqual, cartSubtotal, normalizeCartItems, updateCartItemQuantity } from "@/lib/cartRules";
 import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
 const STORAGE_KEY = "letrusto:cart";
@@ -15,6 +16,9 @@ type CartContextValue = {
   itemCount: number;
   subtotal: number;
   savings: number;
+  cartReady: boolean;
+  catalogReady: boolean;
+  catalogError: string;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -29,6 +33,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [products, setProducts] = useState<Record<string, ReturnType<typeof toCommerceProduct>>>({});
+  const [catalogReady, setCatalogReady] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
 
   useEffect(() => {
     void Promise.resolve().then(() => {
@@ -42,11 +48,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void getPublicProducts().then((catalog) => {
-      setProducts(Object.fromEntries(catalog.map((product) => {
+      const nextProducts = Object.fromEntries(catalog.map((product) => {
         const commerceProduct = toCommerceProduct(product);
         return [commerceProduct.id, commerceProduct];
-      })));
-    }).catch(() => {});
+      }));
+      setProducts(nextProducts);
+      setItems((current) => normalizeCartItems(current, nextProducts));
+      setCatalogReady(true);
+      setCatalogError("");
+    }).catch(() => {
+      setCatalogReady(false);
+      setCatalogError("Unable to load current product details. Please refresh and try again.");
+    });
   }, []);
 
   useEffect(() => {
@@ -54,21 +67,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     saveCart(items);
   }, [hydrated, items]);
 
-  const addItem = useCallback((productId: string, quantity = 1, selectedVariantId?: string) => {
-    const product = products[productId];
-    const variant = product?.catalogVariants?.find((candidate) => candidate.id === selectedVariantId);
-    if (variant && (!variant.available || quantity > variant.inventory)) return;
-    setItems((prev) => {
-      const existing = prev.find((i) => i.productId === productId && i.selectedVariantId === selectedVariantId);
-      const nextQuantity = quantity + (existing?.quantity ?? 0);
-      if (variant && nextQuantity > variant.inventory) return prev;
-      if (existing) {
-        return prev.map((i) =>
-          i === existing ? { ...i, quantity: i.quantity + quantity } : i
-        );
-      }
-      return [...prev, { productId, quantity, selectedVariantId }];
+  useEffect(() => {
+    if (!hydrated || !catalogReady) return;
+    void Promise.resolve().then(() => {
+      setItems((current) => {
+        const normalized = normalizeCartItems(current, products);
+        return cartItemsEqual(current, normalized) ? current : normalized;
+      });
     });
+  }, [catalogReady, hydrated, products]);
+
+  const addItem = useCallback((productId: string, quantity = 1, selectedVariantId?: string) => {
+    setItems((prev) => addCartItem(prev, products, productId, quantity, selectedVariantId));
   }, [products]);
 
   const removeItem = useCallback((productId: string, selectedVariantId?: string) => {
@@ -76,32 +86,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateQuantity = useCallback((productId: string, quantity: number, selectedVariantId?: string) => {
-    if (quantity <= 0) {
-      setItems((prev) => prev.filter((item) => item.productId !== productId || item.selectedVariantId !== selectedVariantId));
-      return;
-    }
-    setItems((prev) => prev.map((item) => {
-      if (item.productId !== productId || item.selectedVariantId !== selectedVariantId) return item;
-      const inventory = products[item.productId]?.catalogVariants?.find((variant) => variant.id === item.selectedVariantId)?.inventory;
-      return inventory !== undefined && quantity > inventory ? item : { ...item, quantity };
-    }));
+    setItems((prev) => updateCartItemQuantity(prev, products, productId, quantity, selectedVariantId));
   }, [products]);
 
   const clearCart = useCallback(() => setItems([]), []);
 
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
-  const subtotal = items.reduce((sum, item) => {
-    const product = products[item.productId];
-    const variant = product?.catalogVariants?.find((candidate) => candidate.id === item.selectedVariantId);
-    return sum + (variant?.price ?? product?.price ?? 0) * item.quantity;
-  }, 0);
+  const subtotal = cartSubtotal(items, products);
 
   const savings = 0;
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart, itemCount, subtotal, savings }}
+      value={{ items, addItem, removeItem, updateQuantity, clearCart, itemCount, subtotal, savings, cartReady: hydrated, catalogReady, catalogError }}
     >
       {children}
     </CartContext.Provider>
