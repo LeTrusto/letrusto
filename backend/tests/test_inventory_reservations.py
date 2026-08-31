@@ -167,7 +167,7 @@ def test_payment_success_consumes_reservation_without_local_inventory_decrement(
         async def no_fulfillment(_, __):
             return order
         monkeypatch.setattr("app.services.cashfree_service.FulfillmentService.submit", no_fulfillment)
-        body = json.dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": {"payment_status": "SUCCESS", "cf_payment_id": "pay-1"}}}).encode()
+        body = json.dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": {"payment_status": "SUCCESS", "cf_payment_id": f"pay-success-{order.id}"}}}).encode()
         timestamp = "payment-success-test"
         signature = base64.b64encode(hmac.new(b"webhook", timestamp.encode() + body, hashlib.sha256).digest()).decode()
         asyncio.run(CashfreeService(db, settings()).process_webhook(body, timestamp, signature))
@@ -188,7 +188,7 @@ def test_payment_failure_releases_reservation():
         order = db.get(Order, result.id)
         order.provider_order_id = f"cf-{uuid4().hex}"
         db.commit()
-        body = json.dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": {"payment_status": "FAILED", "payment_message": "declined", "cf_payment_id": "pay-2"}}}).encode()
+        body = json.dumps({"data": {"order": {"order_id": order.provider_order_id}, "payment": {"payment_status": "FAILED", "payment_message": "declined", "cf_payment_id": f"pay-failure-{order.id}"}}}).encode()
         timestamp = "payment-failure-test"
         signature = base64.b64encode(hmac.new(b"webhook", timestamp.encode() + body, hashlib.sha256).digest()).decode()
         asyncio.run(CashfreeService(db, settings()).process_webhook(body, timestamp, signature))

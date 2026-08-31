@@ -139,7 +139,7 @@ class TestCustomerCancellation:
     def test_cancel_rejected_after_cj_submission(self):
         db = SessionLocal()
         user, admin, product, _ = _fixture(db)
-        order = _make_paid_order(db, user, supplier_order_id="CJ-12345")
+        order = _make_paid_order(db, user, supplier_order_id=f"CJ-12345-{uuid4().hex[:8]}")
         try:
             svc = CancellationService(db)
             with pytest.raises(BadRequestError, match="submitted to supplier"):
@@ -239,7 +239,7 @@ class TestRefundProvider:
         user, admin, product, _ = _fixture(db)
         order = _make_paid_order(db, user, payment_provider="RAZORPAY")
         order.provider_order_id = f"order_{uuid4().hex[:8]}"
-        attempt = PaymentAttempt(order=order, provider="RAZORPAY", provider_order_id=order.provider_order_id, status="CAPTURED", provider_payment_id="pay_razorpay")
+        attempt = PaymentAttempt(order=order, provider="RAZORPAY", provider_order_id=order.provider_order_id, status="CAPTURED", provider_payment_id=f"pay_razorpay_{uuid4().hex[:8]}")
         db.add(attempt)
         db.commit()
         cashfree = MagicMock()
@@ -278,7 +278,7 @@ class TestRefundProvider:
         user, admin, product, _ = _fixture(db)
         order = _make_paid_order(db, user, payment_provider="RAZORPAY")
         order.provider_order_id = f"order_{uuid4().hex[:8]}"
-        db.add(PaymentAttempt(order=order, provider="RAZORPAY", provider_order_id=order.provider_order_id, status="CAPTURED", provider_payment_id="pay_razorpay_fail"))
+        db.add(PaymentAttempt(order=order, provider="RAZORPAY", provider_order_id=order.provider_order_id, status="CAPTURED", provider_payment_id=f"pay_razorpay_fail_{uuid4().hex[:8]}"))
         db.commit()
         razorpay = MagicMock()
         razorpay.request_refund.return_value = {"provider_status": "failed", "failure_reason": "Provider rejected refund"}
@@ -382,10 +382,11 @@ class TestRefundProvider:
         db = SessionLocal()
         user, admin, product, _ = _fixture(db)
         order = _make_paid_order(db, user)
+        refund_id = f"rfnd_wh_{uuid4().hex[:8]}"
         refund = RefundRequest(
             order=order, provider="CASHFREE", provider_order_id=order.provider_order_id or "",
             amount=order.total, currency="INR", status="PROCESSING",
-            idempotency_key=f"refund-{order.id}", provider_refund_id="rfnd_wh_001",
+            idempotency_key=f"refund-{order.id}", provider_refund_id=refund_id,
             requested_by="customer",
         )
         db.add(refund)
@@ -394,7 +395,7 @@ class TestRefundProvider:
         db.commit()
         try:
             svc = CancellationService(db)
-            svc.process_refund_webhook("rfnd_wh_001", "SUCCESS", str(order.id))
+            svc.process_refund_webhook(refund_id, "SUCCESS", str(order.id))
             db.refresh(refund)
             db.refresh(order)
             assert refund.status == "SUCCESS"
@@ -411,10 +412,11 @@ class TestRefundProvider:
         db = SessionLocal()
         user, admin, product, _ = _fixture(db)
         order = _make_paid_order(db, user)
+        refund_id = f"rfnd_duplicate_{uuid4().hex[:8]}"
         refund = RefundRequest(
             order=order, provider="CASHFREE", provider_order_id=order.provider_order_id or "",
             amount=order.total, currency="INR", status="SUCCESS",
-            idempotency_key=f"refund-{order.id}", provider_refund_id="rfnd_dup_wh",
+            idempotency_key=f"refund-{order.id}", provider_refund_id=refund_id,
             requested_by="customer", completed_at=datetime.now(timezone.utc),
         )
         db.add(refund)
@@ -423,7 +425,7 @@ class TestRefundProvider:
         db.commit()
         try:
             svc = CancellationService(db)
-            svc.process_refund_webhook("rfnd_dup_wh", "SUCCESS", str(order.id))
+            svc.process_refund_webhook(refund_id, "SUCCESS", str(order.id))
             # No error, no state change
             db.refresh(refund)
             assert refund.status == "SUCCESS"
@@ -437,6 +439,7 @@ class TestRefundProvider:
         db = SessionLocal()
         user, admin, product, _ = _fixture(db)
         order = _make_paid_order(db, user)
+        refund_id = f"rfnd_signed_{uuid4().hex[:8]}"
         refund = RefundRequest(
             order=order,
             provider="CASHFREE",
@@ -445,7 +448,7 @@ class TestRefundProvider:
             currency="INR",
             status="PROCESSING",
             idempotency_key=f"refund-{order.id}",
-            provider_refund_id="rfnd_signed_webhook",
+            provider_refund_id=refund_id,
             requested_by="customer",
         )
         db.add(refund)
@@ -458,7 +461,7 @@ class TestRefundProvider:
                     "type": "REFUND_STATUS_WEBHOOK",
                     "data": {
                         "refund": {
-                            "cf_refund_id": "rfnd_signed_webhook",
+                            "cf_refund_id": refund_id,
                             "order_id": order.provider_order_id,
                             "refund_status": "SUCCESS",
                         }

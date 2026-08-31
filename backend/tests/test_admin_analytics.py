@@ -15,7 +15,7 @@ from app.services.order_service import OrderService
 
 def fixture(db):
     suffix = uuid4().hex[:8]
-    now = datetime.now(timezone.utc) - timedelta(days=60)
+    now = datetime.now(timezone.utc) + timedelta(days=1000 + int(suffix, 16) % 10000)
     user = User(email=f"analytics-{suffix}@example.com", full_name="Analytics Test")
     product = Product(slug=f"analytics-{suffix}", name="Analytics Fixture", description="test", status="ACTIVE", supplier="cj", supplier_product_id=f"CJ-{suffix}", price_value=Decimal("100"), selling_price=Decimal("100"), cj_inventory=5, factory_inventory=999, ai_score=1, rating=Decimal("1"), ai_summary="", review_summary="")
     variant = ProductVariant(product=product, supplier_variant_id=f"VID-{suffix}", supplier_variant_sku=f"SKU-{suffix}", name="Gold", position=1, selling_price=Decimal("100"), cj_inventory=5, factory_inventory=999, active=True)
@@ -105,9 +105,9 @@ def test_new_order_captures_immutable_economics_snapshot():
         order = db.get(Order, result.id)
         order.status = "PAID"
         order.payment_status = "PAID"
-        order.paid_at = datetime.now(timezone.utc)
+        order.paid_at = datetime.now(timezone.utc) + timedelta(days=1000 + int(suffix, 16) % 10000)
         db.commit()
-        period = AdminAnalyticsService.resolve_period("today")
+        period = AdminAnalyticsService.resolve_period("custom", order.paid_at.date(), order.paid_at.date())
         summary = AdminAnalyticsService(db).summary(period)
         assert summary.contribution_before_cac.value == Decimal("96.00")
         assert summary.contribution_status == "PARTIAL"

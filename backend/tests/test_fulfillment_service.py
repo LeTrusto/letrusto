@@ -162,8 +162,8 @@ def test_unknown_tracking_status_does_not_downgrade_or_erase_tracking(monkeypatc
 
 def test_admin_supplier_payment_action_is_explicit_and_persists_state(monkeypatch):
     db = SessionLocal(); user, product, order = make_paid_order(db); fake = FakeCJ()
-    order.supplier_order_id = "CJ-EXPLICIT"
-    order.supplier_shipment_order_id = "SHIP-EXPLICIT"
+    order.supplier_order_id = f"CJ-EXPLICIT-{product.supplier_product_id}"
+    order.supplier_shipment_order_id = f"SHIP-EXPLICIT-{product.supplier_product_id}"
     order.supplier_status = "UNPAID"
     order.supplier_payment_state = "AWAITING_PAYMENT"
     db.commit()
@@ -176,7 +176,7 @@ def test_admin_supplier_payment_action_is_explicit_and_persists_state(monkeypatc
         response = TestClient(app).post(f"/api/v1/admin/orders/{order.id}/supplier-payment", json={"required_amount_usd": 25})
         assert response.status_code == 200
         body = response.json()
-        assert body["supplier_order_id"] == "CJ-EXPLICIT"
+        assert body["supplier_order_id"] == order.supplier_order_id
         assert body["payment_state"] == "PENDING"
         assert body["confirmation_required"] is True
         db.refresh(order)

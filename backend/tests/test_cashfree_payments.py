@@ -94,7 +94,8 @@ def test_webhook_signature_and_duplicate_success_are_idempotent():
     order.payment_provider = "CASHFREE"
     order.provider_order_id = order.order_number
     db.commit()
-    body = json.dumps({"data": {"order": {"order_id": order.order_number}, "payment": {"cf_payment_id": "cf-pay-1", "payment_status": "SUCCESS"}}}).encode()
+    payment_id = f"cf-pay-{order.id}"
+    body = json.dumps({"data": {"order": {"order_id": order.order_number}, "payment": {"cf_payment_id": payment_id, "payment_status": "SUCCESS"}}}).encode()
     timestamp = "1700000000000"
     signature = base64.b64encode(hmac.new(b"webhook", timestamp.encode() + body, hashlib.sha256).digest()).decode()
     try:

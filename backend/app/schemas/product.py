@@ -99,8 +99,8 @@ class ProductShippingEstimate(BaseModel):
     shipping_method: str | None = None
     shipping_price: Decimal | None = None
     estimated_delivery: str | None = None
-        rate_source: str | None = None
-        estimated: bool = False
+    rate_source: str | None = None
+    estimated: bool = False
 
 
 class ProductSearchQuery(BaseModel):
