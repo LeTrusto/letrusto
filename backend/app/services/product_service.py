@@ -12,6 +12,7 @@ from app.schemas.product import (
     PaginatedProductsResponse,
     ProductDTO,
     ProductSearchQuery,
+    ProductShippingEstimate,
 )
 from app.services.product_mapper import to_product_dto
 from app.services.printful_shipping_service import PrintfulShippingService

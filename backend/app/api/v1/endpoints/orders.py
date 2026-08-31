@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Header, Request
 from app.api.deps import get_cancellation_service, get_cashfree_service, get_current_admin, get_current_user, get_order_service, get_razorpay_service
 from app.models.entities import User
 from app.schemas.cancellation import AdminCancelRequest, CancelOrderRequest, CancellationStatusDTO, RefundDTO
-from app.schemas.orders import CartDTO, CartItemRequest, CreateOrderRequest, OrderDTO
+from app.schemas.orders import CartDTO, CartItemRequest, CreateOrderRequest, OrderDTO, OrderQuoteDTO, OrderQuoteRequest
 from app.services.order_service import OrderService
 from app.schemas.payments import PaymentSessionDTO, PaymentStatusDTO, RazorpayOrderDTO, RazorpayPaymentVerification
 from app.services.cancellation_service import CancellationService
@@ -38,6 +38,11 @@ def remove_cart_item(item_id: UUID, current_user: User = Depends(get_current_use
 @router.delete("/cart", response_model=CartDTO)
 def clear_cart(current_user: User = Depends(get_current_user), service: OrderService = Depends(get_order_service)) -> CartDTO:
     return service.clear_cart(current_user)
+
+
+@router.post("/orders/quote", response_model=OrderQuoteDTO)
+def quote_order(payload: OrderQuoteRequest, current_user: User = Depends(get_current_user), service: OrderService = Depends(get_order_service)) -> OrderQuoteDTO:
+    return service.quote_order(current_user, payload)
 
 
 @router.post("/orders", response_model=OrderDTO)

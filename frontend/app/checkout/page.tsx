@@ -8,16 +8,14 @@ import { CheckCircle2, Loader2, LockKeyhole } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/lib/cartContext";
 import { buildRazorpayCheckoutOptions, callbackMatchesOrder, isBackendPaymentSuccess, RAZORPAY_CHECKOUT_SCRIPT_URL, type RazorpayCheckoutOptions, type RazorpayPaymentFailure, type RazorpayResult } from "@/lib/razorpayCheckout";
-import { createOrder, createRazorpayOrder, verifyRazorpayPayment } from "@/services/order.service";
+import { createOrder, createRazorpayOrder, getOrderQuote, verifyRazorpayPayment } from "@/services/order.service";
 import { getAccount, updateAccountProfile } from "@/services/account.service";
-import type { Order, RazorpayOrder } from "@/types/orders";
+import type { Order, OrderQuote, RazorpayOrder } from "@/types/orders";
 import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
-const INR_PER_USD = Number(process.env.NEXT_PUBLIC_PRICING_FX_RATE ?? "98");
-
-function money(value: number, currency = "INR") {
-  const amount = currency === "USD" ? value / INR_PER_USD : value;
-  return new Intl.NumberFormat(currency === "USD" ? "en-US" : "en-IN", { style: "currency", currency }).format(amount);
+// Catalog, cart, checkout, and orders are all priced in INR by the backend.
+function money(value: number) {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(value);
 }
 
 type RazorpayCheckout = {
@@ -32,6 +30,15 @@ declare global {
 }
 
 type PaymentState = "idle" | "creating" | "opening" | "verifying" | "success" | "failed" | "cancelled";
+type QuoteState = "idle" | "loading" | "ready" | "error";
+
+// A Cancellation Policy route does not exist yet; link it here once it is published.
+const LEGAL_LINKS = [
+  { label: "Terms of Use", href: "/terms-of-use" },
+  { label: "Privacy Policy", href: "/privacy-policy" },
+  { label: "Shipping Policy", href: "/shipping-policy" },
+  { label: "Returns & Refunds", href: "/returns-policy" },
+];
 
 export default function CheckoutPage() {
   const { accessToken, isLoading, isAuthenticated, user } = useAuth();
@@ -44,10 +51,19 @@ export default function CheckoutPage() {
   const [razorpayOrder, setRazorpayOrder] = useState<RazorpayOrder | null>(null);
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [razorpayReady, setRazorpayReady] = useState(false);
+  const [quoteResult, setQuoteResult] = useState<{ key: string; quote: OrderQuote | null; error: string } | null>(null);
   const idempotencyKey = useRef<string | null>(null);
   const paymentCallbackHandled = useRef(false);
   const checkoutEdited = useRef(false);
   const isIndia = form.country.trim().toUpperCase() === "IN" || form.country.trim().toUpperCase() === "INDIA";
+  const orderItems = items.map((item) => ({ product_id: item.productId, variant_id: item.selectedVariantId ?? "", quantity: item.quantity }));
+  const orderItemsKey = JSON.stringify(orderItems);
+  const destination = form.country.trim();
+  const quoteKey = `${destination}|${orderItemsKey}`;
+  const canQuote = Boolean(accessToken) && items.length > 0 && destination.length >= 2 && !createdOrder;
+  const quoteState: QuoteState = !canQuote ? "idle" : quoteResult?.key !== quoteKey ? "loading" : quoteResult.quote ? "ready" : "error";
+  const quote = quoteResult?.key === quoteKey ? quoteResult.quote : null;
+  const quoteError = quoteResult?.key === quoteKey ? quoteResult.error : "";
 
   useEffect(() => {
     if (!accessToken) return;
@@ -72,6 +88,20 @@ export default function CheckoutPage() {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!canQuote) return;
+    const [country, itemsJson] = [quoteKey.slice(0, quoteKey.indexOf("|")), quoteKey.slice(quoteKey.indexOf("|") + 1)];
+    let ignore = false;
+    void getOrderQuote(accessToken!, { items: JSON.parse(itemsJson) as typeof orderItems, country })
+      .then((result) => {
+        if (!ignore) setQuoteResult({ key: quoteKey, quote: result, error: "" });
+      })
+      .catch((err: unknown) => {
+        if (!ignore) setQuoteResult({ key: quoteKey, quote: null, error: err instanceof Error ? err.message : "Shipping could not be calculated. Please try again." });
+      });
+    return () => { ignore = true; };
+  }, [accessToken, canQuote, quoteKey]);
+
   if (isLoading) return <main className="max-w-2xl mx-auto px-4 py-20 text-center">Loading checkout...</main>;
   if (!isAuthenticated) return <main className="max-w-2xl mx-auto px-4 py-20 text-center"><h1 className="lt-heading-2">Sign in to checkout</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Your cart is ready. Sign in with your email and password to continue.</p><div className="mt-6 flex flex-wrap justify-center gap-3"><Link href="/login?redirect=/checkout" className="lt-btn lt-btn-primary inline-flex">Sign in with email</Link></div></main>;
   if (items.length === 0) return <main className="max-w-2xl mx-auto px-4 py-20 text-center"><h1 className="lt-heading-2">Your cart is empty</h1><Link href="/shop" className="lt-btn lt-btn-primary mt-6 inline-flex">Continue Shopping</Link></main>;
@@ -80,7 +110,11 @@ export default function CheckoutPage() {
     event.preventDefault();
     if (!accessToken || working || createdOrder) return;
     if (!isIndia) {
-      setError("Razorpay checkout currently supports INR orders only. Please use an India shipping address.");
+      setError("We currently deliver and accept payment only for India shipping addresses.");
+      return;
+    }
+    if (quoteState !== "ready" || !quote?.purchasable) {
+      setError(quoteError || "Shipping for this order could not be confirmed yet. Please review your address and try again.");
       return;
     }
     setWorking(true); setError(""); setPaymentState("creating");
@@ -169,8 +203,9 @@ export default function CheckoutPage() {
   }
 
   const razorpayScript = <Script src={RAZORPAY_CHECKOUT_SCRIPT_URL} strategy="afterInteractive" onLoad={() => setRazorpayReady(true)} onError={() => setError("Payment checkout is unavailable. Please try again later.")} />;
+  const serverTotalsReady = quoteState === "ready" && quote !== null && quote.purchasable;
 
-  if (createdOrder) return <>{razorpayScript}<main className="mx-auto max-w-2xl px-4 py-16 text-center md:py-20"><div className="lt-card p-6 md:p-8"><CheckCircle2 className="mx-auto text-[var(--lt-success)]" size={38} /><p className="lt-label mt-4">{paymentState === "success" ? "Payment successful" : "Order created"}</p><h1 className="lt-heading-2 mt-2">{paymentState === "success" ? "Thank you for your order" : "Ready for payment"}</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Order {createdOrder.order_number} · {money(createdOrder.total, createdOrder.currency)}<br />Your order is confirmed only after the payment provider verifies it.</p>{paymentState === "success" ? <p className="mt-6 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">Payment verified by LeTrusto. Fulfillment will continue from your order record.</p> : razorpayOrder ? <button type="button" disabled={paymentState === "opening" || paymentState === "verifying"} onClick={openRazorpay} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "opening" ? <><Loader2 size={16} className="animate-spin" /> Opening Razorpay...</> : paymentState === "verifying" ? <><Loader2 size={16} className="animate-spin" /> Verifying payment...</> : "Continue to secure payment"}</button> : <button type="button" disabled={paymentState === "creating"} onClick={() => { void prepareRazorpayOrder(createdOrder.id); }} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "creating" ? <><Loader2 size={16} className="animate-spin" /> Creating payment...</> : "Retry payment setup"}</button>}{error && <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}<Link href={`/orders/${createdOrder.id}`} className="lt-btn lt-btn-ghost mt-3 inline-flex">View order details</Link></div></main></>;
+  if (createdOrder) return <>{razorpayScript}<main className="mx-auto max-w-2xl px-4 py-16 text-center md:py-20"><div className="lt-card p-6 md:p-8"><CheckCircle2 className="mx-auto text-[var(--lt-success)]" size={38} /><p className="lt-label mt-4">{paymentState === "success" ? "Payment successful" : "Order created"}</p><h1 className="lt-heading-2 mt-2">{paymentState === "success" ? "Thank you for your order" : "Ready for payment"}</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Order {createdOrder.order_number}<br />Your order is confirmed only after the payment provider verifies it.</p><dl className="mt-5 space-y-2 border-y border-[var(--border)] py-4 text-left text-sm"><div className="flex justify-between gap-3"><dt className="text-[var(--text-secondary)]">Subtotal</dt><dd data-testid="order-subtotal">{money(createdOrder.subtotal)}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--text-secondary)]">Shipping</dt><dd data-testid="order-shipping">{money(createdOrder.shipping_amount)}</dd></div><div className="flex justify-between gap-3 text-base font-bold"><dt>Total payable</dt><dd data-testid="order-total">{money(createdOrder.total)}</dd></div></dl>{paymentState === "success" ? <p className="mt-6 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">Payment verified by LeTrusto. Fulfillment will continue from your order record.</p> : razorpayOrder ? <button type="button" disabled={paymentState === "opening" || paymentState === "verifying"} onClick={openRazorpay} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "opening" ? <><Loader2 size={16} className="animate-spin" /> Opening Razorpay...</> : paymentState === "verifying" ? <><Loader2 size={16} className="animate-spin" /> Verifying payment...</> : `Pay ${money(createdOrder.total)} with Razorpay`}</button> : <button type="button" disabled={paymentState === "creating"} onClick={() => { void prepareRazorpayOrder(createdOrder.id); }} className="lt-btn lt-btn-primary mt-6 w-full">{paymentState === "creating" ? <><Loader2 size={16} className="animate-spin" /> Creating payment...</> : "Retry payment setup"}</button>}{error && <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}<Link href={`/orders/${createdOrder.id}`} className="lt-btn lt-btn-ghost mt-3 inline-flex">View order details</Link></div></main></>;
 
   return <>{razorpayScript}<main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
     <header><p className="lt-label">Secure checkout</p><h1 className="lt-heading-2 mt-1">Checkout</h1><p className="mt-2 text-sm text-[var(--text-muted)]">Review your details before continuing to payment.</p></header>
@@ -190,7 +225,45 @@ export default function CheckoutPage() {
         </div></div>
         {error && <p role="alert" className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       </section>
-      <aside className="lt-card h-fit p-5 lg:sticky lg:top-20"><h2 className="font-bold">Order summary</h2><div className="mt-4 space-y-4 text-sm">{items.map((item) => { const product = products[item.productId]; const variant = product?.catalogVariants?.find((candidate) => candidate.id === item.selectedVariantId); const unitPrice = variant?.price ?? product?.price ?? 0; const currency = isIndia ? "INR" : "USD"; return <div key={`${item.productId}-${item.selectedVariantId}`} className="flex justify-between gap-3"><span className="min-w-0"><span className="line-clamp-2 font-medium">{product?.name ?? item.productId}</span><span className="mt-1 block text-xs text-[var(--text-muted)]">{variant?.label ?? "Selected variant"} · {item.quantity} × {money(unitPrice, currency)}</span></span><strong className="shrink-0">{money(unitPrice * item.quantity, currency)}</strong></div>; })}</div><div className="mt-5 space-y-2 border-t border-[var(--border)] pt-4 text-sm"><div className="flex justify-between"><span className="text-[var(--text-secondary)]">Subtotal</span><span>{money(subtotal, isIndia ? "INR" : "USD")}</span></div><div className="flex justify-between"><span className="text-[var(--text-secondary)]">Shipping</span><span>Included in total</span></div></div><div className="mt-4 flex justify-between border-t border-[var(--border)] pt-4 text-base font-bold"><span>Total</span><span>{money(subtotal, isIndia ? "INR" : "USD")}</span></div><button disabled={working} className="lt-btn lt-btn-primary mt-5 w-full">{working ? <><Loader2 size={16} className="animate-spin" /> Creating order...</> : "Continue to payment"}</button><p className="mt-3 flex items-start gap-2 text-xs text-[var(--text-muted)]"><LockKeyhole size={14} className="mt-0.5 shrink-0" />Payment is completed with the available payment provider after your order is created.</p></aside>
+      <aside className="lt-card h-fit p-5 lg:sticky lg:top-20">
+        <h2 className="font-bold">Order summary</h2>
+        <div className="mt-4 space-y-4 text-sm">{items.map((item) => { const product = products[item.productId]; const variant = product?.catalogVariants?.find((candidate) => candidate.id === item.selectedVariantId); const unitPrice = variant?.price ?? product?.price ?? 0; return <div key={`${item.productId}-${item.selectedVariantId}`} className="flex justify-between gap-3"><span className="min-w-0"><span className="line-clamp-2 font-medium">{product?.name ?? item.productId}</span><span className="mt-1 block text-xs text-[var(--text-muted)]">{variant?.label ?? "Selected variant"} · {item.quantity} × {money(unitPrice)}</span></span><strong className="shrink-0">{money(unitPrice * item.quantity)}</strong></div>; })}</div>
+        <dl className="mt-5 space-y-2 border-t border-[var(--border)] pt-4 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-[var(--text-secondary)]">Subtotal</dt>
+            <dd data-testid="checkout-subtotal">{money(quote?.subtotal ?? subtotal)}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-[var(--text-secondary)]">Shipping</dt>
+            <dd data-testid="checkout-shipping">
+              {quoteState === "loading" && "Calculating..."}
+              {quoteState === "idle" && "Enter delivery address"}
+              {quoteState === "error" && "Unavailable"}
+              {quoteState === "ready" && (serverTotalsReady ? money(quote!.shipping_amount) : "Not available")}
+            </dd>
+          </div>
+        </dl>
+        <div className="mt-4 flex justify-between gap-3 border-t border-[var(--border)] pt-4 text-base font-bold">
+          <span>Total payable</span>
+          <span data-testid="checkout-total">{serverTotalsReady ? money(quote!.total) : "—"}</span>
+        </div>
+        {serverTotalsReady && quote?.shipping_message && <p className="mt-2 text-xs text-[var(--text-muted)]">{quote.shipping_message}</p>}
+        {!isIndia && <p role="status" className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">International checkout is not available yet. You can browse LeTrusto from anywhere, but orders can currently be placed only for delivery addresses in India.</p>}
+        {isIndia && quoteState === "ready" && !quote?.purchasable && <p role="status" className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{quote?.shipping_message ?? "Shipping for this destination is not available yet."}</p>}
+        {isIndia && quoteState === "error" && <p role="status" className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{quoteError}</p>}
+        <button disabled={working || !serverTotalsReady} className="lt-btn lt-btn-primary mt-5 w-full">{working ? <><Loader2 size={16} className="animate-spin" /> Creating order...</> : "Continue to payment"}</button>
+        <p className="mt-3 flex items-start gap-2 text-xs text-[var(--text-muted)]"><LockKeyhole size={14} className="mt-0.5 shrink-0" />Payment is completed securely with Razorpay in INR after your order is created. Shipping is charged separately and is shown above.</p>
+        <div className="mt-4 border-t border-[var(--border)] pt-4">
+          <p className="text-xs font-semibold text-[var(--text-secondary)]">By continuing you agree to our policies</p>
+          <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            {LEGAL_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="text-xs text-[var(--text-secondary)] underline hover:text-[var(--lt-accent)]">{link.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
     </form>
   </main></>;
 }

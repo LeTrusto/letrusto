@@ -1,5 +1,5 @@
 import { buildApiUrl } from "@/services/api";
-import type { CancellationStatus, CreateOrderPayload, Order, OrderList, PaymentSession, PaymentStatus, RazorpayOrder } from "@/types/orders";
+import type { CancellationStatus, CreateOrderPayload, Order, OrderList, OrderQuote, OrderQuotePayload, PaymentSession, PaymentStatus, RazorpayOrder } from "@/types/orders";
 
 async function orderRequest<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(buildApiUrl(path), {
@@ -16,6 +16,10 @@ async function orderRequest<T>(path: string, token: string, init?: RequestInit):
 
 export function createOrder(token: string, payload: CreateOrderPayload) {
   return orderRequest<Order>("/orders", token, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function getOrderQuote(token: string, payload: OrderQuotePayload) {
+  return orderRequest<OrderQuote>("/orders/quote", token, { method: "POST", body: JSON.stringify(payload) });
 }
 
 export function getOrder(token: string, orderId: string) {

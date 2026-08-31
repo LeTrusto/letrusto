@@ -53,6 +53,27 @@ class CreateOrderRequest(BaseModel):
     idempotency_key: str = Field(min_length=8, max_length=100)
 
 
+class OrderQuoteRequest(BaseModel):
+    items: list[CartItemRequest] = Field(min_length=1, max_length=100)
+    country: str = Field(min_length=2, max_length=80)
+
+    @field_validator("country")
+    @classmethod
+    def normalize_country(cls, value: str) -> str:
+        return value.strip().upper()
+
+
+class OrderQuoteDTO(BaseModel):
+    currency: str
+    subtotal: Decimal
+    shipping_amount: Decimal
+    total: Decimal
+    shipping_status: str
+    shipping_message: str | None = None
+    purchasable: bool
+    unavailable_reason: str | None = None
+
+
 class OrderItemDTO(BaseModel):
     id: UUID
     product_name: str

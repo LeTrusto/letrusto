@@ -92,7 +92,7 @@ export function toCommerceProduct(product: Product): CommerceProduct {
     name: product.name,
     description: product.description,
     price: product.priceValue,
-    currency: "USD",
+    currency: "INR",
     images: product.images.length > 0 ? product.images : ["/images/products/placeholder.svg"],
     category,
     categoryLabel: categoryLabel(product.category),

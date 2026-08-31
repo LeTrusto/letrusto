@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
@@ -10,10 +10,14 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.config import get_settings
 from app.models.entities import Cart, CartItem, Order, OrderItem, Product, ProductVariant, User
-from app.schemas.orders import CartDTO, CartItemDTO, CartItemRequest, CreateOrderRequest, OrderDTO, OrderItemDTO, OrderListDTO
+from app.schemas.orders import CartDTO, CartItemDTO, CartItemRequest, CreateOrderRequest, OrderDTO, OrderItemDTO, OrderListDTO, OrderQuoteDTO, OrderQuoteRequest
 from app.services.inventory_reservation_service import InventoryReservationService
 from app.services.fulfillment_preflight_service import FulfillmentPreflightService
 from app.services.printful_shipping_service import PrintfulShippingService
+
+# Razorpay is the only active provider and settles INR, so purchasing stays India-only.
+INDIA_COUNTRY_CODES = frozenset({"IN", "INDIA"})
+INTERNATIONAL_CHECKOUT_UNAVAILABLE = "INTERNATIONAL_CHECKOUT_UNAVAILABLE"
 
 
 class OrderService:
@@ -104,16 +108,74 @@ class OrderService:
 
     @staticmethod
     def _currency_for_country(country: str) -> str:
-        return "INR" if country.strip().upper() in {"IN", "INDIA"} else "USD"
+        return "INR" if country.strip().upper() in INDIA_COUNTRY_CODES else "USD"
 
     @staticmethod
-    def _price_for_currency(price: Decimal, currency: str) -> Decimal:
-        if currency == "INR":
-            return price
-        rate = get_settings().PRICING_FX_RATE
-        if rate <= 0:
-            raise BadRequestError("Currency conversion is not configured")
-        return (price / rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    def _is_india(country: str) -> bool:
+        return country.strip().upper() in INDIA_COUNTRY_CODES
+
+    def _resolve_items(self, items: list[CartItemRequest]) -> list[tuple[Product, ProductVariant, int]]:
+        return [(*self._resolve_variant(self.db, item.product_id, item.variant_id), item.quantity) for item in items]
+
+    @staticmethod
+    def _subtotal(resolved: list[tuple[Product, ProductVariant, int]]) -> Decimal:
+        return sum((variant.selling_price * quantity for _, variant, quantity in resolved), Decimal("0"))
+
+    def _shipping_quote(
+        self, resolved: list[tuple[Product, ProductVariant, int]], country: str, currency: str
+    ) -> tuple[str, Decimal, str | None]:
+        """Single source of shipping truth for both the checkout quote and order creation."""
+        shipping_service = PrintfulShippingService(self.db)
+        total = Decimal("0")
+        estimated = False
+        applicable = False
+        for product, _variant, quantity in resolved:
+            if product.supplier != "printful":
+                continue
+            applicable = True
+            try:
+                estimate = shipping_service.estimate(product, country, quantity)
+            except BadRequestError:
+                return "UNSUPPORTED_DESTINATION", Decimal("0"), "We do not ship to this destination yet."
+            except (NotFoundError, InvalidOperation, TypeError, ValueError):
+                return "ERROR", Decimal("0"), "Shipping could not be calculated. Please try again."
+            if estimate["status"] != "AVAILABLE":
+                return "REQUIRES_VERIFICATION", Decimal("0"), estimate.get("message") or "Shipping rate requires Printful verification"
+            if estimate["currency"] != currency:
+                return "INVALID_CONFIGURATION", Decimal("0"), "Shipping is not configured for this destination currency."
+            total += estimate["shipping_price"]
+            estimated = estimated or bool(estimate.get("estimated"))
+        if not applicable:
+            return "NOT_APPLICABLE", Decimal("0"), None
+        return "AVAILABLE", total, "Estimated shipping; pending Printful verification" if estimated else None
+
+    def quote_order(self, user: User, payload: OrderQuoteRequest) -> OrderQuoteDTO:
+        resolved = self._resolve_items(payload.items)
+        subtotal = self._subtotal(resolved)
+        currency = "INR"
+        if not self._is_india(payload.country):
+            return OrderQuoteDTO(
+                currency=currency,
+                subtotal=subtotal,
+                shipping_amount=Decimal("0"),
+                total=subtotal,
+                shipping_status="UNAVAILABLE",
+                shipping_message=None,
+                purchasable=False,
+                unavailable_reason=INTERNATIONAL_CHECKOUT_UNAVAILABLE,
+            )
+        status, shipping_amount, message = self._shipping_quote(resolved, payload.country, currency)
+        purchasable = status in {"AVAILABLE", "NOT_APPLICABLE"}
+        return OrderQuoteDTO(
+            currency=currency,
+            subtotal=subtotal,
+            shipping_amount=shipping_amount,
+            total=subtotal + shipping_amount if purchasable else subtotal,
+            shipping_status=status,
+            shipping_message=message,
+            purchasable=purchasable,
+            unavailable_reason=None if purchasable else status,
+        )
 
     def get_cart(self, user: User) -> CartDTO:
         return self._cart_dto(self._cart(user))
@@ -209,10 +271,9 @@ class OrderService:
         existing = self.db.scalar(select(Order).where(Order.user_id == user.id, Order.idempotency_key == payload.idempotency_key).options(selectinload(Order.items)))
         if existing:
             return self._order_dto(existing)
-        resolved: list[tuple[Product, ProductVariant, int]] = []
-        for item in payload.items:
-            product, variant = self._resolve_variant(self.db, item.product_id, item.variant_id)
-            resolved.append((product, variant, item.quantity))
+        if not self._is_india(payload.shipping_address.country):
+            raise BadRequestError("Orders can currently be placed only for delivery addresses in India.")
+        resolved = self._resolve_items(payload.items)
         locked_variants = list(self.db.scalars(
             select(ProductVariant)
             .where(ProductVariant.id.in_([variant.id for _, variant, _ in resolved]))
@@ -226,18 +287,11 @@ class OrderService:
         for _, variant, quantity in resolved:
             self._validate_inventory(variant, quantity)
         currency = self._currency_for_country(payload.shipping_address.country)
-        shipping_amount = Decimal("0")
+        shipping_status, shipping_amount, _ = self._shipping_quote(resolved, payload.shipping_address.country, currency)
+        if shipping_status not in {"AVAILABLE", "NOT_APPLICABLE"}:
+            self.db.rollback()
+            raise BadRequestError("Shipping to this destination is currently unavailable.")
         for product, variant, quantity in resolved:
-            if product.supplier == "printful":
-                shipping = PrintfulShippingService(self.db).estimate(
-                    product, payload.shipping_address.country, quantity
-                )
-                if shipping["status"] != "AVAILABLE":
-                    self.db.rollback()
-                    raise BadRequestError("Shipping to this destination is currently unavailable.")
-                if shipping["currency"] != currency:
-                    raise BadRequestError("Printful shipping currency is not supported for this order")
-                shipping_amount += shipping["shipping_price"]
             try:
                 preflight = asyncio.run(self.fulfillment_preflight_service.check(
                     product_id=product.id,
@@ -251,7 +305,7 @@ class OrderService:
             if preflight.status != "FULFILLABLE":
                 self.db.rollback()
                 raise BadRequestError("Product variant is unavailable for the selected destination")
-            subtotal = sum((self._price_for_currency(variant.selling_price, currency) * quantity for _, variant, quantity in resolved), Decimal("0"))
+        subtotal = self._subtotal(resolved)
         now = datetime.now(timezone.utc)
         order = Order(
             order_number=f"LT-{now.strftime('%Y%m%d')}-{uuid4().hex[:8].upper()}",
@@ -270,7 +324,7 @@ class OrderService:
             idempotency_key=payload.idempotency_key,
         )
         order.items = [
-            OrderItem(product_id=product.id, variant_id=variant.id, product_name=product.name, product_image_url=product.images[0].url if product.images else None, variant_name=variant.name or variant.attributes, quantity=quantity, unit_price=self._price_for_currency(variant.selling_price, currency), line_total=self._price_for_currency(variant.selling_price, currency) * quantity, **self._economics_snapshot(product, variant))
+            OrderItem(product_id=product.id, variant_id=variant.id, product_name=product.name, product_image_url=product.images[0].url if product.images else None, variant_name=variant.name or variant.attributes, quantity=quantity, unit_price=variant.selling_price, line_total=variant.selling_price * quantity, **self._economics_snapshot(product, variant))
             for product, variant, quantity in resolved
         ]
         try:

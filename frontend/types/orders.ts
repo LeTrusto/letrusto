@@ -19,6 +19,22 @@ export type CreateOrderPayload = {
   idempotency_key: string;
 };
 
+export type OrderQuotePayload = {
+  items: Array<{ product_id: string; variant_id: string; quantity: number }>;
+  country: string;
+};
+
+export type OrderQuote = {
+  currency: string;
+  subtotal: number;
+  shipping_amount: number;
+  total: number;
+  shipping_status: "AVAILABLE" | "REQUIRES_VERIFICATION" | "UNSUPPORTED_DESTINATION" | "INVALID_CONFIGURATION" | "ERROR" | "NOT_APPLICABLE" | "UNAVAILABLE";
+  shipping_message?: string | null;
+  purchasable: boolean;
+  unavailable_reason?: string | null;
+};
+
 export type OrderItem = {
   id: string;
   product_name: string;

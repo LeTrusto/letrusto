@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+from types import SimpleNamespace
 from uuid import uuid4
 
 from app.models.entities import PrintfulShippingRate, Product
 from app.schemas.admin_products import PrintfulShippingUpdate
 from app.services.printful_shipping_service import PrintfulShippingService, region_for_country
+from app.services.product_service import ProductService
 
 
 def shipping_product() -> Product:
@@ -61,3 +63,22 @@ def test_india_estimate_update_requires_inr_rates_and_source():
     assert payload.country_codes == []
     assert payload.single_product_rate == Decimal("299")
     assert payload.additional_product_rate == Decimal("100")
+
+
+def test_product_shipping_estimate_is_serialized_for_the_storefront(monkeypatch):
+    product = shipping_product()
+    repository = SimpleNamespace(get_by_slug=lambda _: product, db=None)
+    monkeypatch.setattr(
+        "app.services.product_service.PrintfulShippingService.estimate",
+        lambda *_args, **_kwargs: {
+            "country": "IN", "region": "IN", "status": "AVAILABLE", "currency": "INR",
+            "shipping_method": "Standard", "shipping_price": Decimal("299"), "rate_source": "LETRUSTO_ESTIMATE",
+            "estimated": True, "message": "Estimated shipping; pending Printful verification", "estimated_delivery": None,
+        },
+    )
+
+    estimate = ProductService(repository).get_shipping_estimate("hoodie", "IN", 1)
+
+    assert estimate.status == "AVAILABLE"
+    assert estimate.shipping_price == Decimal("299")
+    assert estimate.currency == "INR"

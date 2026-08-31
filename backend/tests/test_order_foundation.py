@@ -118,7 +118,7 @@ def test_order_revalidates_active_status_and_zero_sellable_inventory():
         cleanup(db, user, product)
 
 
-def test_international_order_uses_usd_conversion():
+def test_international_checkout_is_blocked_while_razorpay_is_inr_only():
     db = SessionLocal()
     user, product, _ = make_order_fixture(db)
     try:
@@ -126,11 +126,9 @@ def test_international_order_uses_usd_conversion():
             return SimpleNamespace(status="FULFILLABLE")
 
         service = OrderService(db, fulfillment_preflight_service=SimpleNamespace(check=international_preflight))
-        result = service.create_order(user, order_payload(product.slug, country="US", key="order-test-usd-001"))
-        assert result.currency == "USD"
-        assert result.subtotal == Decimal("2.04")
-        assert result.total == Decimal("2.04")
-        assert result.items[0].unit_price == Decimal("1.02")
+        with pytest.raises(BadRequestError, match="only for delivery addresses in India"):
+            service.create_order(user, order_payload(product.slug, country="US", key="order-test-usd-001"))
+        assert db.query(Order).filter(Order.user_id == user.id).count() == 0
     finally:
         cleanup(db, user, product)
 
@@ -143,17 +141,19 @@ def test_printful_shipping_is_added_to_server_order_total(monkeypatch):
     db.commit()
     monkeypatch.setattr(
         "app.services.order_service.PrintfulShippingService.estimate",
-        lambda *_args, **_kwargs: {"status": "AVAILABLE", "currency": "USD", "shipping_price": Decimal("8.79")},
+        lambda *_args, **_kwargs: {"status": "AVAILABLE", "currency": "INR", "shipping_price": Decimal("399"), "estimated": True},
     )
     try:
-        async def international_preflight(**_kwargs):
+        async def india_preflight(**_kwargs):
             return SimpleNamespace(status="FULFILLABLE")
 
-        service = OrderService(db, fulfillment_preflight_service=SimpleNamespace(check=international_preflight))
-        result = service.create_order(user, order_payload(product.slug, country="US", key="order-test-shipping-001"))
-        assert result.subtotal == Decimal("2.04")
-        assert result.shipping_amount == Decimal("8.79")
-        assert result.total == Decimal("10.83")
+        service = OrderService(db, fulfillment_preflight_service=SimpleNamespace(check=india_preflight))
+        result = service.create_order(user, order_payload(product.slug, key="order-test-shipping-001"))
+        assert result.currency == "INR"
+        assert result.subtotal == Decimal("200.00")
+        assert result.shipping_amount == Decimal("399.00")
+        assert result.total == Decimal("599.00")
+        assert result.total == result.subtotal + result.shipping_amount
     finally:
         cleanup(db, user, product)
 

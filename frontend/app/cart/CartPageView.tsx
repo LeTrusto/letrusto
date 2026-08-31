@@ -134,13 +134,14 @@ export default function CartPageView() {
               )}
               <div className="flex justify-between text-[var(--text-muted)]">
                 <span>Shipping</span>
-                <span>Included in total</span>
+                <span>Calculated at checkout</span>
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-[var(--border)] flex justify-between text-base font-bold">
-              <span>Total</span>
+              <span>Subtotal</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">Shipping is charged separately and is added to your total at checkout.</p>
             <Link href="/checkout" className="lt-btn lt-btn-lg lt-btn-primary w-full mt-5 justify-center">
               Proceed to Checkout
             </Link>
