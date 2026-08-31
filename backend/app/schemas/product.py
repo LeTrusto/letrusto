@@ -90,6 +90,17 @@ class ProductDTO(BaseModel):
     similarProductIds: list[str]
 
 
+class ProductShippingEstimate(BaseModel):
+    country: str
+    region: str
+    status: Literal["AVAILABLE", "REQUIRES_VERIFICATION"]
+    message: str | None = None
+    currency: str | None = None
+    shipping_method: str | None = None
+    shipping_price: Decimal | None = None
+    estimated_delivery: str | None = None
+
+
 class ProductSearchQuery(BaseModel):
     q: str = ""
     sort: ProductSortOption = "relevance"

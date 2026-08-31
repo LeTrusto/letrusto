@@ -13,6 +13,7 @@ from app.models.entities import Cart, CartItem, Order, OrderItem, Product, Produ
 from app.schemas.orders import CartDTO, CartItemDTO, CartItemRequest, CreateOrderRequest, OrderDTO, OrderItemDTO, OrderListDTO
 from app.services.inventory_reservation_service import InventoryReservationService
 from app.services.fulfillment_preflight_service import FulfillmentPreflightService
+from app.services.printful_shipping_service import PrintfulShippingService
 
 
 class OrderService:
@@ -224,7 +225,19 @@ class OrderService:
         resolved = [(product, variants_by_id[variant.id], quantity) for product, variant, quantity in resolved]
         for _, variant, quantity in resolved:
             self._validate_inventory(variant, quantity)
+        currency = self._currency_for_country(payload.shipping_address.country)
+        shipping_amount = Decimal("0")
         for product, variant, quantity in resolved:
+            if product.supplier == "printful":
+                shipping = PrintfulShippingService(self.db).estimate(
+                    product, payload.shipping_address.country, quantity
+                )
+                if shipping["status"] != "AVAILABLE":
+                    self.db.rollback()
+                    raise BadRequestError("Shipping to this destination is currently unavailable.")
+                if shipping["currency"] != currency:
+                    raise BadRequestError("Printful shipping currency is not supported for this order")
+                shipping_amount += shipping["shipping_price"]
             try:
                 preflight = asyncio.run(self.fulfillment_preflight_service.check(
                     product_id=product.id,
@@ -238,7 +251,6 @@ class OrderService:
             if preflight.status != "FULFILLABLE":
                 self.db.rollback()
                 raise BadRequestError("Product variant is unavailable for the selected destination")
-            currency = self._currency_for_country(payload.shipping_address.country)
             subtotal = sum((self._price_for_currency(variant.selling_price, currency) * quantity for _, variant, quantity in resolved), Decimal("0"))
         now = datetime.now(timezone.utc)
         order = Order(
@@ -248,8 +260,8 @@ class OrderService:
             payment_status="PENDING",
             fulfillment_status="PENDING",
             subtotal=subtotal,
-            shipping_amount=Decimal("0"),
-            total=subtotal,
+            shipping_amount=shipping_amount,
+            total=subtotal + shipping_amount,
             currency=currency,
             customer_name=payload.customer.name,
             customer_email=str(payload.customer.email),

@@ -26,6 +26,8 @@ from app.schemas.admin_products import (
     PrintfulProductsResponse,
     PrintfulPricingResponse,
     PrintfulPricingUpdate,
+    PrintfulShippingRateDTO,
+    PrintfulShippingUpdate,
     LegacyArchiveResponse,
     ProductRejectionRequest,
     ProductStatusUpdate,
@@ -570,6 +572,25 @@ def update_printful_product_pricing(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> PrintfulPricingResponse:
     return service.update_printful_pricing(product_id, payload)
+
+
+@router.get("/products/{product_id}/printful-shipping", response_model=list[PrintfulShippingRateDTO])
+def get_printful_shipping(
+    product_id: UUID,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> list[dict]:
+    return service.get_printful_shipping(product_id)
+
+
+@router.put("/products/{product_id}/printful-shipping", response_model=PrintfulShippingRateDTO)
+def update_printful_shipping(
+    product_id: UUID,
+    payload: PrintfulShippingUpdate,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> dict:
+    return service.update_printful_shipping(product_id, payload)
 
 
 @router.post(

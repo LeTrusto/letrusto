@@ -50,6 +50,8 @@ from app.schemas.admin_products import (
     PrintfulProductsResponse,
     PrintfulPricingResponse,
     PrintfulPricingUpdate,
+    PrintfulShippingRateDTO,
+    PrintfulShippingUpdate,
     ProductImportRequest,
     ProductRejectionRequest,
     ProductStatusUpdate,
@@ -66,6 +68,7 @@ from app.services.commercial_review_service import evaluate_commercial_product
 from app.services.launch_pricing_policy import LaunchPricingPolicy, load_launch_pricing_policy
 from app.services.pricing_engine import calculate_launch_variant_price, calculate_margin_price
 from app.services.supplier_candidate_readiness_service import SupplierCandidateReadinessService
+from app.services.printful_shipping_service import PrintfulShippingService
 from app.suppliers.economics import EconomicsConfig, calculate_economics
 from app.suppliers.base import InventorySnapshot, WarehouseInventorySnapshot
 from app.suppliers.factory import build_supplier_adapter
@@ -1147,10 +1150,12 @@ class AdminProductService:
         if product.supplier != "printful":
             raise BadRequestError("Printful pricing applies only to Printful products")
         details = dict(product.supplier_validation_details or {})
+        shipping_reviewed, shipping_blockers = PrintfulShippingService(self.db).review(product)
         details["printful_customer_pricing"] = {
             "india_price_inr": str(payload.india_price_inr),
             "international_price_usd": str(payload.international_price_usd),
-            "shipping_reviewed": payload.shipping_reviewed,
+            "shipping_reviewed": shipping_reviewed,
+            "shipping_review_blockers": shipping_blockers,
         }
         product.supplier_validation_details = details
         product.selling_price = payload.india_price_inr
@@ -1160,7 +1165,19 @@ class AdminProductService:
             if variant.active:
                 variant.selling_price = payload.india_price_inr
         self.db.commit()
-        return PrintfulPricingResponse(product_id=product.id, **payload.model_dump())
+        return PrintfulPricingResponse(product_id=product.id, india_price_inr=payload.india_price_inr, international_price_usd=payload.international_price_usd, shipping_reviewed=shipping_reviewed)
+
+    def get_printful_shipping(self, product_id: UUID) -> list[dict]:
+        product = self._get(product_id)
+        if product.supplier != "printful":
+            raise BadRequestError("Printful shipping applies only to Printful products")
+        return PrintfulShippingService(self.db).list_for_product(product)
+
+    def update_printful_shipping(self, product_id: UUID, payload: PrintfulShippingUpdate) -> dict:
+        product = self._get(product_id)
+        if product.supplier != "printful":
+            raise BadRequestError("Printful shipping applies only to Printful products")
+        return PrintfulShippingService(self.db).update(product, payload.model_dump())
 
     def calculate_variant_prices(self, product_id: UUID) -> VariantPriceCalculationResponse:
         product = self._get(product_id)
@@ -1322,8 +1339,7 @@ class AdminProductService:
         self.db.commit()
         return self._dto(self._get(product.id))
 
-    @staticmethod
-    def _printful_publish_blockers(product: Product) -> list[str]:
+    def _printful_publish_blockers(self, product: Product) -> list[str]:
         details = product.supplier_validation_details or {}
         pricing = details.get("printful_customer_pricing") if isinstance(details, dict) else None
         blockers: list[str] = []
@@ -1346,8 +1362,10 @@ class AdminProductService:
             blockers.append("INDIA_PRICE_MISSING")
         if not isinstance(pricing, dict) or not pricing.get("international_price_usd"):
             blockers.append("INTERNATIONAL_USD_PRICE_MISSING")
-        if not isinstance(pricing, dict) or pricing.get("shipping_reviewed") is not True:
+        shipping_reviewed, shipping_blockers = PrintfulShippingService(self.db).review(product)
+        if not shipping_reviewed:
             blockers.append("SHIPPING_NOT_REVIEWED")
+            blockers.extend(shipping_blockers)
         return blockers
 
     def pause(self, product_id: UUID) -> AdminProductDTO:

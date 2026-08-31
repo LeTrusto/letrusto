@@ -4,7 +4,7 @@ from uuid import UUID
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 
 CatalogStatus = Literal["DRAFT", "ACTIVE", "PAUSED"]
@@ -309,6 +309,45 @@ class PrintfulPricingResponse(BaseModel):
     international_price_usd: Decimal
     shipping_reviewed: bool
     currency: Literal["INR", "USD"] = "INR"
+
+
+class PrintfulShippingRateDTO(BaseModel):
+    region: str
+    label: str
+    status: Literal["AVAILABLE", "REQUIRES_VERIFICATION", "MISSING"]
+    shipping_method: str | None
+    single_product_rate: Decimal | None
+    additional_product_rate: Decimal | None
+    currency: str
+    country_codes: list[str]
+    source: str
+    effective_at: datetime | None
+    updated_at: datetime | None
+    active: bool
+    requires_verification: bool
+
+
+class PrintfulShippingUpdate(BaseModel):
+    region: str
+    country_codes: list[str] = Field(default_factory=list)
+    shipping_method: str = Field(default="Standard", min_length=1, max_length=120)
+    single_product_rate: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    additional_product_rate: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    currency: Literal["USD"] = "USD"
+    effective_at: datetime | None = None
+    active: bool = True
+    requires_verification: bool = False
+
+    @model_validator(mode="after")
+    def validate_destination_mapping(self) -> "PrintfulShippingUpdate":
+        if self.requires_verification:
+            if self.region != "IN":
+                raise ValueError("Verification-only shipping is supported for India")
+            if self.single_product_rate is not None or self.additional_product_rate is not None:
+                raise ValueError("India verification rows must not include shipping rates")
+        elif not self.country_codes:
+            raise ValueError("At least one country code is required")
+        return self
 
 
 class PriceCalculationRequest(BaseModel):

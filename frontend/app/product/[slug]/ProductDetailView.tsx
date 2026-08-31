@@ -4,12 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useEffect } from "react";
 import { Check, Heart, Loader2, Minus, Plus, Share2, ShoppingBag, Truck, RotateCcw, ChevronLeft, Zap } from "lucide-react";
 import type { CommerceProduct } from "@/types/commerce";
 import { useCart } from "@/lib/cartContext";
 import CommerceProductCard from "@/components/products/CommerceProductCard";
 import ProductTrustSection from "@/components/products/ProductTrustSection";
 import SchemaOrg from "@/components/SchemaOrg";
+import { buildApiUrl } from "@/services/api";
 
 function formatPrice(value: number): string {
   return `₹${value.toLocaleString("en-IN")}`;
@@ -18,6 +20,15 @@ function formatPrice(value: number): string {
 type Props = {
   product: CommerceProduct;
   related: CommerceProduct[];
+};
+
+type ShippingEstimate = {
+  status: "AVAILABLE" | "REQUIRES_VERIFICATION";
+  currency?: string | null;
+  shipping_method?: string | null;
+  shipping_price?: number | string | null;
+  message?: string | null;
+  estimated_delivery?: string | null;
 };
 
 export default function ProductDetailView({ product, related }: Props) {
@@ -31,6 +42,8 @@ export default function ProductDetailView({ product, related }: Props) {
   const isAvailable = selectedVariant?.available ?? product.availability !== "out-of-stock";
   const maxQuantity = selectedVariant?.inventory ?? 1;
   const [quantity, setQuantity] = useState(1);
+  const [shippingCountry, setShippingCountry] = useState("US");
+  const [shippingEstimate, setShippingEstimate] = useState<ShippingEstimate | null>(null);
 
   const discount = product.compareAtPrice
     ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
@@ -58,6 +71,15 @@ export default function ProductDetailView({ product, related }: Props) {
 
   const activeImage = product.images[selectedImageIndex] ?? "/images/products/placeholder.svg";
   const productDescription = product.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(buildApiUrl(`/products/${encodeURIComponent(product.id)}/shipping?country=${shippingCountry}&quantity=${quantity}`), { signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<ShippingEstimate> : Promise.reject(new Error("Shipping unavailable")))
+      .then(setShippingEstimate)
+      .catch((error: unknown) => { if (error instanceof DOMException && error.name === "AbortError") return; setShippingEstimate(null); });
+    return () => controller.abort();
+  }, [product.id, quantity, shippingCountry]);
 
   return (
     <main className="min-h-screen bg-[var(--background)]">
@@ -145,6 +167,19 @@ export default function ProductDetailView({ product, related }: Props) {
                 <span className="text-sm font-medium text-[var(--text-muted)]">● This option is unavailable</span>
               )}
             </div>
+
+            <section className="mt-5 border-y border-[var(--border)] py-4" aria-label="Shipping estimate">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-bold text-[var(--text-primary)]">Shipping</h2>
+                <label className="text-xs text-[var(--text-muted)]">Deliver to <select value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} className="ml-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-[var(--text-primary)]"><option value="IN">India</option><option value="US">United States</option><option value="GB">United Kingdom</option><option value="DE">European Union</option><option value="CA">Canada</option><option value="AU">Australia</option><option value="NZ">New Zealand</option><option value="JP">Japan</option><option value="BR">Brazil</option></select></label>
+              </div>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                {!shippingEstimate && "Checking current shipping rate..."}
+                {shippingEstimate?.status === "REQUIRES_VERIFICATION" && (shippingEstimate.message ?? "Shipping rate requires Printful verification")}
+                {shippingEstimate?.status === "AVAILABLE" && `${shippingEstimate.currency === "USD" ? "$" : ""}${Number(shippingEstimate.shipping_price ?? 0).toFixed(2)} ${shippingEstimate.shipping_method ? `· ${shippingEstimate.shipping_method}` : ""}`}
+              </p>
+              {shippingEstimate?.estimated_delivery && <p className="mt-1 text-xs text-[var(--text-muted)]">Estimated delivery: {shippingEstimate.estimated_delivery}</p>}
+            </section>
 
             {/* Variants */}
             {product.catalogVariants && product.catalogVariants.length > 0 && (

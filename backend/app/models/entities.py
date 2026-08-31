@@ -263,6 +263,38 @@ class Product(Base):
         cascade="all, delete-orphan",
     )
     trust_claims: Mapped[list["TrustClaim"]] = relationship(back_populates="product", cascade="all, delete-orphan")
+    printful_shipping_rates: Mapped[list["PrintfulShippingRate"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan"
+    )
+
+
+class PrintfulShippingRate(Base):
+    __tablename__ = "printful_shipping_rates"
+    __table_args__ = (
+        UniqueConstraint("product_id", "category_key", "destination_region", name="uq_printful_shipping_rate_scope"),
+        Index("ix_printful_shipping_rates_destination", "destination_region", "country_codes"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("products.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    source: Mapped[str] = mapped_column(String(40), nullable=False, default="printful")
+    category_key: Mapped[str] = mapped_column(String(80), nullable=False, default="hoodies-sweatshirts")
+    destination_region: Mapped[str] = mapped_column(String(40), nullable=False)
+    country_codes: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    shipping_method: Mapped[str] = mapped_column(String(120), nullable=False, default="Standard")
+    single_product_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    additional_product_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="USD")
+    effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    requires_verification: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+
+    product: Mapped[Product | None] = relationship(back_populates="printful_shipping_rates")
 
 
 class ProductVariant(Base):

@@ -14,6 +14,7 @@ from app.schemas.product import (
     ProductSearchQuery,
 )
 from app.services.product_mapper import to_product_dto
+from app.services.printful_shipping_service import PrintfulShippingService
 
 
 CATEGORY_LABELS = {
@@ -92,6 +93,12 @@ class ProductService:
         if not product:
             raise NotFoundError(f"Product '{product_slug}' not found")
         return self._to_dto(product)
+
+    def get_shipping_estimate(self, product_slug: str, country: str, quantity: int = 1):
+        product = self.repository.get_by_slug(product_slug)
+        if not product:
+            raise NotFoundError(f"Product '{product_slug}' not found")
+        return PrintfulShippingService(self.repository.db).estimate(product, country, quantity)
 
     def get_search(self, query: ProductSearchQuery) -> PaginatedProductsResponse:
         products = self.repository.search_candidates(query)

@@ -133,3 +133,43 @@ def test_international_order_uses_usd_conversion():
         assert result.items[0].unit_price == Decimal("1.02")
     finally:
         cleanup(db, user, product)
+
+
+def test_printful_shipping_is_added_to_server_order_total(monkeypatch):
+    db = SessionLocal()
+    user, product, _ = make_order_fixture(db)
+    product.supplier = "printful"
+    product.name = "Unisex Hoodie"
+    db.commit()
+    monkeypatch.setattr(
+        "app.services.order_service.PrintfulShippingService.estimate",
+        lambda *_args, **_kwargs: {"status": "AVAILABLE", "currency": "USD", "shipping_price": Decimal("8.79")},
+    )
+    try:
+        async def international_preflight(**_kwargs):
+            return SimpleNamespace(status="FULFILLABLE")
+
+        service = OrderService(db, fulfillment_preflight_service=SimpleNamespace(check=international_preflight))
+        result = service.create_order(user, order_payload(product.slug, country="US", key="order-test-shipping-001"))
+        assert result.subtotal == Decimal("2.04")
+        assert result.shipping_amount == Decimal("8.79")
+        assert result.total == Decimal("10.83")
+    finally:
+        cleanup(db, user, product)
+
+
+def test_printful_india_without_verified_shipping_blocks_order(monkeypatch):
+    db = SessionLocal()
+    user, product, _ = make_order_fixture(db)
+    product.supplier = "printful"
+    product.name = "Unisex Hoodie"
+    db.commit()
+    monkeypatch.setattr(
+        "app.services.order_service.PrintfulShippingService.estimate",
+        lambda *_args, **_kwargs: {"status": "REQUIRES_VERIFICATION"},
+    )
+    try:
+        with pytest.raises(BadRequestError, match="Shipping to this destination is currently unavailable"):
+            OrderService(db).create_order(user, order_payload(product.slug, key="order-test-india-001"))
+    finally:
+        cleanup(db, user, product)

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import get_product_service
-from app.schemas.product import CatalogMetadataResponse, HomeCollectionsResponse, ProductDTO
+from app.schemas.product import CatalogMetadataResponse, HomeCollectionsResponse, ProductDTO, ProductShippingEstimate
 from app.services.product_service import ProductService
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -42,6 +42,16 @@ def get_suggestions(
     service: ProductService = Depends(get_product_service),
 ) -> list[str]:
     return service.get_suggestions(limit)
+
+
+@router.get("/{product_id}/shipping", response_model=ProductShippingEstimate)
+def get_shipping_estimate(
+    product_id: str,
+    country: str = Query(min_length=2, max_length=2),
+    quantity: int = Query(default=1, ge=1, le=50),
+    service: ProductService = Depends(get_product_service),
+) -> ProductShippingEstimate:
+    return service.get_shipping_estimate(product_id, country, quantity)
 
 
 @router.get("/{product_id}", response_model=ProductDTO)

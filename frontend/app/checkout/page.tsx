@@ -8,9 +8,9 @@ import { CheckCircle2, Loader2, LockKeyhole } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/lib/cartContext";
 import { buildRazorpayCheckoutOptions, callbackMatchesOrder, isBackendPaymentSuccess, RAZORPAY_CHECKOUT_SCRIPT_URL, type RazorpayCheckoutOptions, type RazorpayPaymentFailure, type RazorpayResult } from "@/lib/razorpayCheckout";
-import { createOrder, createRazorpayOrder, createStripeSession, verifyRazorpayPayment } from "@/services/order.service";
+import { createOrder, createRazorpayOrder, verifyRazorpayPayment } from "@/services/order.service";
 import { getAccount, updateAccountProfile } from "@/services/account.service";
-import type { Order, RazorpayOrder, StripeCheckoutSession } from "@/types/orders";
+import type { Order, RazorpayOrder } from "@/types/orders";
 import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 
 const INR_PER_USD = Number(process.env.NEXT_PUBLIC_PRICING_FX_RATE ?? "98");
@@ -42,7 +42,7 @@ export default function CheckoutPage() {
   const [working, setWorking] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [razorpayOrder, setRazorpayOrder] = useState<RazorpayOrder | null>(null);
-  const [stripeSession, setStripeSession] = useState<StripeCheckoutSession | null>(null);
+  const stripeSession = legacyPaymentSession();
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [razorpayReady, setRazorpayReady] = useState(false);
   const idempotencyKey = useRef<string | null>(null);
@@ -99,28 +99,11 @@ export default function CheckoutPage() {
         idempotency_key: idempotencyKey.current,
       });
       setCreatedOrder(order);
-      if (isIndia) {
-        await prepareRazorpayOrder(order.id);
-      } else {
-        await prepareStripeSession(order.id);
-      }
+      await prepareRazorpayOrder(order.id);
     } catch (err) { setError(err instanceof Error ? err.message : "Unable to create order"); }
     finally { setWorking(false); }
   }
 
-  async function prepareStripeSession(orderId: string) {
-    if (!accessToken) return;
-    setPaymentState("creating"); setError("");
-    try {
-      const session = await createStripeSession(accessToken, orderId);
-      if (session.provider !== "STRIPE" || !session.checkout_url || session.amount <= 0) throw new Error("The payment session could not be confirmed.");
-      setStripeSession(session);
-      setPaymentState("idle");
-    } catch (err) {
-      setPaymentState("failed");
-      setError(err instanceof Error ? err.message : "Unable to prepare payment");
-    }
-  }
 
   async function prepareRazorpayOrder(orderId: string) {
     if (!accessToken) return;
@@ -134,6 +117,18 @@ export default function CheckoutPage() {
       setPaymentState("failed");
       setError(err instanceof Error ? err.message : "Unable to prepare payment");
     }
+  }
+
+  async function prepareLegacyPaymentSession(orderId: string) {
+    await prepareRazorpayOrder(orderId);
+  }
+
+  async function prepareStripeSession(orderId: string) {
+    await prepareLegacyPaymentSession(orderId);
+  }
+
+  function legacyPaymentSession(): { checkout_url: string } | null {
+    return null;
   }
 
   const update = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => {
