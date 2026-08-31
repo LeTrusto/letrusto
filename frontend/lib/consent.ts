@@ -11,18 +11,31 @@ export type ConsentState = {
 };
 
 const listeners = new Set<() => void>();
+let cachedRawValue: string | null | undefined;
+let cachedConsent: ConsentState | null = null;
 
 export function getConsent(): ConsentState | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(CONSENT_STORAGE_KEY);
+    if (raw === cachedRawValue) return cachedConsent;
+    cachedRawValue = raw;
     if (!raw) return null;
     const value = JSON.parse(raw) as Partial<ConsentState>;
-    if (value.version !== CONSENT_VERSION || value.status !== "granted" || value.essential !== true) return null;
-    if (typeof value.analytics !== "boolean" || typeof value.marketing !== "boolean") return null;
-    return value as ConsentState;
+    if (value.version !== CONSENT_VERSION || value.status !== "granted" || value.essential !== true) {
+      cachedConsent = null;
+      return cachedConsent;
+    }
+    if (typeof value.analytics !== "boolean" || typeof value.marketing !== "boolean") {
+      cachedConsent = null;
+      return cachedConsent;
+    }
+    cachedConsent = value as ConsentState;
+    return cachedConsent;
   } catch {
-    return null;
+    cachedRawValue = undefined;
+    cachedConsent = null;
+    return cachedConsent;
   }
 }
 
@@ -35,7 +48,10 @@ export function saveConsent(analytics: boolean, marketing: boolean): ConsentStat
     marketing,
     updatedAt: new Date().toISOString(),
   };
-  window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(state));
+  const serialized = JSON.stringify(state);
+  window.localStorage.setItem(CONSENT_STORAGE_KEY, serialized);
+  cachedRawValue = serialized;
+  cachedConsent = state;
   if (!analytics) clearAnalyticsIdentifiers();
   listeners.forEach((listener) => listener());
   return state;
@@ -49,13 +65,22 @@ export function clearAnalyticsIdentifiers(): void {
       document.cookie = `${name}=; Max-Age=0; path=/`;
     }
   });
+  document.querySelectorAll('script[src*="googletagmanager.com"], script#ga4-init').forEach((script) => script.remove());
+  const browserWindow = window as Window & { gtag?: (...args: unknown[]) => void; dataLayer?: unknown[] };
+  delete browserWindow.gtag;
+  browserWindow.dataLayer = [];
 }
 
 export function subscribeToConsent(listener: () => void): () => void {
   listeners.add(listener);
   if (typeof window === "undefined") return () => listeners.delete(listener);
   const handleStorage = (event: StorageEvent) => {
-    if (event.key === CONSENT_STORAGE_KEY) listener();
+    if (event.key === CONSENT_STORAGE_KEY) {
+      cachedRawValue = undefined;
+      cachedConsent = null;
+      if (!getConsent()?.analytics) clearAnalyticsIdentifiers();
+      listener();
+    }
   };
   window.addEventListener("storage", handleStorage);
   return () => {

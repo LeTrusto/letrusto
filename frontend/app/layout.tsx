@@ -137,8 +137,8 @@ export default function RootLayout({
             </CartProvider>
           </AuthProvider>
           <CookieConsent />
+          <GoogleAnalytics />
         </ConsentProvider>
-        <GoogleAnalytics />
       </body>
     </html>
   );

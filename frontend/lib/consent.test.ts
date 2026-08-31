@@ -13,7 +13,7 @@ function installBrowserStorage() {
     location: { href: "https://letrusto.com/" },
     gtag: vi.fn(),
   });
-  vi.stubGlobal("document", { title: "LeTrusto", cookie: "" });
+  vi.stubGlobal("document", { title: "LeTrusto", cookie: "", querySelectorAll: () => [] });
 }
 
 describe("cookie consent", () => {

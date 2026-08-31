@@ -24,7 +24,10 @@ export default function GlobalError({
         </div>
         <div className="flex flex-wrap justify-center gap-3">
           <button
-            onClick={reset}
+            onClick={() => {
+              reset();
+              window.location.reload();
+            }}
             className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 text-sm font-bold text-white"
           >
             Try Again
