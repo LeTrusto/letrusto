@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/config/site";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -11,7 +12,6 @@ export default function robots(): MetadataRoute.Robots {
           "/product",
           "/about",
           "/support",
-          "/deals",
           "/shipping-policy",
           "/returns-policy",
           "/cancellation-policy",
@@ -34,6 +34,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: "https://letrusto.com/sitemap.xml",
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

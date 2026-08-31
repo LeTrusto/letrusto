@@ -23,6 +23,7 @@ const contact = source("./contact/page.tsx");
 const sitemap = source("./sitemap.ts");
 const robots = source("./robots.ts");
 const cookieConsent = source("../components/CookieConsent.tsx");
+const searchError = source("./search/error.tsx");
 
 describe("legal and policy route coverage", () => {
   it("keeps every customer legal route implemented", () => {
@@ -65,6 +66,16 @@ describe("legal and policy route coverage", () => {
     expect(contact).toContain('redirect("/support?tab=contact&category=contact")');
     expect(sitemap).not.toContain("${BASE_URL}/contact");
     expect(sitemap).toContain("${BASE_URL}/support");
+  });
+
+  it("does not publish a sitemap route that has no page", () => {
+    expect(sitemap).not.toContain("/deals");
+    expect(robots).not.toContain('"/deals"');
+  });
+
+  it("keeps search errors customer-safe", () => {
+    expect(searchError).toContain("Please try again, or return to the shop");
+    expect(searchError).not.toContain("error.message");
   });
 
   it("exposes legal routes through sitemap and robots without protected auth", () => {

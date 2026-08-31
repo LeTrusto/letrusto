@@ -67,7 +67,7 @@ export function clearAnalyticsIdentifiers(): void {
   });
   document.querySelectorAll('script[src*="googletagmanager.com"], script#ga4-init').forEach((script) => script.remove());
   const browserWindow = window as Window & { gtag?: (...args: unknown[]) => void; dataLayer?: unknown[] };
-  delete browserWindow.gtag;
+  browserWindow.gtag = undefined;
   browserWindow.dataLayer = [];
 }
 

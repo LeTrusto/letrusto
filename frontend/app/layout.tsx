@@ -11,6 +11,7 @@ import { AuthProvider } from "@/lib/authContext";
 import { CartProvider } from "@/lib/cartContext";
 import { ConsentProvider } from "@/lib/consentContext";
 import CookieConsent from "@/components/CookieConsent";
+import { SITE_URL } from "@/config/site";
 
 import "./globals.css";
 
@@ -25,7 +26,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://letrusto.com"),
+  metadataBase: new URL(SITE_URL),
   applicationName: "LeTrusto",
   alternates: {
     canonical: "/",
@@ -51,7 +52,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en",
-    url: "https://letrusto.com",
+    url: SITE_URL,
     siteName: "LeTrusto",
     title: "LeTrusto — Unique Designs. Freshly Printed.",
     description: "Custom apparel, wall art and accessories printed on demand for the current India launch.",
@@ -65,7 +66,7 @@ export const metadata: Metadata = {
     description: "Custom apparel, wall art and accessories printed on demand for the current India launch.",
     images: ["/images/og-default.svg"],
   },
-  authors: [{ name: "LeTrusto", url: "https://letrusto.com" }],
+  authors: [{ name: "LeTrusto", url: SITE_URL }],
   creator: "LeTrusto",
   publisher: "LeTrusto",
   manifest: "/site.webmanifest",
@@ -100,13 +101,13 @@ export default function RootLayout({
         <SchemaOrg
           type="WebSite"
           data={{
-            "@id": "https://letrusto.com/#website",
+            "@id": `${SITE_URL}/#website`,
             name: "LeTrusto",
-            url: "https://letrusto.com",
+            url: SITE_URL,
             description: "Original designs printed on demand for the current India launch.",
             potentialAction: {
               "@type": "SearchAction",
-              target: "https://letrusto.com/search?q={search_term_string}",
+              target: `${SITE_URL}/search?q={search_term_string}`,
               "query-input": "required name=search_term_string",
             },
           }}
@@ -114,12 +115,12 @@ export default function RootLayout({
         <SchemaOrg
           type="Organization"
           data={{
-            "@id": "https://letrusto.com/#organization",
+            "@id": `${SITE_URL}/#organization`,
             name: "LeTrusto",
-            url: "https://letrusto.com",
+            url: SITE_URL,
             logo: {
               "@type": "ImageObject",
-              url: "https://letrusto.com/LeTrusto%20Brand%20Logo.png",
+              url: `${SITE_URL}/LeTrusto%20Brand%20Logo.png`,
               width: 1774,
               height: 887,
             },

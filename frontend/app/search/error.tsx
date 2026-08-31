@@ -5,13 +5,13 @@ type SearchErrorProps = {
   reset: () => void;
 };
 
-export default function SearchError({ error, reset }: SearchErrorProps) {
+export default function SearchError({ reset }: SearchErrorProps) {
   return (
     <main className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-3xl rounded-[2rem] border border-rose-200 bg-white p-8 text-center premium-shadow">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rose-500">Search Error</p>
         <h1 className="mt-3 text-3xl font-bold text-gray-900">Something went wrong while loading products.</h1>
-        <p className="mt-4 text-gray-600">{error.message}</p>
+        <p className="mt-4 text-gray-600">Please try again, or return to the shop while we restore search.</p>
         <button
           type="button"
           onClick={reset}

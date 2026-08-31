@@ -9,6 +9,7 @@ import CreatorFinds from "@/components/home/CreatorFinds";
 import SchemaOrg from "@/components/SchemaOrg";
 import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
 import type { CommerceProduct } from "@/types/commerce";
+import { SITE_URL } from "@/config/site";
 
 export const metadata: Metadata = {
   title: "Unique Designs. Freshly Printed.",
@@ -34,7 +35,7 @@ export default async function Home() {
 
   return (
     <main className="bg-[var(--background)]">
-      <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Unique Designs. Freshly Printed.", url: "https://letrusto.com", description: "Custom apparel, wall art and accessories printed on demand for the current India launch." }} />
+      <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Unique Designs. Freshly Printed.", url: SITE_URL, description: "Custom apparel, wall art and accessories printed on demand for the current India launch." }} />
       <Hero />
       {products.length > 0 ? (
         <ProductRail title="Fresh prints" subtitle="Custom designs printed on demand" products={products.slice(0, 8)} href="/shop" />

@@ -11,6 +11,7 @@ import CommerceProductCard from "@/components/products/CommerceProductCard";
 import ProductTrustSection from "@/components/products/ProductTrustSection";
 import SchemaOrg from "@/components/SchemaOrg";
 import { buildApiUrl } from "@/services/api";
+import { SITE_URL } from "@/config/site";
 
 function formatPrice(value: number): string {
   return `₹${value.toLocaleString("en-IN")}`;
@@ -121,7 +122,7 @@ export default function ProductDetailView({ product, related }: Props) {
           description: productDescription,
           offers: {
             "@type": "Offer",
-            url: `https://letrusto.com/product/${product.slug}`,
+            url: `${SITE_URL}/product/${product.slug}`,
             priceCurrency: product.currency,
             price: displayPrice,
             availability: isAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
