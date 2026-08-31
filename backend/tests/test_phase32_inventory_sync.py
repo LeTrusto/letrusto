@@ -267,7 +267,8 @@ def test_admin_inventory_route_returns_all_warehouse_rows_without_mutation():
         assert all(row["last_synced_at"] for row in first["warehouses"])
         db.expire_all()
         after = [(row.id, row.last_synced_at, row.cj_sellable_inventory, row.factory_inventory) for row in db.query(SupplierVariantInventory).filter(SupplierVariantInventory.product_id == product.id).order_by(SupplierVariantInventory.storage_id)]
-        assert after == sorted(before, key=lambda item: str(item[0]))
+        expected = sorted(before, key=lambda item: next(row.storage_id for row in rows if row.id == item[0]))
+        assert after == expected
     finally:
         app.dependency_overrides.clear()
         db.query(Product).filter(Product.id == product.id).delete(synchronize_session=False)

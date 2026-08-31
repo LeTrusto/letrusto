@@ -8,6 +8,7 @@ import { API_BASE_URL } from "@/services/api";
 import FulfillmentPreflightPanel from "./FulfillmentPreflightPanel";
 
 const API_BASE = API_BASE_URL;
+const LEGACY_CJ_WORKFLOW_ENABLED = false;
 
 type Variant = {
   id: string;
@@ -65,6 +66,7 @@ type ProductResponse = { products: Product[]; total: number };
 type PrintfulConnection = { connected: boolean; store: string | null; status: string; message: string | null };
 type PrintfulProduct = { supplier_product_id: string; name: string; thumbnail_url: string | null; finalized: boolean; imported_product_id: string | null };
 type PrintfulProductsResponse = { products: PrintfulProduct[]; total: number };
+type LegacyArchiveResponse = { supplier: "cj"; archived_count: number; status: string };
 
 type FulfillmentOrder = {
   order_id: string;
@@ -286,11 +288,14 @@ export default function AdminProductsView() {
   const [message, setMessage] = useState("");
   const [fulfillmentOrders, setFulfillmentOrders] = useState<FulfillmentOrder[]>([]);
   const [syncingOrderId, setSyncingOrderId] = useState<string | null>(null);
+  const [productFilter, setProductFilter] = useState<"all" | "drafts" | "published">("all");
 
   const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/v1/admin/products`, { headers: apiHeaders() });
+      const status = productFilter === "drafts" ? "DRAFT" : productFilter === "published" ? "ACTIVE" : "";
+      const query = status ? `?status=${status}` : "";
+      const response = await fetch(`${API_BASE}/api/v1/admin/products${query}`, { headers: apiHeaders() });
       if (!response.ok) throw new Error(`API error ${response.status}`);
       const data = (await response.json()) as ProductResponse;
       setProducts(data.products.map((product) => ({
@@ -312,7 +317,7 @@ export default function AdminProductsView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [productFilter]);
 
   const loadCandidates = useCallback(async () => {
     const response = await fetch(`${API_BASE}/api/v1/admin/supplier-candidates`, { headers: apiHeaders() });
@@ -412,6 +417,23 @@ export default function AdminProductsView() {
       setError(err instanceof Error ? err.message : "Unable to import Printful hoodie");
     } finally {
       setImportingPrintfulId(null);
+    }
+  }
+
+  async function archiveLegacyCjProducts() {
+    setPrintfulWorking(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/products/archive-legacy-cj`, { method: "POST", headers: apiHeaders() });
+      if (!response.ok) throw new Error(await apiError(response));
+      const result = (await response.json()) as LegacyArchiveResponse;
+      setMessage(`Archived ${result.archived_count} legacy supplier product${result.archived_count === 1 ? "" : "s"}.`);
+      await loadProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to archive legacy supplier products");
+    } finally {
+      setPrintfulWorking(false);
     }
   }
 
@@ -631,29 +653,33 @@ export default function AdminProductsView() {
       <div className="flex items-end justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Catalog Products</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">Imported supplier products and catalog status.</p>
+          <p className="text-sm text-[var(--text-muted)] mt-1">Printful POD products and publish status.</p>
         </div>
         <span className="text-sm text-[var(--text-muted)]">{products.length} loaded</span>
       </div>
 
-      <form onSubmit={(event) => void importProduct(event)} className="lt-card p-4 mb-6 flex flex-col sm:flex-row gap-3">
+      <div className="mb-6 flex flex-wrap gap-2">
+        {(["all", "drafts", "published"] as const).map((filter) => <button key={filter} type="button" onClick={() => setProductFilter(filter)} className={`lt-btn lt-btn-secondary capitalize ${productFilter === filter ? "border-[var(--lt-primary)] text-[var(--lt-primary)]" : ""}`}>{filter}</button>)}
+      </div>
+
+      {LEGACY_CJ_WORKFLOW_ENABLED && <form onSubmit={(event) => void importProduct(event)} className="lt-card p-4 mb-6 flex flex-col sm:flex-row gap-3">
         <input
           value={supplierProductId}
           onChange={(event) => setSupplierProductId(event.target.value)}
-          placeholder="CJ product ID"
+          placeholder="Legacy supplier product ID"
           className="lt-input flex-1"
-          aria-label="CJ product ID"
+          aria-label="Legacy supplier product ID"
         />
         <button type="submit" disabled={working} className="lt-btn lt-btn-primary">
           {working ? "Importing..." : "Import as Draft"}
         </button>
-      </form>
+      </form>}
 
       <section className="lt-card mb-6 p-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Printful</h2>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">Test the backend-only Printful connection and import the finalized Unisex Hoodie as DRAFT.</p>
+            <h2 className="text-lg font-semibold">POD / Printful</h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Test the backend-only Printful connection, discover finalized POD products, and import Unisex Hoodie as DRAFT.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button type="button" onClick={() => void testPrintfulConnection()} disabled={printfulWorking} className="lt-btn lt-btn-secondary">
@@ -662,6 +688,9 @@ export default function AdminProductsView() {
             </button>
             <button type="button" onClick={() => void loadPrintfulProducts()} disabled={printfulWorking} className="lt-btn lt-btn-primary">
               {printfulWorking ? "Loading..." : "Find Products"}
+            </button>
+            <button type="button" onClick={() => void archiveLegacyCjProducts()} disabled={printfulWorking} className="lt-btn lt-btn-secondary">
+              Archive Legacy Catalog
             </button>
           </div>
         </div>
@@ -681,14 +710,14 @@ export default function AdminProductsView() {
         </div>}
       </section>
 
-      <section className="mb-6 border-y border-[var(--border)] py-5">
+      {LEGACY_CJ_WORKFLOW_ENABLED && <section className="mb-6 border-y border-[var(--border)] py-5">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold">Supplier Candidates</h2>
-            <p className="text-sm text-[var(--text-muted)] mt-1">Verified CJ products awaiting an explicit import decision.</p>
+            <h2 className="text-lg font-semibold">Legacy Supplier Candidates</h2>
+            <p className="text-sm text-[var(--text-muted)] mt-1">Legacy supplier products awaiting an explicit import decision.</p>
           </div>
           <form onSubmit={(event) => void registerCandidate(event)} className="flex flex-col sm:flex-row gap-2 lg:w-[32rem]">
-            <input value={candidateIdentifier} onChange={(event) => setCandidateIdentifier(event.target.value)} placeholder="CJ product ID or SKU" aria-label="CJ product ID or SKU" className="lt-input flex-1" />
+            <input value={candidateIdentifier} onChange={(event) => setCandidateIdentifier(event.target.value)} placeholder="Legacy supplier product ID or SKU" aria-label="Legacy supplier product ID or SKU" className="lt-input flex-1" />
             <button type="submit" disabled={candidateWorking} className="lt-btn lt-btn-primary">{candidateWorking ? "Verifying..." : "Register"}</button>
           </form>
         </div>
@@ -745,9 +774,9 @@ export default function AdminProductsView() {
             </table>
           </div>
         )}
-      </section>
+      </section>}
 
-      {selectedCandidateIds.length > 0 && (
+      {LEGACY_CJ_WORKFLOW_ENABLED && selectedCandidateIds.length > 0 && (
         <div className="mb-4 flex items-center justify-between gap-3 border border-[var(--border)] p-3">
           <span className="text-sm">{selectedCandidateIds.length} approved candidate{selectedCandidateIds.length === 1 ? "" : "s"} selected</span>
           <button type="button" disabled={bulkWorking} onClick={() => void bulkImportApprovedProducts()} className="lt-btn lt-btn-primary text-sm">
@@ -756,7 +785,7 @@ export default function AdminProductsView() {
         </div>
       )}
 
-      {bulkImportResult && (
+      {LEGACY_CJ_WORKFLOW_ENABLED && bulkImportResult && (
         <section className="mb-4 border border-[var(--border)] p-4" aria-live="polite">
           <h2 className="font-semibold text-sm">Bulk approved import result</h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -776,13 +805,13 @@ export default function AdminProductsView() {
       {message && <p className="mb-4 text-sm text-green-700">{message}</p>}
       {error && <p className="mb-4 text-sm text-red-700">{error}</p>}
 
-      <FulfillmentPreflightPanel products={products.map((product) => ({ id: product.id, name: product.name, variants: product.variants }))} />
+      {LEGACY_CJ_WORKFLOW_ENABLED && <FulfillmentPreflightPanel products={products.map((product) => ({ id: product.id, name: product.name, variants: product.variants }))} />}
 
-      <section className="mb-6 border-y border-[var(--border)] py-5">
+      {LEGACY_CJ_WORKFLOW_ENABLED && <section className="mb-6 border-y border-[var(--border)] py-5">
         <h2 className="text-lg font-semibold">Paid order fulfillment</h2>
         <p className="text-sm text-[var(--text-muted)] mt-1">Supplier status and tracking are synchronized server-side.</p>
         {fulfillmentOrders.length === 0 ? <p className="mt-4 text-sm text-[var(--text-muted)]">No paid orders require fulfillment.</p> : <div className="mt-4 overflow-x-auto"><table className="w-full text-sm whitespace-nowrap"><thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2 pr-3">Order</th><th className="pr-3">Payment</th><th className="pr-3">Fulfillment</th><th className="pr-3">CJ order</th><th className="pr-3">Tracking</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{fulfillmentOrders.map((order) => <tr key={order.order_id} className="border-t border-[var(--border)]"><td className="py-3 pr-3">{order.order_number}<span className="block text-xs text-[var(--text-muted)]">{order.customer_email}</span></td><td className="pr-3">{order.payment_status}</td><td className="pr-3">{order.fulfillment_status}<span className="block text-xs text-[var(--text-muted)]">{order.supplier_status ?? "-"}</span></td><td className="pr-3">{order.supplier_order_id ?? "Not submitted"}</td><td className="pr-3">{order.tracking_number ? `${order.tracking_carrier ?? "Carrier"} · ${order.tracking_number}` : "-"}</td><td><button type="button" onClick={() => void syncFulfillment(order.order_id)} disabled={syncingOrderId !== null || order.fulfillment_status === "DELIVERED"} className="lt-btn lt-btn-secondary text-sm">{syncingOrderId === order.order_id ? "Syncing..." : "Sync status"}</button></td></tr>)}</tbody></table></div>}
-      </section>
+      </section>}
 
       {loading ? (
         <p className="text-sm text-[var(--text-muted)]">Loading catalog...</p>
@@ -797,7 +826,7 @@ export default function AdminProductsView() {
                   {product.images[0] && <Image src={product.images[0]} alt="" width={80} height={80} className="w-20 h-20 object-cover rounded-lg" />}
                   <div>
                     <h2 className="font-semibold">{product.name}</h2>
-                    <p className="text-xs text-[var(--text-muted)] mt-1">CJ: {product.supplier_product_id ?? "-"}</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">Supplier: {product.supplier ?? "-"} · ID: {product.supplier_product_id ?? "-"}</p>
                     <p className="text-xs text-[var(--text-muted)]">Variants: {product.variants.length} · Images: {product.images.length}</p>
                   </div>
                 </div>
@@ -856,8 +885,8 @@ export default function AdminProductsView() {
               )}
               <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4 text-sm">
                 <Metric label="Status" value={product.status} />
-                <Metric label="CJ inventory" value={product.cj_inventory ?? 0} />
-                <Metric label="Factory inventory" value={product.factory_inventory ?? 0} />
+                <Metric label="POD availability" value={product.verified_warehouse ?? "Review"} />
+                <Metric label="Inventory" value={product.total_inventory ?? "On demand"} />
                 <Metric label="Supplier cost (INR)" value={product.supplier_cost == null ? "-" : formatInr(product.supplier_cost)} />
                 <Metric label="Shipping (INR)" value={product.shipping_cost == null ? "-" : formatInr(product.shipping_cost)} />
                 <Metric label="Selling price" value={product.selling_price == null ? "-" : formatInr(product.selling_price)} />
@@ -942,7 +971,7 @@ export default function AdminProductsView() {
               {product.variants.length > 0 && (
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full text-xs">
-                    <thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2">CJ VID</th><th>SKU</th><th>Supplier USD</th><th>Supplier cost (INR)</th><th>Selling price</th><th>CJ inventory</th><th>Factory inventory</th></tr></thead>
+                    <thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2">Variant ID</th><th>SKU</th><th>Supplier USD</th><th>Supplier cost (INR)</th><th>Selling price</th><th>Inventory</th><th>Reserved supply</th></tr></thead>
                     <tbody>{product.variants.map((variant) => <tr key={variant.id} className="border-t border-[var(--border)]"><td className="py-2 pr-3">{variant.supplier_variant_id}</td><td className="pr-3">{variant.supplier_variant_sku}</td><td className="pr-3">{variant.supplier_cost_usd == null ? "-" : `$${variant.supplier_cost_usd}`}</td><td className="pr-3">{variant.supplier_cost == null ? "-" : formatInr(variant.supplier_cost)}</td><td className="pr-3">{variant.selling_price == null ? "-" : formatInr(variant.selling_price)}</td><td className="pr-3">{variant.cj_inventory ?? 0}</td><td>{variant.factory_inventory ?? 0}</td></tr>)}</tbody>
                   </table>
                 </div>

@@ -42,6 +42,7 @@ from app.schemas.admin_products import (
     MarketEvidenceCreate,
     MarketEvidenceDTO,
     MarketEvidenceResponse,
+    LegacyArchiveResponse,
     PriceCalculationRequest,
     PriceCalculationResponse,
     PrintfulConnectionResponse,
@@ -78,17 +79,22 @@ class AdminProductService:
     def list_products(self, status: str | None, supplier: str | None, skip: int, limit: int) -> AdminProductListResponse:
         stmt = select(Product).options(selectinload(Product.images), selectinload(Product.variants)).order_by(Product.created_at.desc())
         count_stmt = select(func.count(Product.id))
-        if supplier:
-            stmt = stmt.where(Product.supplier == supplier)
-            count_stmt = count_stmt.where(Product.supplier == supplier)
-        else:
-            stmt = stmt.where(Product.supplier.is_not(None))
-            count_stmt = count_stmt.where(Product.supplier.is_not(None))
+        active_supplier = supplier or "printful"
+        stmt = stmt.where(Product.supplier == active_supplier)
+        count_stmt = count_stmt.where(Product.supplier == active_supplier)
         if status:
             stmt = stmt.where(Product.status == status)
             count_stmt = count_stmt.where(Product.status == status)
         products = list(self.db.scalars(stmt.offset(skip).limit(limit)).unique().all())
         return AdminProductListResponse(products=[self._dto(p) for p in products], total=self.db.scalar(count_stmt) or 0)
+
+    def archive_legacy_cj_products(self) -> LegacyArchiveResponse:
+        products = list(self.db.scalars(select(Product).where(Product.supplier == "cj", Product.status == "ACTIVE")).all())
+        for product in products:
+            product.status = "PAUSED"
+            product.last_supplier_sync_at = datetime.now(timezone.utc)
+        self.db.commit()
+        return LegacyArchiveResponse(supplier="cj", archived_count=len(products))
 
     async def test_printful_connection(self) -> PrintfulConnectionResponse:
         try:
@@ -165,7 +171,10 @@ class AdminProductService:
                     storage_id=warehouse.storage_id,
                     last_synced_at=warehouse.last_synced_at,
                 )
-                for warehouse in sorted(variant.warehouse_inventory, key=lambda item: str(item.id))
+                for warehouse in sorted(
+                    variant.warehouse_inventory,
+                    key=lambda item: (item.warehouse_country, item.warehouse_name or "", item.storage_id or ""),
+                )
             ]
             variants.append(
                 AdminVariantInventoryDTO(

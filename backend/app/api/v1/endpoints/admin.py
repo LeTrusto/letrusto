@@ -24,6 +24,7 @@ from app.schemas.admin_products import (
     ProductImportRequest,
     PrintfulConnectionResponse,
     PrintfulProductsResponse,
+    LegacyArchiveResponse,
     ProductRejectionRequest,
     ProductStatusUpdate,
     SupplierCandidateCreate,
@@ -501,6 +502,14 @@ def list_catalog_products(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> AdminProductListResponse:
     return service.list_products(status=status, supplier=supplier, skip=skip, limit=limit)
+
+
+@router.post("/products/archive-legacy-cj", response_model=LegacyArchiveResponse)
+def archive_legacy_cj_products(
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> LegacyArchiveResponse:
+    return service.archive_legacy_cj_products()
 
 
 @router.get("/products/{product_id}", response_model=AdminProductDTO)

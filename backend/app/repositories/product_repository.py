@@ -44,10 +44,12 @@ class ProductRepository:
         )
         return (Product.price_value.is_not(None) | priced_variant)
 
+    @staticmethod
+    def _public_catalog_filter():
+        return Product.status == "ACTIVE", Product.supplier == "printful", ProductRepository._customer_ready_price_filter()
+
     def list_products(self, ids: list[str] | None = None) -> list[Product]:
-        stmt = select(Product).where(
-            Product.status == "ACTIVE", self._customer_ready_price_filter()
-        ).options(*self._product_load_options())
+        stmt = select(Product).where(*self._public_catalog_filter()).options(*self._product_load_options())
         if ids is not None:
             if len(ids) == 0:
                 return []
@@ -59,7 +61,7 @@ class ProductRepository:
         stmt = (
             select(Product)
             .options(*self._product_load_options())
-            .where(Product.slug == slug, Product.status == "ACTIVE", self._customer_ready_price_filter())
+            .where(Product.slug == slug, *self._public_catalog_filter())
         )
         return self.db.scalars(stmt).unique().first()
 
@@ -68,7 +70,7 @@ class ProductRepository:
             select(Product)
             .join(Product.brand)
             .join(Product.category)
-            .where(Product.status == "ACTIVE", self._customer_ready_price_filter())
+            .where(*self._public_catalog_filter())
             .options(*self._product_load_options())
         )
 
@@ -146,6 +148,6 @@ class ProductRepository:
 
     def get_by_id(self, product_id) -> Product | None:
         stmt = select(Product).where(
-            Product.id == product_id, Product.status == "ACTIVE", self._customer_ready_price_filter()
+            Product.id == product_id, *self._public_catalog_filter()
         ).options(*self._product_load_options())
         return self.db.scalars(stmt).unique().first()

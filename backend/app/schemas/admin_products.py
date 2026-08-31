@@ -95,6 +95,12 @@ class PrintfulProductsResponse(BaseModel):
     total: int
 
 
+class LegacyArchiveResponse(BaseModel):
+    supplier: Literal["cj"]
+    archived_count: int
+    status: str = "PAUSED"
+
+
 CandidateApprovalStatus = Literal["REVIEW", "APPROVED", "REJECTED", "IMPORTED"]
 CandidateSnapshotStatus = Literal["AVAILABLE", "LEGACY_SNAPSHOT_UNAVAILABLE"]
 CandidateReadinessStatus = Literal[

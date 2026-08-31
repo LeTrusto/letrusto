@@ -722,12 +722,14 @@ def test_admin_catalog_separates_legacy_and_supplier_products():
     db.flush()
     legacy = Product(id=uuid4(), slug=f"phase31-legacy-{suffix}", name="Legacy product", description="Legacy", status="ACTIVE", category_id=category.id, brand_id=brand.id)
     supplier = Product(id=uuid4(), slug=f"phase31-cj-{suffix}", name="CJ product", description="CJ", status="DRAFT", supplier="cj", supplier_product_id=f"phase31-cj-{suffix}")
-    db.add_all([legacy, supplier])
+    printful = Product(id=uuid4(), slug=f"phase31-printful-{suffix}", name="Printful product", description="Printful", status="DRAFT", supplier="printful", supplier_product_id=f"phase31-printful-{suffix}")
+    db.add_all([legacy, supplier, printful])
     db.commit()
     try:
         default = service.list_products(None, None, 0, 100)
-        assert all(product.supplier is not None for product in default.products)
-        assert supplier.id in {product.id for product in default.products}
+        assert all(product.supplier == "printful" for product in default.products)
+        assert printful.id in {product.id for product in default.products}
+        assert supplier.id not in {product.id for product in default.products}
         assert legacy.id not in {product.id for product in default.products}
 
         filtered = service.list_products(None, "cj", 0, 100)
@@ -737,6 +739,7 @@ def test_admin_catalog_separates_legacy_and_supplier_products():
         assert all(product.supplier == "cj" for product in filtered.products)
         assert db.get(Product, legacy.id).status == "ACTIVE"
     finally:
+        db.delete(printful)
         db.delete(supplier)
         db.delete(legacy)
         db.delete(brand)
@@ -756,7 +759,7 @@ def test_public_catalog_exposes_only_safe_active_variant_data():
     db.flush()
     product = Product(
         id=uuid4(), slug=f"public-product-{suffix}", name="Public product", description="Public",
-        status="ACTIVE", supplier="cj", supplier_product_id=f"cj-{suffix}", category_id=category.id,
+        status="ACTIVE", supplier="printful", supplier_product_id=f"printful-{suffix}", category_id=category.id,
         brand_id=brand.id, price_value=Decimal("299.00"), selling_price=Decimal("299.00"),
         ai_score=80, rating=Decimal("4.0"), availability="In Stock", ai_summary="Public summary",
         review_summary="Public reviews",
@@ -818,5 +821,71 @@ def test_public_catalog_hides_active_product_without_stored_customer_price():
         db.delete(product)
         db.delete(brand)
         db.delete(category)
+        db.commit()
+        db.close()
+
+
+def test_public_catalog_only_returns_active_printful_products():
+    from app.repositories.product_repository import ProductRepository
+    from app.services.product_service import ProductService
+
+    db = SessionLocal()
+    suffix = str(uuid4())[:8]
+    category = Category(name=f"POD Category {suffix}", slug=f"pod-category-{suffix}")
+    brand = Brand(name=f"POD Brand {suffix}", slug=f"pod-brand-{suffix}")
+    db.add_all([category, brand])
+    db.flush()
+    cj_product = Product(id=uuid4(), slug=f"cj-public-{suffix}", name="Legacy CJ", description="Legacy", status="ACTIVE", supplier="cj", supplier_product_id=f"cj-public-{suffix}", category_id=category.id, brand_id=brand.id, price_value=Decimal("499"), ai_score=1, rating=Decimal("1.0"), ai_summary="", review_summary="")
+    printful_draft = Product(id=uuid4(), slug=f"printful-draft-{suffix}", name="Draft Hoodie", description="Draft", status="DRAFT", supplier="printful", supplier_product_id=f"printful-draft-{suffix}", category_id=category.id, brand_id=brand.id, price_value=Decimal("999"), ai_score=1, rating=Decimal("1.0"), ai_summary="", review_summary="")
+    printful_active = Product(id=uuid4(), slug=f"printful-active-{suffix}", name="Published Hoodie", description="Published", status="ACTIVE", supplier="printful", supplier_product_id=f"printful-active-{suffix}", category_id=category.id, brand_id=brand.id, price_value=Decimal("1299"), ai_score=1, rating=Decimal("1.0"), ai_summary="", review_summary="")
+    db.add_all([cj_product, printful_draft, printful_active])
+    db.flush()
+    db.add_all([
+        ProductVariant(product_id=cj_product.id, supplier_variant_id=f"cj-vid-{suffix}", supplier_variant_sku=f"cj-sku-{suffix}", name="Default", position=1, selling_price=Decimal("499"), active=True),
+        ProductVariant(product_id=printful_draft.id, supplier_variant_id=f"pf-draft-vid-{suffix}", supplier_variant_sku=f"pf-draft-sku-{suffix}", name="Default", position=1, selling_price=Decimal("999"), active=True),
+        ProductVariant(product_id=printful_active.id, supplier_variant_id=f"pf-active-vid-{suffix}", supplier_variant_sku=f"pf-active-sku-{suffix}", name="Default", position=1, selling_price=Decimal("1299"), active=True),
+    ])
+    db.commit()
+    try:
+        public_products = ProductService(ProductRepository(db)).list_products()
+        public_slugs = {item.id for item in public_products}
+
+        assert printful_active.slug in public_slugs
+        assert printful_draft.slug not in public_slugs
+        assert cj_product.slug not in public_slugs
+    finally:
+        for product in (cj_product, printful_draft, printful_active):
+            db.delete(product)
+        db.delete(brand)
+        db.delete(category)
+        db.commit()
+        db.close()
+
+
+def test_archive_legacy_cj_products_pauses_without_deleting():
+    db = SessionLocal()
+    suffix = str(uuid4())[:8]
+    service = AdminProductService(db)
+    active_cj = Product(id=uuid4(), slug=f"archive-cj-{suffix}", name="Legacy active CJ", description="Legacy", status="ACTIVE", supplier="cj", supplier_product_id=f"archive-cj-{suffix}")
+    draft_cj = Product(id=uuid4(), slug=f"archive-cj-draft-{suffix}", name="Legacy draft CJ", description="Legacy", status="DRAFT", supplier="cj", supplier_product_id=f"archive-cj-draft-{suffix}")
+    active_printful = Product(id=uuid4(), slug=f"archive-pf-{suffix}", name="Printful active", description="POD", status="ACTIVE", supplier="printful", supplier_product_id=f"archive-pf-{suffix}")
+    db.add_all([active_cj, draft_cj, active_printful])
+    db.commit()
+    active_cj_ids = set()
+    try:
+        active_cj_ids = {row.id for row in db.query(Product).filter(Product.supplier == "cj", Product.status == "ACTIVE").all()}
+        result = service.archive_legacy_cj_products()
+
+        assert result.archived_count == len(active_cj_ids)
+        assert active_cj.id in active_cj_ids
+        assert db.get(Product, active_cj.id).status == "PAUSED"
+        assert db.get(Product, draft_cj.id).status == "DRAFT"
+        assert db.get(Product, active_printful.id).status == "ACTIVE"
+    finally:
+        if active_cj_ids:
+            db.query(Product).filter(Product.id.in_(active_cj_ids)).update({Product.status: "ACTIVE"}, synchronize_session=False)
+        db.delete(active_printful)
+        db.delete(draft_cj)
+        db.delete(active_cj)
         db.commit()
         db.close()
