@@ -26,8 +26,8 @@ class FakeResult:
 
 
 class FakeDB:
-    def __init__(self, warehouses):
-        self.product = SimpleNamespace(id=PRODUCT_ID, status="ACTIVE", supplier="cj")
+    def __init__(self, warehouses, supplier="cj"):
+        self.product = SimpleNamespace(id=PRODUCT_ID, status="ACTIVE", supplier=supplier)
         self.variant = SimpleNamespace(id=VARIANT_ID, supplier_variant_id=VID, active=True)
         self.warehouses = warehouses
 
@@ -44,7 +44,7 @@ class FakeAdapter:
         self.error = error
         self.calls = []
 
-    async def calculate_shipping(self, variant_id, destination_country, *, origin_country, quantity):
+    async def calculate_shipping(self, variant_id, destination_country, *, origin_country="", quantity=1):
         self.calls.append((variant_id, destination_country, origin_country, quantity))
         if self.error:
             raise self.error
@@ -88,6 +88,15 @@ async def check(warehouses, adapter, quantity=1, **kwargs):
     )
 
 
+async def check_printful(adapter, quantity=1):
+    return await FulfillmentPreflightService(FakeDB([], supplier="printful"), adapter).check(
+        product_id=PRODUCT_ID,
+        variant_id=VARIANT_ID,
+        quantity=quantity,
+        destination_country="IN",
+    )
+
+
 def test_product_1_is_not_fulfillable_when_only_us_stock_has_no_route():
     adapter = FakeAdapter(routes={"CN": route()})
     result = asyncio.run(check([warehouse("CN", 0, factory=50031), warehouse("US", 243)], adapter))
@@ -102,6 +111,15 @@ def test_china_sellable_stock_and_route_is_fulfillable():
     assert result.status == "FULFILLABLE"
     assert result.origin_country == "CN"
     assert result.sellable_inventory == 5
+
+
+def test_printful_on_demand_does_not_require_warehouse_inventory():
+    adapter = FakeAdapter(routes={"": route(name="Printful Standard")})
+    result = asyncio.run(check_printful(adapter))
+    assert result.status == "FULFILLABLE"
+    assert result.sellable_inventory == 0
+    assert result.logistics_name == "Printful Standard"
+    assert adapter.calls == [(VID, "IN", "", 1)]
 
 
 def test_factory_inventory_is_not_sellable():

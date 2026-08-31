@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.config import get_settings
 from app.models.entities import InventoryReservation, Order
 from app.schemas.reconciliation import ReconciliationIssueDTO, ReconciliationResultDTO
-from app.services.cashfree_service import CashfreeService
 from app.services.fulfillment_service import FulfillmentService
 from app.services.inventory_reservation_service import InventoryReservationService
+from app.services.razorpay_service import RazorpayService
 
 
 class OrderLifecycleReconciliationService:
@@ -34,26 +34,24 @@ class OrderLifecycleReconciliationService:
             ).options(selectinload(Order.user)).order_by(Order.created_at.asc()).limit(self.settings.RECONCILIATION_BATCH_SIZE)
         ).all())
         reconciled = 0
-        service = CashfreeService(self.db)
+        service = RazorpayService(self.db, self.settings)
         for order in orders:
             try:
-                result = await service.reconcile_order_payment(order.id)
-                state = result.get("state")
-                if state == "PROVIDER_UNAVAILABLE":
-                    provider_unavailable.append(f"payment:{order.order_number}")
-                elif state in {"SUCCESS", "FAILED", "USER_DROPPED", "CANCELLED", "VOID"}:
+                if order.payment_provider != service.provider:
+                    failures.append(f"payment:{order.order_number}:unsupported_provider")
+                    continue
+                result = await service.verify_payment_status(order.user, order.id)
+                state = result.payment_status
+                if state in {"PAID", "FAILED", "CANCELLED", "REFUNDED"}:
                     reconciled += 1
-                elif state not in {"PENDING", "SKIPPED"}:
-                    failures.append(f"payment:{order.order_number}:{result.get('failure') or state}")
+                elif state not in {"PENDING"}:
+                    failures.append(f"payment:{order.order_number}:{state}")
             except Exception as exc:
                 self.db.rollback()
                 failures.append(f"payment:{order.order_number}:{str(exc)[:300]}")
         return reconciled
 
     async def reconcile_fulfillment(self, failures: list[str], provider_unavailable: list[str]) -> int:
-        if not self.settings.CJ_API_KEY:
-            provider_unavailable.append("fulfillment:CJ_API_KEY_not_configured")
-            return 0
         orders = list(self.db.scalars(
             select(Order).where(
                 Order.payment_status == "PAID",
@@ -77,9 +75,6 @@ class OrderLifecycleReconciliationService:
         return submitted
 
     async def sync_tracking(self, failures: list[str], provider_unavailable: list[str]) -> int:
-        if not self.settings.CJ_API_KEY:
-            provider_unavailable.append("tracking:CJ_API_KEY_not_configured")
-            return 0
         try:
             orders = await FulfillmentService(self.db).sync_pending_fulfillments()
             return len(orders)

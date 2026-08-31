@@ -153,6 +153,22 @@ class PrintfulAdapter:
         )
 
     async def create_order(self, payload: dict) -> SupplierOrderResult:
+        external_id = str(payload.get("orderNumber", ""))
+        if external_id:
+            try:
+                existing = await self._request("GET", "/orders", params={"external_id": external_id})
+            except (httpx.HTTPError, ValueError, TypeError):
+                existing = {}
+            orders = existing.get("data", existing.get("orders", []))
+            if isinstance(orders, list):
+                match = next((item for item in orders if isinstance(item, dict) and str(item.get("external_id", "")) == external_id), None)
+                if match and match.get("id"):
+                    return SupplierOrderResult(
+                        accepted=True,
+                        supplier_order_id=str(match["id"]),
+                        status=str(match.get("status", "SUBMITTED")),
+                        supplier_status=str(match.get("status", "")) or None,
+                    )
         items = [
             {"variant_id": int(item["vid"]), "quantity": item["quantity"]}
             for item in payload.get("products", [])
@@ -161,7 +177,7 @@ class PrintfulAdapter:
             "POST",
             "/orders",
             body={
-                "external_id": payload.get("orderNumber", ""),
+                "external_id": external_id,
                 "recipient": {
                     "name": payload.get("shippingCustomerName", ""),
                     "phone": payload.get("shippingPhone", ""),

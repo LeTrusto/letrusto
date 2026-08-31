@@ -70,6 +70,23 @@ class FulfillmentPreflightService:
         if quantity <= 0:
             return self._failed(**base, reason="Requested quantity must be positive", error_classification="INVALID_REQUEST")
 
+        if product.supplier == "printful":
+            try:
+                adapter = self.adapter or build_supplier_adapter(product.supplier)
+                shipping = await adapter.calculate_shipping(variant.supplier_variant_id, destination_country, quantity=quantity)
+            except (httpx.HTTPError, ValueError, TypeError) as exc:
+                return self._failed(**base, reason="Supplier freight validation failed", error_classification="TEMPORARY_SUPPLIER_ERROR")
+            if not shipping.options:
+                return self._failed(**base, reason=shipping.error or "Printful cannot ship this destination", error_classification="NO_LOGISTICS")
+            selected = min(shipping.options, key=lambda option: (option.cost_usd, _delivery_days(option.estimated_days), option.carrier))
+            return FulfillmentPreflightResult(
+                **base,
+                status="FULFILLABLE",
+                logistics_name=selected.carrier,
+                shipping_cost_usd=selected.cost_usd,
+                delivery_estimate=selected.estimated_days,
+            )
+
         warehouses = list(
             self.db.scalars(
                 select(SupplierVariantInventory).where(

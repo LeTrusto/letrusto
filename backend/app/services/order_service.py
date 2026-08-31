@@ -56,7 +56,9 @@ class OrderService:
         return product, variant
 
     @staticmethod
-    def _validate_inventory(variant: ProductVariant, quantity: int) -> None:
+    def _validate_inventory(product: Product, variant: ProductVariant, quantity: int) -> None:
+        if product.supplier == "printful":
+            return
         available = max(0, variant.cj_inventory or 0)
         if available == 0:
             raise BadRequestError("Product variant is out of stock")
@@ -185,7 +187,7 @@ class OrderService:
         product, variant = self._resolve_variant(self.db, payload.product_id, payload.variant_id)
         existing = next((item for item in cart.items if item.product_id == product.id and item.variant_id == variant.id), None)
         quantity = payload.quantity + (existing.quantity if existing else 0)
-        self._validate_inventory(variant, quantity)
+        self._validate_inventory(product, variant, quantity)
         if existing:
             existing.quantity = quantity
             existing.price_snapshot = variant.selling_price
@@ -284,8 +286,8 @@ class OrderService:
         if len(variants_by_id) != len({variant.id for _, variant, _ in resolved}):
             raise BadRequestError("Product variant is unavailable")
         resolved = [(product, variants_by_id[variant.id], quantity) for product, variant, quantity in resolved]
-        for _, variant, quantity in resolved:
-            self._validate_inventory(variant, quantity)
+        for product, variant, quantity in resolved:
+            self._validate_inventory(product, variant, quantity)
         currency = self._currency_for_country(payload.shipping_address.country)
         shipping_status, shipping_amount, _ = self._shipping_quote(resolved, payload.shipping_address.country, currency)
         if shipping_status not in {"AVAILABLE", "NOT_APPLICABLE"}:

@@ -82,7 +82,10 @@ def test_create_order_maps_shared_fulfillment_payload(monkeypatch):
     adapter = PrintfulAdapter("test-key")
 
     async def request(method, path, *, params=None, body=None):
-        assert method == "POST"
+        if method == "GET":
+            assert path == "/orders"
+            assert params == {"external_id": "LT-1001"}
+            return {"data": []}
         assert path == "/orders"
         assert body["external_id"] == "LT-1001"
         assert body["recipient"]["country_code"] == "US"
@@ -106,3 +109,18 @@ def test_create_order_maps_shared_fulfillment_payload(monkeypatch):
     assert result.accepted is True
     assert result.supplier_order_id == "9001"
     assert result.status == "draft"
+
+
+def test_create_order_recovers_existing_external_order_without_duplicate(monkeypatch):
+    adapter = PrintfulAdapter("test-key")
+
+    async def request(method, path, *, params=None, body=None):
+        assert method == "GET"
+        assert path == "/orders"
+        assert params == {"external_id": "LT-1001"}
+        return {"data": [{"id": 9001, "external_id": "LT-1001", "status": "draft"}]}
+
+    monkeypatch.setattr(adapter, "_request", request)
+    result = asyncio.run(adapter.create_order({"orderNumber": "LT-1001", "products": []}))
+    assert result.accepted is True
+    assert result.supplier_order_id == "9001"

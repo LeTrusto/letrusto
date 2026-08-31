@@ -52,6 +52,8 @@ class InventoryReservationService:
         reservations: list[InventoryReservation] = []
         for item in order.items:
             variant = variants_by_id[item.variant_id]
+            if item.product and item.product.supplier == "printful":
+                continue
             cj_inventory = max(0, variant.cj_inventory or 0)
             reserved = self.active_quantity(variant.id, now)
             available = max(0, cj_inventory - reserved)
