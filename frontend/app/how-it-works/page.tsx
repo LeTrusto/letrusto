@@ -4,7 +4,7 @@ import { ArrowRight, Palette, ShoppingCart, Truck, Package } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "How It Works",
-  description: "Learn how LeTrusto print-on-demand works — choose a design, we print it fresh and ship it worldwide.",
+  description: "Learn how LeTrusto print-on-demand works for the current India launch.",
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -26,8 +26,8 @@ const STEPS = [
   },
   {
     icon: Truck,
-    title: "Shipped Worldwide",
-    description: "We ship from production facilities closest to you. Most orders arrive within 3-7 business days.",
+    title: "India Checkout",
+    description: "India is the current purchasing destination. Shipping is calculated at checkout before payment.",
   },
 ];
 
@@ -39,7 +39,7 @@ export default function HowItWorksPage() {
           How It Works
         </h1>
         <p className="mt-4 text-center text-[var(--text-secondary)] max-w-lg mx-auto">
-          From design to your doorstep — simple, fast, and worldwide.
+          From design to made-to-order production, with India checkout available at launch.
         </p>
 
         <div className="mt-12 grid gap-8 md:grid-cols-2">

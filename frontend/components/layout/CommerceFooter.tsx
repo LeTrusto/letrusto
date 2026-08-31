@@ -15,15 +15,16 @@ const SHOP_LINKS = [
 
 const COMPANY_LINKS = [
   { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
+  { label: "Contact Us", href: "/support?tab=contact&category=contact" },
   { label: "Support", href: "/support" },
 ];
 
 const POLICY_LINKS = [
   { label: "Shipping Policy", href: "/shipping-policy" },
   { label: "Returns & Refunds", href: "/returns-policy" },
+  { label: "Cancellation Policy", href: "/cancellation-policy" },
   { label: "Privacy Policy", href: "/privacy-policy" },
-  { label: "Terms of Use", href: "/terms-of-use" },
+  { label: "Terms & Conditions", href: "/terms-of-use" },
 ];
 
 export default function CommerceFooter() {
@@ -36,7 +37,7 @@ export default function CommerceFooter() {
             <BrandMark footer />
             <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
               Original designs, printed fresh.<br />
-              Made to order and shipped worldwide.
+              Made to order for the current India launch.
             </p>
           </div>
 

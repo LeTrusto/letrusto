@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     template: "%s | LeTrusto",
   },
   description:
-    "Custom apparel, wall art and accessories — printed on demand and shipped worldwide. LeTrusto — unique designs, freshly printed.",
+    "Custom apparel, wall art and accessories printed on demand for the current India launch. LeTrusto — unique designs, freshly printed.",
   keywords: [
     "print on demand",
     "custom t-shirts",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     "printed apparel",
     "custom phone cases",
     "unique designs",
-    "global shipping",
+    "India shipping",
     "LeTrusto",
     "made to order",
   ],
@@ -53,8 +53,8 @@ export const metadata: Metadata = {
     locale: "en",
     url: "https://letrusto.com",
     siteName: "LeTrusto",
-    title: "LeTrusto — Unique Designs. Freshly Printed. Shipped Worldwide.",
-    description: "Custom apparel, wall art and accessories — printed on demand and shipped worldwide.",
+    title: "LeTrusto — Unique Designs. Freshly Printed.",
+    description: "Custom apparel, wall art and accessories printed on demand for the current India launch.",
     images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
   },
   twitter: {
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     site: "@letrusto",
     creator: "@letrusto",
     title: "LeTrusto — Unique Designs. Freshly Printed.",
-    description: "Custom apparel, wall art and accessories — printed on demand and shipped worldwide.",
+    description: "Custom apparel, wall art and accessories printed on demand for the current India launch.",
     images: ["/images/og-default.svg"],
   },
   authors: [{ name: "LeTrusto", url: "https://letrusto.com" }],
@@ -103,7 +103,7 @@ export default function RootLayout({
             "@id": "https://letrusto.com/#website",
             name: "LeTrusto",
             url: "https://letrusto.com",
-            description: "Original designs printed on demand and shipped worldwide.",
+            description: "Original designs printed on demand for the current India launch.",
             potentialAction: {
               "@type": "SearchAction",
               target: "https://letrusto.com/search?q={search_term_string}",
@@ -123,7 +123,7 @@ export default function RootLayout({
               width: 1774,
               height: 887,
             },
-            description: "Original designs printed on demand and shipped worldwide.",
+            description: "Original designs printed on demand for the current India launch.",
             sameAs: ["https://x.com/letrusto", "https://instagram.com/letrusto"],
           }}
         />

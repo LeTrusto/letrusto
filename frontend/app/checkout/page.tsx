@@ -32,12 +32,12 @@ declare global {
 type PaymentState = "idle" | "creating" | "opening" | "verifying" | "success" | "failed" | "cancelled";
 type QuoteState = "idle" | "loading" | "ready" | "error";
 
-// A Cancellation Policy route does not exist yet; link it here once it is published.
 const LEGAL_LINKS = [
-  { label: "Terms of Use", href: "/terms-of-use" },
+  { label: "Terms & Conditions", href: "/terms-of-use" },
   { label: "Privacy Policy", href: "/privacy-policy" },
   { label: "Shipping Policy", href: "/shipping-policy" },
   { label: "Returns & Refunds", href: "/returns-policy" },
+  { label: "Cancellation Policy", href: "/cancellation-policy" },
 ];
 
 export default function CheckoutPage() {

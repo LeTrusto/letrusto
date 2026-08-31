@@ -13,7 +13,7 @@ export default function Hero() {
           FRESHLY PRINTED.
         </h1>
         <p className="mx-auto mt-6 max-w-[680px] text-lg font-medium leading-relaxed text-[var(--text-secondary)]">
-          Custom apparel, accessories and home decor — printed on demand and shipped worldwide.
+          Custom apparel, accessories and home decor — printed on demand for the current India launch.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link href="/shop" className="lt-btn lt-btn-xl lt-btn-primary w-full sm:w-auto">

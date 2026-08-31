@@ -224,7 +224,7 @@ class OrderService:
         refund = next((item for item in getattr(order, "refund_requests", []) if item.status != "FAILED"), None)
         refund_message = {
             "PENDING": "Refund is being initiated.",
-            "PROCESSING": "Refund is being processed.",
+            "PROCESSING": "Refund is being processed. Please allow approximately 5-7 business days for LeTrusto to initiate the applicable refund where supported by the payment provider.",
             "SUCCESS": "Refund completed.",
         }.get(refund.status) if refund else None
         return OrderDTO(

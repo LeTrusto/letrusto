@@ -43,7 +43,7 @@ describe("checkout totals contract", () => {
   });
 
   it("shows the available legal policies before payment", () => {
-    for (const href of ["/terms-of-use", "/privacy-policy", "/shipping-policy", "/returns-policy"]) {
+    for (const href of ["/terms-of-use", "/privacy-policy", "/shipping-policy", "/returns-policy", "/cancellation-policy"]) {
       expect(checkoutSource).toContain(href);
     }
   });

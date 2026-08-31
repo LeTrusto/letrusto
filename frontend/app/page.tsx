@@ -11,12 +11,12 @@ import { getPublicProducts, toCommerceProduct } from "@/services/product.service
 import type { CommerceProduct } from "@/types/commerce";
 
 export const metadata: Metadata = {
-  title: "Unique Designs. Freshly Printed. Shipped Worldwide.",
-  description: "Custom apparel, wall art and accessories — printed on demand and shipped worldwide. LeTrusto — unique designs, freshly printed.",
+  title: "Unique Designs. Freshly Printed.",
+  description: "Custom apparel, wall art and accessories printed on demand for the current India launch. LeTrusto — unique designs, freshly printed.",
   alternates: { canonical: "/" },
   openGraph: {
     title: "LeTrusto — Unique Designs. Freshly Printed.",
-    description: "Custom apparel, wall art and accessories — printed on demand and shipped worldwide.",
+    description: "Custom apparel, wall art and accessories printed on demand for the current India launch.",
     url: "/",
     siteName: "LeTrusto",
     type: "website",
@@ -34,7 +34,7 @@ export default async function Home() {
 
   return (
     <main className="bg-[var(--background)]">
-      <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Unique Designs. Freshly Printed.", url: "https://letrusto.com", description: "Custom apparel, wall art and accessories — printed on demand and shipped worldwide." }} />
+      <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Unique Designs. Freshly Printed.", url: "https://letrusto.com", description: "Custom apparel, wall art and accessories printed on demand for the current India launch." }} />
       <Hero />
       {products.length > 0 ? (
         <ProductRail title="Fresh prints" subtitle="Custom designs printed on demand" products={products.slice(0, 8)} href="/shop" />

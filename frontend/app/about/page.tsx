@@ -5,13 +5,13 @@ import SchemaOrg from "@/components/SchemaOrg";
 
 export const metadata: Metadata = {
   title: "About LeTrusto",
-  description: "Discover LeTrusto's made-to-order designs, global delivery, and customer-first approach.",
+  description: "Discover LeTrusto's made-to-order designs, current India launch, and customer-first approach.",
   alternates: {
     canonical: "/about",
   },
   openGraph: {
     title: "About LeTrusto",
-    description: "Discover LeTrusto's made-to-order designs, global delivery, and customer-first approach.",
+    description: "Discover LeTrusto's made-to-order designs, current India launch, and customer-first approach.",
     url: "/about",
     siteName: "LeTrusto",
     type: "website",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "About LeTrusto",
-    description: "Discover LeTrusto's made-to-order designs, global delivery, and customer-first approach.",
+    description: "Discover LeTrusto's made-to-order designs, current India launch, and customer-first approach.",
     images: ["/images/og-default.svg"],
   },
 };
@@ -37,7 +37,7 @@ export default function AboutPage() {
     },
     {
       q: "Where do you deliver?",
-      a: "We ship to supported destinations worldwide. Production and delivery times depend on the product and delivery address and are shown during checkout.",
+      a: "India is the current purchasing destination. International visitors may browse products, but international checkout is not available yet.",
     },
     {
       q: "Can I return a made-to-order item?",
@@ -49,7 +49,7 @@ export default function AboutPage() {
     },
     {
       q: "How can I contact LeTrusto?",
-      a: "Use the Contact page or Support centre for order, product, and account questions.",
+      a: "Use the Support Centre or email hello@letrusto.com for order, product, and account questions.",
     },
   ];
 
@@ -60,7 +60,7 @@ export default function AboutPage() {
         data={{
           name: "About LeTrusto",
           url: "https://letrusto.com/about",
-          description: "Discover LeTrusto's made-to-order designs, global delivery, and customer-first approach.",
+          description: "Discover LeTrusto's made-to-order designs, current India launch, and customer-first approach.",
         }}
       />
       <SchemaOrg
@@ -81,7 +81,7 @@ export default function AboutPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">About LeTrusto</p>
           <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-6xl">Original designs, made when you order</h1>
           <p className="mt-5 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
-            LeTrusto is a global print-on-demand storefront for expressive designs made for everyday life. We make each order with care, then ship it to you.
+            LeTrusto is a print-on-demand storefront for expressive designs made for everyday life. India checkout is available for the current launch, and international visitors may browse while purchasing remains disabled.
           </p>
         </div>
 
@@ -89,7 +89,7 @@ export default function AboutPage() {
           {[
             { title: "Made to order", copy: "Your product is created after checkout, helping us keep collections fresh and reduce unnecessary inventory." },
             { title: "Designed to last", copy: "We choose practical products and clear product details so you can order with confidence." },
-            { title: "Shipped worldwide", copy: "Our fulfillment network helps us produce and deliver orders to customers across supported destinations." },
+            { title: "India launch", copy: "Current checkout supports India delivery, with server-calculated shipping shown before payment." },
           ].map((item) => (
             <article key={item.title} className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-xl font-bold text-slate-950">{item.title}</h2>

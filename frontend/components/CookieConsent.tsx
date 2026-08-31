@@ -6,7 +6,17 @@ import { getConsent, saveConsent, subscribeToConsent } from "@/lib/consent";
 
 const OPEN_PREFERENCES_EVENT = "letrusto:open-cookie-preferences";
 
+declare global {
+  interface Window {
+    letrustoOpenCookiePreferences?: () => void;
+  }
+}
+
 export function openCookiePreferences(): void {
+  if (typeof window.letrustoOpenCookiePreferences === "function") {
+    window.letrustoOpenCookiePreferences();
+    return;
+  }
   window.dispatchEvent(new Event(OPEN_PREFERENCES_EVENT));
 }
 
@@ -23,8 +33,12 @@ export default function CookieConsent() {
       setMarketing(current?.marketing ?? false);
       setPreferencesOpen(true);
     };
+    window.letrustoOpenCookiePreferences = open;
     window.addEventListener(OPEN_PREFERENCES_EVENT, open);
-    return () => window.removeEventListener(OPEN_PREFERENCES_EVENT, open);
+    return () => {
+      if (window.letrustoOpenCookiePreferences === open) delete window.letrustoOpenCookiePreferences;
+      window.removeEventListener(OPEN_PREFERENCES_EVENT, open);
+    };
   }, []);
 
   function choose(nextAnalytics: boolean, nextMarketing: boolean) {

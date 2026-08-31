@@ -101,7 +101,7 @@ export function toCommerceProduct(product: Product): CommerceProduct {
     tags: product.tags,
     specs: product.specs,
     estimatedDelivery: "Delivery calculated at checkout",
-    returnInfo: "Returns subject to product policy",
+    returnInfo: "Made-to-order product. Returns are limited to eligible issues.",
   };
 }
 

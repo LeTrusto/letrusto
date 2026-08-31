@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms of Use",
-  description: "Review the terms governing use of LeTrusto.",
+  title: "Terms & Conditions",
+  description: "Review the terms and conditions governing use of LeTrusto.",
   alternates: {
     canonical: "/terms-of-use",
   },
@@ -11,25 +12,46 @@ export const metadata: Metadata = {
 export default function TermsOfUsePage() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
-      <h1 className="text-4xl font-black text-gray-900">Terms of Use</h1>
-      <p className="mt-3 text-sm text-gray-500">Last updated: 2026-08-26</p>
+      <h1 className="text-4xl font-black text-gray-900">Terms &amp; Conditions</h1>
+      <p className="mt-3 text-sm text-gray-500">Last updated: 2026-08-31</p>
 
       <div className="mt-8 space-y-6 text-sm leading-7 text-gray-700">
         <section>
           <h2 className="text-lg font-bold text-gray-900">1. Platform Scope</h2>
-          <p>LeTrusto operates an online storefront for made-to-order printed products. Product images, colors, and measurements may vary slightly between screens, materials, and production batches.</p>
+          <p>LeTrusto operates an ecommerce storefront for made-to-order printed products. Products are produced after purchase through print-on-demand fulfillment. Product images, mockups, colors, placement, and measurements may vary slightly between screens, materials, and production batches.</p>
         </section>
         <section>
           <h2 className="text-lg font-bold text-gray-900">2. Content and Availability</h2>
-          <p>Prices, product availability, production times, shipping estimates, and taxes may change. The details shown at checkout apply to your order. We may cancel and refund an order if a product or price is unavailable due to an obvious error.</p>
+          <p>Prices, product availability, product options, production times, and shipping estimates may change. The details shown at checkout apply to your order. We may reject, cancel, or refund an order if a product, price, shipping rate, or checkout detail is unavailable or affected by an obvious error.</p>
         </section>
         <section>
-          <h2 className="text-lg font-bold text-gray-900">3. Acceptable Use</h2>
+          <h2 className="text-lg font-bold text-gray-900">3. Accounts</h2>
+          <p>Email and password authentication is used for customer accounts. You are responsible for keeping your login details secure and for ensuring that your order, contact, and delivery information is accurate.</p>
+        </section>
+        <section>
+          <h2 className="text-lg font-bold text-gray-900">4. Acceptable Use</h2>
           <p>Users must not misuse the platform, attempt unauthorized access, or abuse recommendation and support systems.</p>
         </section>
         <section>
-          <h2 className="text-lg font-bold text-gray-900">4. Contact</h2>
-          <p>For legal or policy questions, please use /contact.</p>
+          <h2 className="text-lg font-bold text-gray-900">5. Orders and Payment</h2>
+          <p>India is the active purchasing destination at this stage. International visitors may browse the storefront, but international checkout is currently unavailable. Active checkout payment is through Razorpay in INR.</p>
+        </section>
+        <section>
+          <h2 className="text-lg font-bold text-gray-900">6. Shipping, Cancellations, Returns, and Refunds</h2>
+          <p>Shipping is charged separately from product price and is shown at checkout before payment. Because products are made to order, cancellation may only be possible before production or fulfillment begins. Returns and refunds are limited as described in the applicable policies.</p>
+          <p className="mt-3">Please review the <Link className="underline" href="/shipping-policy">Shipping Policy</Link>, <Link className="underline" href="/cancellation-policy">Cancellation Policy</Link>, and <Link className="underline" href="/returns-policy">Returns &amp; Refunds Policy</Link>.</p>
+        </section>
+        <section>
+          <h2 className="text-lg font-bold text-gray-900">7. Intellectual Property</h2>
+          <p>LeTrusto branding, storefront content, product artwork, text, and site materials are owned by LeTrusto or used with permission. You may not copy, reproduce, or misuse site content except as allowed by law or with permission.</p>
+        </section>
+        <section>
+          <h2 className="text-lg font-bold text-gray-900">8. Service Availability and Limits</h2>
+          <p>We work to keep product information, checkout, and support available, but the service may be affected by maintenance, provider outages, internet issues, fulfillment delays, or other events outside our control. To the extent permitted by applicable law, LeTrusto is not responsible for indirect or consequential losses arising from use of the storefront.</p>
+        </section>
+        <section>
+          <h2 className="text-lg font-bold text-gray-900">9. Policy Updates and Contact</h2>
+          <p>We may update these Terms as the storefront, policies, or business operations change. For legal or policy questions, contact <a className="underline" href="mailto:hello@letrusto.com">hello@letrusto.com</a> or use the <Link className="underline" href="/support?tab=contact&category=contact">Support Centre</Link>.</p>
         </section>
       </div>
     </main>

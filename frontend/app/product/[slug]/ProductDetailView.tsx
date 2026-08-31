@@ -293,7 +293,7 @@ export default function ProductDetailView({ product, related }: Props) {
               {product.returnInfo && (
                 <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                   <RotateCcw size={16} strokeWidth={1.5} />
-                  <span>{product.returnInfo}</span>
+                  <span>Made-to-order product. Returns are limited to eligible damaged, defective, incorrect, or materially mismatched items. <Link className="underline" href="/returns-policy">See Returns &amp; Refunds</Link>.</span>
                 </div>
               )}
             </div>
