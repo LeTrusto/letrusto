@@ -61,6 +61,17 @@ export async function confirmPasswordReset(token: string, password: string): Pro
   return data as { message: string };
 }
 
+export async function confirmEmailVerification(token: string): Promise<{ message: string }> {
+  const res = await fetch(`${AUTH_BASE}/email-verification/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { detail?: string }).detail ?? "This verification link is invalid or expired.");
+  return data as { message: string };
+}
+
 export async function refreshAccessToken(refreshToken: string): Promise<AuthResponse> {
   const res = await fetch(`${AUTH_BASE}/refresh`, {
     method: "POST",

@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     SUPPORT_EMAIL: str = "hello@letrusto.com"
     FROM_EMAIL: str = "support@letrusto.com"
+    PUBLIC_APP_URL: str = "https://letrusto.com"
 
     SMS_PROVIDER: str = "mock"
     SMS_API_URL: str = ""

@@ -24,6 +24,7 @@ from app.models.entities import (
     TrustEvidence,
     TrustVerification,
     PasswordResetToken,
+    EmailVerificationToken,
 )
 
 __all__ = [
@@ -51,4 +52,5 @@ __all__ = [
     "TrustClaimEvidence",
     "TrustEvidence",
     "TrustVerification",
+    "EmailVerificationToken",
 ]

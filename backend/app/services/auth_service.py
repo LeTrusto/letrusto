@@ -17,7 +17,7 @@ from app.core.security import (
     hash_refresh_token,
     verify_password,
 )
-from app.models.entities import PasswordResetToken, RefreshToken, User
+from app.models.entities import EmailVerificationToken, PasswordResetToken, RefreshToken, User
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import AuthResponse, TokenIntrospectionResponse, TokenResponse
 
@@ -78,6 +78,33 @@ class AuthService:
         self.db.commit()
         return raw_token, user.email
 
+    def create_email_verification_token(self, user: User) -> str:
+        raw_token = secrets.token_urlsafe(48)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        now = datetime.now(timezone.utc)
+        self.db.query(EmailVerificationToken).filter(
+            EmailVerificationToken.user_id == user.id,
+            EmailVerificationToken.used_at.is_(None),
+        ).update({EmailVerificationToken.used_at: now})
+        self.db.add(EmailVerificationToken(user_id=user.id, token_hash=token_hash, expires_at=now + timedelta(minutes=30)))
+        self.db.commit()
+        return raw_token
+
+    def verify_email(self, token: str) -> None:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        record = self.db.query(EmailVerificationToken).filter(
+            EmailVerificationToken.token_hash == token_hash,
+            EmailVerificationToken.used_at.is_(None),
+        ).first()
+        if not record or _as_utc(record.expires_at) < datetime.now(timezone.utc):
+            raise UnauthorizedError("This verification link is invalid or expired")
+        user = self.user_repo.get_by_id(record.user_id)
+        if not user or not user.is_active or not user.email:
+            raise UnauthorizedError("This verification link is invalid or expired")
+        user.email_verified = True
+        record.used_at = datetime.now(timezone.utc)
+        self.db.commit()
+
     def reset_password(self, token: str, password: str) -> None:
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         record = self.db.query(PasswordResetToken).filter(
@@ -91,6 +118,10 @@ class AuthService:
             raise UnauthorizedError("This reset link is invalid or expired")
         user.password_hash = hash_password(password)
         record.used_at = datetime.now(timezone.utc)
+        self.db.query(RefreshToken).filter(
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked.is_(False),
+        ).update({RefreshToken.revoked: True})
         self.db.commit()
 
     def login(self, email: str, password: str) -> AuthResponse:

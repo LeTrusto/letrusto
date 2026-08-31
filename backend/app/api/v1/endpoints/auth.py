@@ -1,17 +1,15 @@
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends, Header
 
 from app.api.deps import get_auth_service, get_current_user
 from app.core.exceptions import UnauthorizedError
 from app.models.entities import User
 from app.schemas.auth import (
     AuthResponse,
+    EmailVerificationConfirm,
     LinkEmailRequest,
     LoginRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
-    OtpRequest,
-    OtpRequestResponse,
-    OtpVerifyRequest,
     RefreshRequest,
     RegisterRequest,
     TokenIntrospectionResponse,
@@ -20,16 +18,34 @@ from app.schemas.auth import (
 )
 from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
-from app.services.otp_auth_service import OtpAuthService
 from app.services.email_service import EmailService
 from app.core.config import get_settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _send_verification_email(service: AuthService, user: User) -> None:
+    settings = get_settings()
+    if not settings.RESEND_API_KEY or not user.email:
+        return
+    token = service.create_email_verification_token(user)
+    verification_url = f"{settings.PUBLIC_APP_URL.rstrip('/')}/verify-email?token={token}"
+    EmailService.from_settings(settings)._send(
+        to=user.email,
+        subject="Verify your LeTrusto email",
+        html=f"<p>Welcome to LeTrusto.</p><p><a href='{verification_url}'>Verify your email address</a></p><p>This link expires in 30 minutes.</p>",
+        text=f"Verify your LeTrusto email: {verification_url}\nThis link expires in 30 minutes.",
+        template_name="email_verification",
+    )
+
+
 @router.post("/register", response_model=AuthResponse, status_code=201)
 def register(payload: RegisterRequest, service: AuthService = Depends(get_auth_service)) -> AuthResponse:
-    return service.register(email=payload.email, password=payload.password, full_name=payload.full_name)
+    response = service.register(email=payload.email, password=payload.password, full_name=payload.full_name)
+    user = service.user_repo.get_by_id(response.user_id)
+    if user:
+        _send_verification_email(service, user)
+    return response
 
 
 @router.post("/login", response_model=AuthResponse)
@@ -42,7 +58,7 @@ def request_password_reset(payload: PasswordResetRequest, service: AuthService =
     result = service.create_password_reset_token(str(payload.email))
     if result:
         token, email = result
-        reset_url = f"https://letrusto.com/reset-password?token={token}"
+        reset_url = f"{get_settings().PUBLIC_APP_URL.rstrip('/')}/reset-password?token={token}"
         EmailService.from_settings(get_settings())._send(
             to=email,
             subject="Reset your LeTrusto password",
@@ -53,21 +69,24 @@ def request_password_reset(payload: PasswordResetRequest, service: AuthService =
     return MessageResponse(message="If an account exists for that email, a reset link has been sent.")
 
 
+@router.post("/email-verification/resend", response_model=MessageResponse)
+def resend_email_verification(payload: PasswordResetRequest, service: AuthService = Depends(get_auth_service)) -> MessageResponse:
+    user = service.user_repo.get_by_email(str(payload.email).strip().lower())
+    if user and not user.email_verified:
+        _send_verification_email(service, user)
+    return MessageResponse(message="If an unverified account exists for that email, a verification link has been sent.")
+
+
 @router.post("/password-reset/confirm", response_model=MessageResponse)
 def confirm_password_reset(payload: PasswordResetConfirm, service: AuthService = Depends(get_auth_service)) -> MessageResponse:
     service.reset_password(payload.token, payload.password)
     return MessageResponse(message="Your password has been reset. You can now sign in.")
 
 
-@router.post("/otp/request", response_model=OtpRequestResponse)
-def request_otp(payload: OtpRequest, request: Request, service: AuthService = Depends(get_auth_service)) -> OtpRequestResponse:
-    OtpAuthService(service.db).request_otp(payload.mobile_number, request.client.host if request.client else None)
-    return OtpRequestResponse(message="If this mobile number can receive messages, an OTP has been sent")
-
-
-@router.post("/otp/verify", response_model=AuthResponse)
-def verify_otp(payload: OtpVerifyRequest, service: AuthService = Depends(get_auth_service)) -> AuthResponse:
-    return OtpAuthService(service.db).verify_otp(payload.mobile_number, payload.otp)
+@router.post("/email-verification/confirm", response_model=MessageResponse)
+def confirm_email_verification(payload: EmailVerificationConfirm, service: AuthService = Depends(get_auth_service)) -> MessageResponse:
+    service.verify_email(payload.token)
+    return MessageResponse(message="Your email has been verified.")
 
 
 @router.post("/link-email", response_model=AuthResponse)

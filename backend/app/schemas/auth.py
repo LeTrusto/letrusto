@@ -37,6 +37,10 @@ class PasswordResetConfirm(BaseModel):
     password: str = Field(min_length=8, max_length=64)
 
 
+class EmailVerificationConfirm(BaseModel):
+    token: str = Field(min_length=20, max_length=255)
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str = Field(min_length=10)
 
