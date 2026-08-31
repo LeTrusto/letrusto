@@ -16,9 +16,8 @@ def test_search_products_parses_and_filters_catalog(monkeypatch):
 
     async def request(method, path, *, params=None, body=None):
         assert method == "GET"
-        assert path == "/products"
-        assert params["limit"] == 20
-        return {"products": [{"id": 71, "title": "Unisex T-Shirt", "model": "TSHIRT", "image": "https://img/tee"}, {"id": 72, "title": "Mug", "model": "MUG"}]}
+        assert path == "/store/products"
+        return {"data": [{"id": 71, "name": "Unisex T-Shirt", "external_id": "TSHIRT", "thumbnail_url": "https://img/tee"}, {"id": 72, "name": "Mug", "external_id": "MUG"}]}
 
     monkeypatch.setattr(adapter, "_request", request)
     result = asyncio.run(adapter.search_products("shirt"))
@@ -26,6 +25,38 @@ def test_search_products_parses_and_filters_catalog(monkeypatch):
     assert len(result) == 1
     assert result[0].supplier_product_id == "71"
     assert result[0].supplier_id == "printful"
+
+
+def test_get_product_maps_store_sync_variants_and_files(monkeypatch):
+    adapter = PrintfulAdapter("test-key")
+
+    async def request(method, path, *, params=None, body=None):
+        assert method == "GET"
+        assert path == "/store/products/100"
+        return {
+            "sync_product": {"id": 100, "name": "Unisex Hoodie", "external_id": "hoodie", "thumbnail_url": "https://img/hoodie.jpg"},
+            "sync_variants": [
+                {
+                    "id": 2001,
+                    "variant_id": 5530,
+                    "sku": "PF-HOODIE-BLACK-M",
+                    "name": "Unisex Hoodie / Black / M",
+                    "retail_price": "42.00",
+                    "availability_status": "active",
+                    "options": [{"id": "color", "value": "Black"}, {"id": "size", "value": "M"}],
+                    "files": [{"type": "preview", "preview_url": "https://img/mockup.jpg"}],
+                }
+            ],
+        }
+
+    monkeypatch.setattr(adapter, "_request", request)
+    result = asyncio.run(adapter.get_product("100"))
+
+    assert result is not None
+    assert result.supplier_product_id == "100"
+    assert result.images == ["https://img/hoodie.jpg", "https://img/mockup.jpg"]
+    assert result.variants[0].supplier_variant_id == "2001"
+    assert "catalog_variant_id: 5530" in result.variants[0].option_key
 
 
 def test_shipping_rates_map_to_shared_contract(monkeypatch):

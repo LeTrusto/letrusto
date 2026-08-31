@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Calculator, Check, CirclePause, ClipboardCheck, ExternalLink, Play, Trash2, X } from "lucide-react";
+import { Calculator, Check, CirclePause, ClipboardCheck, ExternalLink, Play, RefreshCw, Trash2, X } from "lucide-react";
 import { API_BASE_URL } from "@/services/api";
 import FulfillmentPreflightPanel from "./FulfillmentPreflightPanel";
 
@@ -61,6 +61,10 @@ type Product = {
 };
 
 type ProductResponse = { products: Product[]; total: number };
+
+type PrintfulConnection = { connected: boolean; store: string | null; status: string; message: string | null };
+type PrintfulProduct = { supplier_product_id: string; name: string; thumbnail_url: string | null; finalized: boolean; imported_product_id: string | null };
+type PrintfulProductsResponse = { products: PrintfulProduct[]; total: number };
 
 type FulfillmentOrder = {
   order_id: string;
@@ -259,8 +263,12 @@ export default function AdminProductsView() {
   const [candidateIdentifier, setCandidateIdentifier] = useState("");
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [bulkImportResult, setBulkImportResult] = useState<BulkImportResponse | null>(null);
+  const [printfulConnection, setPrintfulConnection] = useState<PrintfulConnection | null>(null);
+  const [printfulProducts, setPrintfulProducts] = useState<PrintfulProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+  const [printfulWorking, setPrintfulWorking] = useState(false);
+  const [importingPrintfulId, setImportingPrintfulId] = useState<string | null>(null);
   const [candidateWorking, setCandidateWorking] = useState(false);
   const [rejectingCandidateId, setRejectingCandidateId] = useState<string | null>(null);
   const [candidateRejectionReason, setCandidateRejectionReason] = useState("");
@@ -350,6 +358,60 @@ export default function AdminProductsView() {
       setError(err instanceof Error ? err.message : "Unable to synchronize fulfillment");
     } finally {
       setSyncingOrderId(null);
+    }
+  }
+
+  async function testPrintfulConnection() {
+    setPrintfulWorking(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/printful/connection`, { headers: apiHeaders() });
+      if (!response.ok) throw new Error(await apiError(response));
+      const result = (await response.json()) as PrintfulConnection;
+      setPrintfulConnection(result);
+      setMessage(result.connected ? `Printful connection: ${result.status}` : result.message ?? "Printful connection failed");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to test Printful connection");
+    } finally {
+      setPrintfulWorking(false);
+    }
+  }
+
+  async function loadPrintfulProducts() {
+    setPrintfulWorking(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/printful/products`, { headers: apiHeaders() });
+      if (!response.ok) throw new Error(await apiError(response));
+      const result = (await response.json()) as PrintfulProductsResponse;
+      setPrintfulProducts(result.products);
+      setMessage(`Printful products found: ${result.total}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load Printful products");
+    } finally {
+      setPrintfulWorking(false);
+    }
+  }
+
+  async function importPrintfulHoodie(product: PrintfulProduct) {
+    setImportingPrintfulId(product.supplier_product_id);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/admin/printful/products/${encodeURIComponent(product.supplier_product_id)}/import-hoodie`, {
+        method: "POST",
+        headers: apiHeaders(),
+      });
+      if (!response.ok) throw new Error(await apiError(response));
+      const imported = (await response.json()) as Product;
+      setMessage(`${imported.name} imported as DRAFT.`);
+      await Promise.all([loadProducts(), loadPrintfulProducts()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to import Printful hoodie");
+    } finally {
+      setImportingPrintfulId(null);
     }
   }
 
@@ -586,6 +648,38 @@ export default function AdminProductsView() {
           {working ? "Importing..." : "Import as Draft"}
         </button>
       </form>
+
+      <section className="lt-card mb-6 p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Printful</h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Test the backend-only Printful connection and import the finalized Unisex Hoodie as DRAFT.</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button type="button" onClick={() => void testPrintfulConnection()} disabled={printfulWorking} className="lt-btn lt-btn-secondary">
+              <RefreshCw size={16} />
+              Test Connection
+            </button>
+            <button type="button" onClick={() => void loadPrintfulProducts()} disabled={printfulWorking} className="lt-btn lt-btn-primary">
+              {printfulWorking ? "Loading..." : "Find Products"}
+            </button>
+          </div>
+        </div>
+        {printfulConnection && <p className="mt-4 text-sm font-semibold text-[var(--text-primary)]">Printful connection: {printfulConnection.connected ? "Connected" : "Unavailable"}{printfulConnection.store ? ` · Store: ${printfulConnection.store}` : ""}{printfulConnection.message ? ` · ${printfulConnection.message}` : ""}</p>}
+        {printfulProducts.length > 0 && <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {printfulProducts.map((product) => {
+            const isHoodie = product.name.trim().toLowerCase() === "unisex hoodie";
+            return <article key={product.supplier_product_id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-3">
+              {product.thumbnail_url && <Image src={product.thumbnail_url} alt="" width={96} height={96} className="mb-3 h-24 w-24 rounded-lg object-cover" unoptimized />}
+              <h3 className="font-semibold text-[var(--text-primary)]">{product.name}</h3>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Printful ID: {product.supplier_product_id}</p>
+              <button type="button" disabled={!isHoodie || importingPrintfulId === product.supplier_product_id} onClick={() => void importPrintfulHoodie(product)} className="lt-btn lt-btn-primary mt-3 w-full disabled:opacity-50">
+                {product.imported_product_id ? "Update Draft" : importingPrintfulId === product.supplier_product_id ? "Importing..." : isHoodie ? "Import as Draft" : "Later"}
+              </button>
+            </article>;
+          })}
+        </div>}
+      </section>
 
       <section className="mb-6 border-y border-[var(--border)] py-5">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">

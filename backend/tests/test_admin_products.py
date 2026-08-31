@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -346,14 +347,106 @@ def test_printful_import_uses_shared_catalog_persistence(monkeypatch):
         result = asyncio.run(service.import_product(ProductImportRequest(
             supplier="printful", supplier_product_id=product_id, destination="US"
         )))
+        second = asyncio.run(service.import_product(ProductImportRequest(
+            supplier="printful", supplier_product_id=product_id, destination="US"
+        )))
         assert result.status == "DRAFT"
         assert result.supplier == "printful"
         assert result.supplier_product_id == product_id
         assert result.images[0] == "https://example.com/printful-mockup.jpg"
         assert result.variants[0].supplier_variant_id == "101"
+        assert second.id == result.id
+        assert db.query(Product).filter(Product.supplier == "printful", Product.supplier_product_id == product_id).count() == 1
     finally:
         db.query(Product).filter(Product.supplier_product_id == product_id).delete(synchronize_session=False)
         db.commit()
+        db.close()
+
+
+def test_printful_admin_connection_and_hoodie_import(monkeypatch):
+    import app.services.admin_product_service as module
+
+    class PrintfulStoreAdapter(FakeAdapter):
+        supplier_name = "printful"
+
+        async def connection_status(self):
+            return {"status": "Connected", "store": "LeTrusto", "health": "Healthy"}
+
+        async def list_finalized_store_products(self):
+            return [
+                RawSupplierProduct("printful", "pf-hoodie", "hoodie-ext", "Unisex Hoodie", images=["https://img/hoodie.jpg"]),
+                RawSupplierProduct("printful", "pf-tank", "tank-ext", "Men's premium tank top", images=["https://img/tank.jpg"]),
+            ]
+
+        async def get_product(self, product_id: str) -> RawSupplierProduct:
+            assert product_id == "pf-hoodie"
+            return RawSupplierProduct(
+                supplier_id="printful",
+                supplier_product_id="pf-hoodie",
+                supplier_sku="hoodie-ext",
+                title="Unisex Hoodie",
+                description="Soft print-on-demand hoodie",
+                images=["https://img/hoodie.jpg", "https://img/hoodie-back.jpg"],
+                price_usd=24.5,
+                variants=[
+                    RawVariant(
+                        supplier_variant_id="sync-variant-1",
+                        supplier_variant_sku="PF-HOODIE-BLACK-M",
+                        name="Unisex Hoodie / Black / M",
+                        option_key="color: Black / size: M / catalog_variant_id: 5530",
+                        price_usd=24.5,
+                        inventory_verification="active",
+                    )
+                ],
+                raw_payload={"sync_product": {"id": "pf-hoodie"}, "sync_variants": [{"id": "sync-variant-1", "variant_id": 5530}]},
+            )
+
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: PrintfulStoreAdapter())
+    db = SessionLocal()
+    service = AdminProductService(db)
+    try:
+        connection = asyncio.run(service.test_printful_connection())
+        listing = asyncio.run(service.list_printful_products())
+        imported = asyncio.run(service.import_printful_hoodie("pf-hoodie"))
+
+        assert connection.connected is True
+        assert connection.store == "LeTrusto"
+        assert listing.total == 2
+        assert imported.status == "DRAFT"
+        assert imported.supplier == "printful"
+        assert imported.name == "Unisex Hoodie"
+        assert imported.images == ["https://img/hoodie.jpg", "https://img/hoodie-back.jpg"]
+        assert imported.variants[0].supplier_variant_id == "sync-variant-1"
+        assert "catalog_variant_id: 5530" in imported.variants[0].attributes
+        assert imported.supplier_validation_details["reference_data"]["sync_variants"][0]["variant_id"] == 5530
+    finally:
+        db.query(Product).filter(Product.supplier == "printful", Product.supplier_product_id == "pf-hoodie").delete(synchronize_session=False)
+        db.commit()
+        db.close()
+
+
+def test_printful_connection_reports_invalid_auth_without_secret(monkeypatch):
+    import app.services.admin_product_service as module
+
+    class UnauthorizedPrintfulAdapter:
+        async def connection_status(self):
+            raise httpx.HTTPStatusError(
+                "Unauthorized",
+                request=httpx.Request("GET", "https://api.printful.com/stores"),
+                response=httpx.Response(401),
+            )
+
+    monkeypatch.setattr(module, "build_supplier_adapter", lambda _: UnauthorizedPrintfulAdapter())
+    db = SessionLocal()
+    service = AdminProductService(db)
+    try:
+        result = asyncio.run(service.test_printful_connection())
+
+        assert result.connected is False
+        assert result.status == "Unavailable"
+        assert result.message == "Printful authentication failed"
+        assert "test-key" not in str(result)
+    finally:
         db.close()
 
 

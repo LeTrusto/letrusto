@@ -22,6 +22,8 @@ from app.schemas.admin_products import (
     PriceCalculationRequest,
     PriceCalculationResponse,
     ProductImportRequest,
+    PrintfulConnectionResponse,
+    PrintfulProductsResponse,
     ProductRejectionRequest,
     ProductStatusUpdate,
     SupplierCandidateCreate,
@@ -335,6 +337,31 @@ async def import_product(
     service: AdminProductService = Depends(get_admin_product_service),
 ) -> AdminProductDTO:
     return await service.import_product(payload)
+
+
+@router.get("/printful/connection", response_model=PrintfulConnectionResponse)
+async def test_printful_connection(
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> PrintfulConnectionResponse:
+    return await service.test_printful_connection()
+
+
+@router.get("/printful/products", response_model=PrintfulProductsResponse)
+async def list_printful_products(
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> PrintfulProductsResponse:
+    return await service.list_printful_products()
+
+
+@router.post("/printful/products/{supplier_product_id}/import-hoodie", response_model=AdminProductDTO)
+async def import_printful_hoodie(
+    supplier_product_id: str,
+    _: User = Depends(get_current_admin),
+    service: AdminProductService = Depends(get_admin_product_service),
+) -> AdminProductDTO:
+    return await service.import_printful_hoodie(supplier_product_id)
 
 
 @router.post("/products/bulk-import", response_model=BulkApprovedProductImportResponse)

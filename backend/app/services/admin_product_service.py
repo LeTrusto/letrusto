@@ -44,6 +44,9 @@ from app.schemas.admin_products import (
     MarketEvidenceResponse,
     PriceCalculationRequest,
     PriceCalculationResponse,
+    PrintfulConnectionResponse,
+    PrintfulProductSummary,
+    PrintfulProductsResponse,
     ProductImportRequest,
     ProductRejectionRequest,
     ProductStatusUpdate,
@@ -86,6 +89,40 @@ class AdminProductService:
             count_stmt = count_stmt.where(Product.status == status)
         products = list(self.db.scalars(stmt.offset(skip).limit(limit)).unique().all())
         return AdminProductListResponse(products=[self._dto(p) for p in products], total=self.db.scalar(count_stmt) or 0)
+
+    async def test_printful_connection(self) -> PrintfulConnectionResponse:
+        try:
+            adapter = build_supplier_adapter("printful")
+            if not hasattr(adapter, "connection_status"):
+                raise BadRequestError("Printful adapter does not support connection checks")
+            status = await adapter.connection_status()  # type: ignore[attr-defined]
+        except ValueError as exc:
+            return PrintfulConnectionResponse(connected=False, status="Missing configuration", message=str(exc))
+        except httpx.HTTPStatusError as exc:
+            message = "Printful authentication failed" if exc.response.status_code in {401, 403} else "Printful API request failed"
+            return PrintfulConnectionResponse(connected=False, status="Unavailable", message=message)
+        except (httpx.HTTPError, TypeError):
+            return PrintfulConnectionResponse(connected=False, status="Unavailable", message="Printful API is not reachable")
+        return PrintfulConnectionResponse(connected=True, store=status.get("store"), status=status.get("health", "Healthy"))
+
+    async def list_printful_products(self) -> PrintfulProductsResponse:
+        adapter = build_supplier_adapter("printful")
+        if not hasattr(adapter, "list_finalized_store_products"):
+            raise BadRequestError("Printful adapter does not support product discovery")
+        products = await adapter.list_finalized_store_products()  # type: ignore[attr-defined]
+        summaries: list[PrintfulProductSummary] = []
+        for product in products:
+            existing = self.db.scalar(
+                select(Product.id).where(Product.supplier == "printful", Product.supplier_product_id == product.supplier_product_id)
+            )
+            summaries.append(PrintfulProductSummary(
+                supplier_product_id=product.supplier_product_id,
+                name=product.title,
+                thumbnail_url=product.images[0] if product.images else None,
+                finalized=True,
+                imported_product_id=existing,
+            ))
+        return PrintfulProductsResponse(products=summaries, total=len(summaries))
 
     def get_product(self, product_id: UUID) -> AdminProductDTO:
         return self._dto(self._get(product_id))
@@ -145,6 +182,9 @@ class AdminProductService:
         return AdminProductInventoryResponse(product_id=product.id, variants=variants)
 
     async def import_product(self, payload: ProductImportRequest, *, commit: bool = True) -> AdminProductDTO:
+        if payload.supplier == "printful":
+            return await self._import_printful_product(payload.supplier_product_id, commit=commit)
+
         existing = self.db.scalar(select(Product).where(Product.supplier == payload.supplier, Product.supplier_product_id == payload.supplier_product_id))
         if existing:
             return self._dto(self._get(existing.id))
@@ -246,6 +286,100 @@ class AdminProductService:
                     warehouses=variant.warehouses,
                 ),
             )
+        if commit:
+            self.db.commit()
+        else:
+            self.db.flush()
+        return self._dto(self._get(product.id))
+
+    async def import_printful_hoodie(self, supplier_product_id: str) -> AdminProductDTO:
+        return await self._import_printful_product(supplier_product_id, require_hoodie=True)
+
+    async def _import_printful_product(self, supplier_product_id: str, *, require_hoodie: bool = False, commit: bool = True) -> AdminProductDTO:
+        adapter = build_supplier_adapter("printful")
+        if not await adapter.authenticate():
+            raise BadRequestError("Printful connection failed")
+        raw = await adapter.get_product(supplier_product_id)
+        if not raw:
+            raise NotFoundError("Printful product not found")
+        if require_hoodie and raw.title.strip().lower() != "unisex hoodie":
+            raise BadRequestError("First Printful import is restricted to Unisex Hoodie")
+        if not raw.variants:
+            raise BadRequestError("Printful product has no usable variants")
+
+        config = EconomicsConfig()
+        normalized = normalize_product(raw, usd_to_inr=config.usd_to_inr, derive_variant_fields=True)
+        product = self.db.scalar(
+            select(Product)
+            .options(selectinload(Product.images), selectinload(Product.variants))
+            .where(Product.supplier == "printful", Product.supplier_product_id == normalized.supplier_product_id)
+        )
+        if product is None:
+            product = Product(id=uuid4(), slug=self._unique_slug(normalized.title, normalized.supplier_product_id))
+            self.db.add(product)
+        variant_costs_usd = [Decimal(str(variant.cost_usd)) for variant in normalized.variants if variant.cost_usd is not None]
+        supplier_cost_usd = min(variant_costs_usd) if variant_costs_usd else None
+        supplier_cost_inr = supplier_cost_usd * Decimal(str(config.usd_to_inr)) if supplier_cost_usd is not None else None
+
+        product.name = normalized.title
+        product.description = normalized.description or normalized.title
+        product.status = "DRAFT"
+        product.supplier = "printful"
+        product.supplier_product_id = normalized.supplier_product_id
+        product.supplier_source_url = f"https://www.printful.com/dashboard/store/products/{normalized.supplier_product_id}"
+        product.supplier_cost = supplier_cost_inr.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if supplier_cost_inr is not None else None
+        product.shipping_cost = None
+        product.selling_price = None
+        product.currency = "INR"
+        product.total_inventory = normalized.total_inventory
+        product.cj_inventory = normalized.cj_inventory
+        product.factory_inventory = normalized.factory_inventory
+        product.verified_warehouse = normalized.inventory_verification
+        product.last_supplier_sync_at = datetime.now(timezone.utc)
+        product.supplier_validation_status = "REVIEW"
+        product.supplier_validation_score = None
+        product.supplier_validation_notes = ["PRINTFUL_POD_REVIEW_REQUIRED"]
+        product.supplier_validated_at = datetime.now(timezone.utc)
+        product.supplier_validation_details = {
+            "source": "PRINTFUL_SYNC_PRODUCT_IMPORT",
+            "sync_product_id": normalized.supplier_product_id,
+            "reference_data": raw.raw_payload or {},
+            "variants": [
+                {
+                    "sync_variant_id": variant.supplier_variant_id,
+                    "supplier_variant_sku": variant.supplier_variant_sku,
+                    "attributes": variant.option_key,
+                    "supplier_cost_usd": variant.cost_usd,
+                    "availability": variant.inventory_verification,
+                }
+                for variant in normalized.variants
+            ],
+        }
+        self.db.flush()
+
+        self.db.query(ProductImage).filter(ProductImage.product_id == product.id).delete(synchronize_session=False)
+        for position, image_url in enumerate(normalized.images, start=1):
+            if image_url:
+                self.db.add(ProductImage(product_id=product.id, url=image_url, position=position))
+
+        existing_variants = {variant.supplier_variant_id: variant for variant in product.variants}
+        for position, variant in enumerate(normalized.variants, start=1):
+            stored_variant = existing_variants.get(variant.supplier_variant_id)
+            if stored_variant is None:
+                stored_variant = ProductVariant(product_id=product.id, supplier_variant_id=variant.supplier_variant_id)
+                self.db.add(stored_variant)
+            stored_variant.supplier_variant_sku = variant.supplier_variant_sku
+            stored_variant.name = variant.name
+            stored_variant.attributes = variant.option_key
+            stored_variant.supplier_cost = Decimal(str(variant.cost_inr)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if variant.cost_inr is not None else None
+            stored_variant.supplier_cost_usd = Decimal(str(variant.cost_usd)) if variant.cost_usd is not None else None
+            stored_variant.total_inventory = variant.total_inventory
+            stored_variant.cj_inventory = variant.cj_inventory
+            stored_variant.factory_inventory = variant.factory_inventory
+            stored_variant.verified_warehouse = variant.inventory_verification
+            stored_variant.weight_grams = Decimal(str(variant.weight_grams)) if variant.weight_grams is not None else None
+            stored_variant.active = True
+            stored_variant.position = position
         if commit:
             self.db.commit()
         else:

@@ -75,6 +75,26 @@ class ProductImportRequest(BaseModel):
     destination: str = "IN"
 
 
+class PrintfulConnectionResponse(BaseModel):
+    connected: bool
+    store: str | None = None
+    status: str
+    message: str | None = None
+
+
+class PrintfulProductSummary(BaseModel):
+    supplier_product_id: str
+    name: str
+    thumbnail_url: str | None = None
+    finalized: bool = False
+    imported_product_id: UUID | None = None
+
+
+class PrintfulProductsResponse(BaseModel):
+    products: list[PrintfulProductSummary]
+    total: int
+
+
 CandidateApprovalStatus = Literal["REVIEW", "APPROVED", "REJECTED", "IMPORTED"]
 CandidateSnapshotStatus = Literal["AVAILABLE", "LEGACY_SNAPSHOT_UNAVAILABLE"]
 CandidateReadinessStatus = Literal[

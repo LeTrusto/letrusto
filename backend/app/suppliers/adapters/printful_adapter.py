@@ -19,6 +19,12 @@ from app.suppliers.base import (
 )
 
 _BASE_URL = "https://api.printful.com"
+FINALIZED_PRODUCT_NAMES = {
+    "men's premium tank top",
+    "unisex hoodie",
+    "unisex premium sweatshirt",
+    "unisex organic oversized high-neck t-shirt",
+}
 
 
 class PrintfulAdapter:
@@ -51,37 +57,53 @@ class PrintfulAdapter:
             return False
         return True
 
+    async def connection_status(self) -> dict[str, str]:
+        result = await self._request("GET", "/stores")
+        stores = result.get("data", result.get("stores", []))
+        store = stores[0] if isinstance(stores, list) and stores and isinstance(stores[0], dict) else {}
+        return {
+            "status": "Connected",
+            "store": str(store.get("name") or store.get("store_name") or "Printful store"),
+            "health": "Healthy",
+        }
+
+    async def list_store_products(self) -> list[RawSupplierProduct]:
+        result = await self._request("GET", "/store/products")
+        products = result.get("data", result.get("sync_products", []))
+        if not isinstance(products, list):
+            return []
+        return [self._parse_store_product_summary(item) for item in products if isinstance(item, dict)]
+
+    async def list_finalized_store_products(self) -> list[RawSupplierProduct]:
+        products = await self.list_store_products()
+        return [product for product in products if product.title.strip().lower() in FINALIZED_PRODUCT_NAMES]
+
     async def get_categories(self) -> list[SupplierCategory]:
         return []
 
     async def search_products(
         self, keyword: str, *, category_id: str = "", page: int = 1, page_size: int = 20
     ) -> list[RawSupplierProduct]:
-        result = await self._request(
-            "GET", "/products", params={"offset": max(page - 1, 0) * page_size, "limit": min(page_size, 100)}
-        )
-        products = result.get("products", [])
-        if not isinstance(products, list):
-            return []
+        products = await self.list_store_products()
         normalized_keyword = keyword.strip().lower()
         return [
             product
-            for product in (self._parse_product(item) for item in products if isinstance(item, dict))
+            for product in products
             if not normalized_keyword or normalized_keyword in product.title.lower()
         ]
 
     async def get_product(self, product_id: str, *, strict: bool = False) -> RawSupplierProduct | None:
         try:
-            result = await self._request("GET", f"/products/{product_id}")
+            result = await self._request("GET", f"/store/products/{product_id}")
         except (httpx.HTTPError, ValueError):
             if strict:
                 raise
             return None
-        product = result.get("product", {})
+        product = result.get("sync_product", result.get("product", {}))
         if not isinstance(product, dict):
             return None
-        variants = result.get("variants", [])
-        return self._parse_product(product, variants if isinstance(variants, list) else [])
+        variants = result.get("sync_variants", result.get("variants", []))
+        return self._parse_store_product(product, variants if isinstance(variants, list) else [], result)
 
     async def get_variants(self, product_id: str) -> list[RawVariant]:
         product = await self.get_product(product_id)
@@ -200,6 +222,38 @@ class PrintfulAdapter:
         )
 
     @staticmethod
+    def _parse_store_product_summary(product: dict[str, Any]) -> RawSupplierProduct:
+        product_id = str(product.get("id", ""))
+        return RawSupplierProduct(
+            supplier_id="printful",
+            supplier_product_id=product_id,
+            supplier_sku=str(product.get("external_id", product_id)),
+            title=str(product.get("name", product.get("title", ""))),
+            images=[str(product["thumbnail_url"])] if product.get("thumbnail_url") else [],
+            raw_payload={"sync_product": product},
+        )
+
+    @staticmethod
+    def _parse_store_product(product: dict[str, Any], variants: list[dict[str, Any]], payload: dict[str, Any]) -> RawSupplierProduct:
+        parsed_variants = [PrintfulAdapter._parse_store_variant(item) for item in variants if isinstance(item, dict)]
+        product_id = str(product.get("id", ""))
+        images = [str(product["thumbnail_url"])] if product.get("thumbnail_url") else []
+        images.extend(str(variant.image) for variant in parsed_variants if variant.image and variant.image not in images)
+        variant_prices = [variant.price_usd for variant in parsed_variants if variant.price_usd is not None]
+        return RawSupplierProduct(
+            supplier_id="printful",
+            supplier_product_id=product_id,
+            supplier_sku=str(product.get("external_id", product_id)),
+            title=str(product.get("name", product.get("title", ""))),
+            description=str(product.get("description", "")),
+            images=images,
+            variants=parsed_variants,
+            price_usd=min(variant_prices) if variant_prices else None,
+            inventory_verification="POD_ON_DEMAND",
+            raw_payload=payload,
+        )
+
+    @staticmethod
     def _parse_product(product: dict[str, Any], variants: list[dict[str, Any]] | None = None) -> RawSupplierProduct:
         parsed_variants = [PrintfulAdapter._parse_variant(item) for item in (variants or product.get("variants", [])) if isinstance(item, dict)]
         product_id = str(product.get("id", ""))
@@ -223,5 +277,29 @@ class PrintfulAdapter:
             image=str(variant.get("image", "")),
             price_usd=float(variant["price"]) if variant.get("price") is not None else None,
             inventory=int(variant.get("availability", 0) or 0),
+        )
+
+    @staticmethod
+    def _parse_store_variant(variant: dict[str, Any]) -> RawVariant:
+        sync_variant_id = str(variant.get("id", ""))
+        catalog_variant_id = str(variant.get("variant_id", ""))
+        options = variant.get("options") if isinstance(variant.get("options"), list) else []
+        option_parts = [f"{item.get('id')}: {item.get('value')}" for item in options if isinstance(item, dict) and item.get("value")]
+        if catalog_variant_id:
+            option_parts.append(f"catalog_variant_id: {catalog_variant_id}")
+        files = variant.get("files") if isinstance(variant.get("files"), list) else []
+        image = ""
+        for file_item in files:
+            if isinstance(file_item, dict) and file_item.get("preview_url"):
+                image = str(file_item["preview_url"])
+                break
+        return RawVariant(
+            supplier_variant_id=sync_variant_id,
+            supplier_variant_sku=str(variant.get("sku") or variant.get("external_id") or sync_variant_id),
+            name=str(variant.get("name", "")),
+            option_key=" / ".join(option_parts),
+            image=image,
+            price_usd=float(variant["retail_price"]) if variant.get("retail_price") is not None else None,
+            inventory_verification=str(variant.get("availability_status") or "POD_ON_DEMAND"),
         )
 
