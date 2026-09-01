@@ -12,6 +12,7 @@ function variantInventory(catalog: CartCatalog, item: CartItem): number | null {
   const variant = variantFor(catalog, item);
   if (!variant) return product.catalogVariants?.length ? 0 : Number.MAX_SAFE_INTEGER;
   if (!variant.available) return 0;
+  if (product.madeToOrder) return Number.MAX_SAFE_INTEGER;
   return Math.max(0, variant.inventory);
 }
 

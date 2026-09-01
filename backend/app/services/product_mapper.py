@@ -64,7 +64,7 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
             label=variant.name or variant.attributes or f"Option {variant.position}",
             price=format_inr(variant.selling_price),
             priceValue=variant.selling_price,
-            available=bool(variant.active and (variant.cj_inventory or 0) > 0),
+            available=bool(variant.active and (product.verified_warehouse == "POD_ON_DEMAND" or (variant.cj_inventory or 0) > 0)),
             inventory=max(0, variant.cj_inventory or 0),
         )
         for variant in sorted(product.variants, key=lambda item: item.position)
@@ -84,6 +84,7 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
         images=images,
         fallbackImage=fallback_image,
         variants=public_variants,
+        madeToOrder=product.supplier == "printful",
         category=category_slug,
         parentCategory=parent_category,
         availability=product.availability,

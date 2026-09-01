@@ -97,6 +97,7 @@ export function toCommerceProduct(product: Product): CommerceProduct {
     category,
     categoryLabel: categoryLabel(product.category),
     catalogVariants: variants.map((variant) => ({ id: variant.id, label: variant.label, price: variant.priceValue, available: variant.available, inventory: variant.inventory })),
+    madeToOrder: product.madeToOrder,
     availability: variants.some((variant) => variant.available) ? "in-stock" : "out-of-stock",
     tags: product.tags,
     specs: product.specs,

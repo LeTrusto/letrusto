@@ -68,6 +68,7 @@ export type Product = {
   images: string[];
   fallbackImage: string;
   variants?: CatalogVariant[];
+  madeToOrder?: boolean;
   category: ProductCategory;
   parentCategory?: string | null;
   availability: ProductAvailability;

@@ -59,6 +59,7 @@ class ProductDTO(BaseModel):
     images: list[str]
     fallbackImage: str
     variants: list[ProductVariantDTO]
+    madeToOrder: bool = False
     category: str
     parentCategory: str | None = None
     availability: str

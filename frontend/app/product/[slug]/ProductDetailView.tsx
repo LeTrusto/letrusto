@@ -45,8 +45,8 @@ export default function ProductDetailView({ product, related }: Props) {
   const actionLocked = useRef(false);
   const selectedVariant = product.catalogVariants?.find((variant) => variant.id === selectedVariantId);
   const displayPrice = selectedVariant?.price ?? product.price;
-  const isAvailable = selectedVariant ? selectedVariant.available && selectedVariant.inventory > 0 : product.availability !== "out-of-stock";
-  const maxQuantity = Math.max(1, selectedVariant?.inventory ?? 1);
+  const isAvailable = selectedVariant ? selectedVariant.available : product.availability !== "out-of-stock";
+  const maxQuantity = product.madeToOrder ? 99 : Math.max(1, selectedVariant?.inventory ?? 1);
   const [quantity, setQuantity] = useState(1);
   const [shippingCountry, setShippingCountry] = useState("IN");
   const [shippingResult, setShippingResult] = useState<{ key: string; estimate: ShippingEstimate | null; error: boolean } | null>(null);

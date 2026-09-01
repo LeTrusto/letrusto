@@ -27,6 +27,7 @@ export type CommerceProduct = {
   estimatedDelivery?: string;
   returnInfo?: string;
   catalogVariants?: CatalogVariant[];
+  madeToOrder?: boolean;
 };
 
 export type CatalogVariant = {
