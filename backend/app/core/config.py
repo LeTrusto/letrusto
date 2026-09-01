@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     PENDING_PAYMENT_RECONCILIATION_AGE_MINUTES: int = 30
     RECONCILIATION_BATCH_SIZE: int = 50
     ORDER_RECONCILIATION_ENABLED: bool = True
+    SCHEDULED_JOB_LOCK_KEY: int = 826301
 
     # Supplier integration (Phase 2 validation)
     SUPPLIER_PROVIDER: str = "cj"
