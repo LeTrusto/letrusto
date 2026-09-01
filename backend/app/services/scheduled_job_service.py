@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.services.catalog_inventory_sync_service import CatalogInventorySyncService
 from app.services.order_reconciliation_service import OrderLifecycleReconciliationService
+from app.services.operational_alert_service import OperationalAlertService
 
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,12 @@ class ScheduledJobRunner:
             with self.db_session_factory(bind=connection) as db:
                 try:
                     inventory = await CatalogInventorySyncService(db).sync_active_products()
+                    alert_service = OperationalAlertService(db)
+                    sync_alerts = self._run_alert(
+                        lambda: alert_service.process_inventory_sync_failures(inventory["failures"]),
+                        "sync_failure",
+                    )
+                    stock_alerts = self._run_alert(alert_service.evaluate_low_stock, "low_stock")
                     reconciliation = await OrderLifecycleReconciliationService(db).run_order_lifecycle_reconciliation()
                     result = {
                         "job_name": job_name,
@@ -62,6 +69,7 @@ class ScheduledJobRunner:
                         "completed_at": datetime.now(timezone.utc).isoformat(),
                         "duration_seconds": round(monotonic() - started_clock, 3),
                         "inventory": inventory,
+                        "alerts": {"sync_failures": sync_alerts, "low_stock": stock_alerts},
                         "reconciliation": reconciliation.model_dump(mode="json"),
                     }
                     logger.info(
@@ -80,6 +88,14 @@ class ScheduledJobRunner:
                     db.rollback()
                     logger.exception("Scheduled job failed", extra={"job_name": job_name})
                     raise
+
+    @staticmethod
+    def _run_alert(callback: Callable[[], dict[str, int]], alert_name: str) -> dict[str, int | str]:
+        try:
+            return callback()
+        except Exception as exc:
+            logger.exception("Operational alert evaluation failed", extra={"alert_name": alert_name, "error_category": type(exc).__name__})
+            return {"sent": 0, "suppressed": 0, "recovered": 0, "delivery_failures": 0, "status": "ERROR"}
 
 
 async def run_scheduled_job() -> dict[str, Any]:

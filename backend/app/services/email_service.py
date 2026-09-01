@@ -357,6 +357,24 @@ def _delivered_template(context: Mapping[str, Any]) -> RenderedEmail:
     return _shipment_template({**context, "status": "delivered"})
 
 
+def _operational_alert_template(context: Mapping[str, Any]) -> RenderedEmail:
+    subject = str(context["subject"])
+    rows = "".join(_render_label_value(str(label), str(value)) for label, value in context["details"])
+    html = _html_document(
+        subject,
+        (
+            f'<h1 style="margin:0 0 10px 0;font-size:27px;line-height:1.2;color:#0f172a;">{escape(subject)}</h1>'
+            '<p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#475569;">'
+            "Operational attention is required for the LeTrusto commerce backend."
+            "</p>"
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">'
+            f"{rows}</table>"
+        ),
+    )
+    text = _text_block([subject, "", *[f"{label}: {value}" for label, value in context["details"]]])
+    return RenderedEmail(subject=subject, html=html, text=text)
+
+
 class EmailService:
     def __init__(
         self,
@@ -397,6 +415,7 @@ class EmailService:
         registry.register("order_confirmation", _order_confirmation_template)
         registry.register("order_shipped", _shipped_template)
         registry.register("order_delivered", _delivered_template)
+        registry.register("operational_alert", _operational_alert_template)
         return registry
 
     def register_template(self, name: str, renderer: Callable[[Mapping[str, Any]], RenderedEmail]) -> None:

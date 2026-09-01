@@ -364,6 +364,28 @@ class SupplierVariantInventory(Base):
     variant: Mapped[ProductVariant] = relationship(back_populates="warehouse_inventory")
 
 
+class OperationalAlertState(Base):
+    __tablename__ = "operational_alert_states"
+    __table_args__ = (
+        UniqueConstraint("alert_type", "alert_key", name="uq_operational_alert_state_key"),
+        Index("ix_operational_alert_states_active", "alert_type", "is_active"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    alert_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    alert_key: Mapped[str] = mapped_column(String(240), nullable=False)
+    fingerprint: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    last_alert_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    recovered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivery_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivery_failure_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class ProductMarketEvidence(Base):
     __tablename__ = "product_market_evidence"
     __table_args__ = (

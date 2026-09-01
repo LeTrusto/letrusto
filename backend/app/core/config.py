@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     RECONCILIATION_BATCH_SIZE: int = 50
     ORDER_RECONCILIATION_ENABLED: bool = True
     SCHEDULED_JOB_LOCK_KEY: int = 826301
+    LOW_STOCK_THRESHOLD: int = 5
+    ALERT_EMAIL_COOLDOWN_MINUTES: int = 60
 
     # Supplier integration (Phase 2 validation)
     SUPPLIER_PROVIDER: str = "cj"

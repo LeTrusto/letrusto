@@ -8,8 +8,15 @@ Create a separate Railway service from the backend image with:
 - Start command: `python -m scripts.run_scheduled_jobs`
 - The same `DATABASE_URL` and supplier/payment environment configuration as the backend service
 
-The command performs one pass of active CJ inventory synchronization and the existing order lifecycle reconciliation. It exits after the pass so Railway can invoke it again on the next cron tick.
+The command performs one pass of active CJ inventory synchronization, operational low-stock and sync-failure alert evaluation, and the existing order lifecycle reconciliation. It exits after the pass so Railway can invoke it again on the next cron tick.
 
 The job takes a PostgreSQL advisory lock using `SCHEDULED_JOB_LOCK_KEY` (default `826301`). Keep that value the same across scheduler instances. A concurrent invocation exits as `SKIPPED_OVERLAPPING` without touching inventory or orders.
 
 Printful products are not selected by the catalog inventory sync. Printful remains POD-driven and is not routed through CJ warehouse inventory fields or reservations. The scheduler does not create orders, payments, supplier orders, or customer records.
+
+Alert configuration is backend-only:
+
+- `LOW_STOCK_THRESHOLD` (default `5`): sellable CJ inventory at or below this value alerts once per low-stock transition.
+- `ALERT_EMAIL_COOLDOWN_MINUTES` (default `60`): suppresses repeated identical CJ sync-failure alerts during the cooldown.
+
+Alerts are sent to `SUPPORT_EMAIL` using the existing Resend configuration. Low-stock state recovers when stock rises above the threshold; sync-failure state recovers after a clean inventory pass. Email delivery failures are recorded in alert state and do not fail inventory synchronization or reconciliation.
