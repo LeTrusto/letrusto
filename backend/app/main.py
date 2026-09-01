@@ -25,7 +25,12 @@ def _build_cors_origins(raw_origins: str, app_env: str) -> list[str]:
     configured = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
     defaults = ["https://letrusto.com", "https://www.letrusto.com", "https://letrusto.vercel.app"]
     if app_env != "production":
-        defaults.extend(["http://localhost:3000", "http://127.0.0.1:3000"])
+        defaults.extend([
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:3100",
+            "http://127.0.0.1:3100",
+        ])
 
     origins = [*configured, *defaults]
     if app_env == "production":

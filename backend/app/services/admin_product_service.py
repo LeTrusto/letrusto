@@ -196,8 +196,9 @@ class AdminProductService:
         return AdminProductInventoryResponse(product_id=product.id, variants=variants)
 
     async def import_product(self, payload: ProductImportRequest, *, commit: bool = True) -> AdminProductDTO:
-        if payload.supplier == "printful":
-            return await self._import_printful_product(payload.supplier_product_id, commit=commit)
+        if payload.supplier != "printful":
+            raise BadRequestError("Only Printful products can be imported into the active catalog")
+        return await self._import_printful_product(payload.supplier_product_id, commit=commit)
 
         existing = self.db.scalar(select(Product).where(Product.supplier == payload.supplier, Product.supplier_product_id == payload.supplier_product_id))
         if existing:
@@ -1490,6 +1491,8 @@ class AdminProductService:
 
     async def sync_inventory(self, product_id: UUID) -> AdminProductDTO:
         product = self._get(product_id)
+        if product.supplier == "printful":
+            return self._dto(product)
         if not product.supplier:
             raise BadRequestError("Catalog product has no supplier")
         if not product.supplier_product_id:

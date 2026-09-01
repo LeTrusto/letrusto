@@ -6,7 +6,8 @@ The repository is authoritative. Inspect current code, migrations, tests, and co
 
 ## Current Product Direction
 
-LeTrusto is an Indian ecommerce and CJ dropshipping platform.
+LeTrusto is an Indian ecommerce platform whose active production flow is Printful POD.
+CJ is retained only for historical Phase 2 validation and legacy compatibility.
 
 Business progression:
 
@@ -21,9 +22,9 @@ Roadmap:
 - Phase 4: admin/operations, later
 - Phase 5: launch, later
 
-The old mobile/affiliate catalog has been removed. Do not recreate or reseed it. The product database is expected to start at zero products until real CJ products are imported.
+The old mobile/affiliate catalog has been removed. Do not recreate or reseed it. New catalog products must come from Printful.
 
-## Phase 2 Invariants
+## Phase 2 Legacy Invariants
 
 The existing Phase 2 supplier validation flow must remain intact. It supports real CJ search, product details, India shipping validation, economics, contribution, inventory distinction, scoring, and review classification.
 
@@ -46,7 +47,7 @@ Current admin catalog APIs:
 - `GET /api/v1/admin/products/{id}`
 - `PATCH /api/v1/admin/products/{id}`
 
-All admin catalog operations use the existing `get_current_admin` dependency. Imported CJ products start as `DRAFT`; supported statuses are `DRAFT`, `ACTIVE`, and `PAUSED`.
+All admin catalog operations use the existing `get_current_admin` dependency. Imported Printful products start as `DRAFT`; supported statuses are `DRAFT`, `ACTIVE`, and `PAUSED`.
 
 Preserve supplier traceability: supplier, supplier product ID, CJ variant IDs, supplier SKUs, source image URLs, supplier cost, shipping cost, total/CJ/factory inventory, verification status, and sync timestamps. Duplicate imports are identified by `supplier + supplier_product_id`.
 

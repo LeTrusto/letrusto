@@ -40,7 +40,7 @@ def cleanup(db, product_id):
     db.close()
 
 
-def test_low_stock_alerts_on_transition_suppresses_repeat_and_alerts_again_after_recovery():
+def test_low_stock_alerts_do_not_treat_cj_or_printful_as_warehouse_inventory():
     db = SessionLocal()
     product, variant = make_product(db, stock=10)
     email = FakeEmail()
@@ -49,23 +49,11 @@ def test_low_stock_alerts_on_transition_suppresses_repeat_and_alerts_again_after
     now = datetime.now(timezone.utc)
     try:
         service.evaluate_low_stock(now)
-        initial_alerts = len(email.sent)
         variant.cj_inventory = 5
         db.commit()
-        service.evaluate_low_stock(now + timedelta(minutes=1))
-        assert len(email.sent) == initial_alerts + 1
-        before_repeat = len(email.sent)
-        service.evaluate_low_stock(now + timedelta(minutes=2))
-        assert len(email.sent) == before_repeat
-        variant.cj_inventory = 6
-        db.commit()
-        assert service.evaluate_low_stock(now + timedelta(minutes=3))["recovered"] == 1
-        variant.cj_inventory = 2
-        db.commit()
-        before_second_transition = len(email.sent)
-        service.evaluate_low_stock(now + timedelta(minutes=4))
-        assert len(email.sent) == before_second_transition + 1
-        assert any("SKU-1" in item[1]["context"]["details"][1][1] for item in email.sent)
+        result = service.evaluate_low_stock(now + timedelta(minutes=1))
+        assert result == {"sent": 0, "suppressed": 0, "recovered": 0, "delivery_failures": 0}
+        assert email.sent == []
     finally:
         cleanup(db, product.id)
 
@@ -110,7 +98,7 @@ def test_email_failure_is_recorded_without_raising_or_leaking_exception_text(cap
     service = OperationalAlertService(db, email_service=email)
     try:
         result = service.process_inventory_sync_failures([{"product_id": str(uuid4()), "category": "HTTPError"}])
-        state = db.query(OperationalAlertState).filter_by(alert_type="INVENTORY_SYNC_FAILURE", alert_key="cj").one()
+        state = db.query(OperationalAlertState).filter_by(alert_type="INVENTORY_SYNC_FAILURE", alert_key="inventory").one()
         assert result["delivery_failures"] == 1
         assert state.delivery_failure_reason == "EmailDeliveryError"
         assert "secret-resend-key" not in caplog.text

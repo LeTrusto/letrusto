@@ -1,5 +1,7 @@
 # LeTrusto — Supplier Validation Report
 
+> CJ Dropshipping is historical Phase 2 validation evidence. Printful is the only active fulfillment supplier for production commerce.
+
 ## CJ Dropshipping
 
 | Field | Value |

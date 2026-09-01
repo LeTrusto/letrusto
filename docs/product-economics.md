@@ -1,5 +1,7 @@
 # LeTrusto — Product Economics Report
 
+> Active production economics use Printful supplier costs and Printful shipping configuration. The CJ inputs below are historical Phase 2 validation evidence and are not used for new catalog products or orders.
+
 ## Economics Model
 
 ```
@@ -20,9 +22,9 @@ Selling price (target 2.5x markup, rounded to ₹49/₹99 price point)
 
 | Cost Line | Rate | Status |
 |----------|------|--------|
-| Supplier cost | From CJ API `sellPrice` (USD) | KNOWN (when API returns data) |
+| Supplier cost | From Printful catalog data | KNOWN when imported |
 | USD → INR rate | 83.5 | ESTIMATED — use live rate in production |
-| Shipping to India | CJ Freight Calculate API | KNOWN per-product (when available) |
+| Shipping to India | Printful shipping-rate configuration | Requires verified rate configuration |
 | Payment fee | 2.5% of selling price | ESTIMATED (Razorpay-class) |
 | RTO/return reserve | UNKNOWN | UNKNOWN — no historical return data |
 | Creator commission | 10% of selling price | ESTIMATED (configurable) |
@@ -30,7 +32,7 @@ Selling price (target 2.5x markup, rounded to ₹49/₹99 price point)
 
 ## Sample Products (Template)
 
-> No real product economics below until live CJ API validation is completed.
+> No active product economics below until Printful cost and shipping configuration are verified.
 > Products listed here are templates showing the format.
 
 ### Template: Pearl Hair Clip Set

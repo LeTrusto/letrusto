@@ -129,7 +129,7 @@ class SupplierCandidate(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    supplier: Mapped[str] = mapped_column(String(40), nullable=False, index=True, default="cj")
+    supplier: Mapped[str] = mapped_column(String(40), nullable=False, index=True, default="printful")
     supplier_product_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     supplier_sku: Mapped[str | None] = mapped_column(String(160), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(240), nullable=False)

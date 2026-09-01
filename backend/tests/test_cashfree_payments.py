@@ -3,6 +3,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+from datetime import datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 from uuid import uuid4
@@ -12,7 +13,7 @@ import pytest
 
 from app.core.exceptions import BadRequestError
 from app.db.session import SessionLocal
-from app.models.entities import Cart, CartItem, Order, OrderItem, PaymentAttempt, Product, ProductVariant, SupplierVariantInventory, User
+from app.models.entities import Cart, CartItem, Order, OrderItem, PaymentAttempt, PrintfulShippingRate, Product, ProductVariant, SupplierVariantInventory, User
 from app.services.cashfree_service import CashfreeService
 from app.services.order_service import OrderService
 from app.schemas.orders import CartItemRequest, CreateOrderRequest, CustomerDetails, ShippingAddress
@@ -21,10 +22,12 @@ from app.schemas.orders import CartItemRequest, CreateOrderRequest, CustomerDeta
 def make_order(db):
     suffix = uuid4().hex[:8]
     user = User(email=f"cashfree-{suffix}@example.com", full_name="Cashfree Test")
-    product = Product(slug=f"cashfree-product-{suffix}", name="Cashfree product", description="test", status="ACTIVE", supplier="cj", supplier_product_id=f"cashfree-cj-{suffix}", price_value=Decimal("100"), selling_price=Decimal("100"), ai_score=1, rating=Decimal("1"), ai_summary="", review_summary="")
+    product = Product(slug=f"cashfree-product-{suffix}", name="Cashfree product", description="test", status="ACTIVE", supplier="printful", supplier_product_id=f"cashfree-printful-{suffix}", price_value=Decimal("100"), selling_price=Decimal("100"), ai_score=1, rating=Decimal("1"), ai_summary="", review_summary="")
     variant = ProductVariant(product=product, supplier_variant_id=f"VID-{suffix}", supplier_variant_sku=f"SKU-{suffix}", name="Blue", position=1, selling_price=Decimal("100"), cj_inventory=2, factory_inventory=999)
     db.add_all([user, product]); db.flush()
-    db.add(SupplierVariantInventory(product_id=product.id, variant_id=variant.id, supplier_product_id=product.supplier_product_id, supplier_variant_id=variant.supplier_variant_id, warehouse_identity=f"CN-{suffix}", warehouse_country="CN", storage_id="CN", warehouse_name="China Warehouse", total_inventory=2, cj_sellable_inventory=2, factory_inventory=999)); db.commit()
+    db.add(SupplierVariantInventory(product_id=product.id, variant_id=variant.id, supplier_product_id=product.supplier_product_id, supplier_variant_id=variant.supplier_variant_id, warehouse_identity=f"CN-{suffix}", warehouse_country="CN", storage_id="CN", warehouse_name="China Warehouse", total_inventory=2, cj_sellable_inventory=2, factory_inventory=999))
+    db.add(PrintfulShippingRate(category_key="default", destination_region="IN", country_codes=["IN"], shipping_method="Standard", single_product_rate=Decimal("10"), additional_product_rate=Decimal("5"), currency="INR", source="printful", rate_source="PRINTFUL_PUBLISHED", effective_at=datetime.now(timezone.utc), active=True, requires_verification=False))
+    db.commit()
     payload = CreateOrderRequest(items=[CartItemRequest(product_id=product.slug, variant_id="variant-1", quantity=1)], customer=CustomerDetails(name="Buyer", email="buyer@example.com", phone="9876543210"), shipping_address=ShippingAddress(address="1 Street", city="Bengaluru", state="Karnataka", postal_code="560001", country="IN"), idempotency_key=f"cashfree-{suffix}-key")
     order = OrderService(db).create_order(user, payload)
     return user, product, db.get(Order, order.id)
@@ -65,9 +68,9 @@ def test_session_uses_authoritative_order_total_and_hides_secret(monkeypatch):
     try:
         result = CashfreeService(db, settings()).create_session(user, order.id)
         assert result.payment_session_id == "session-safe"
-        assert result.amount == Decimal("100.00")
+        assert result.amount == Decimal("110.00")
         assert "secret" not in result.model_dump_json()
-        assert calls[0][1]["json"]["order_amount"] == 100.0
+        assert calls[0][1]["json"]["order_amount"] == 110.0
         assert calls[0][1]["headers"]["x-client-secret"] == "secret"
         db.refresh(order); assert order.payment_provider == "CASHFREE"
     finally: cleanup(db, user, product)

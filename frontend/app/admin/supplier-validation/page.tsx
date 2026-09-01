@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SupplierValidationView from "./SupplierValidationView";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Product Discovery & Selection",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function SupplierValidationPage() {
-  return <SupplierValidationView />;
+  redirect("/admin/products");
 }

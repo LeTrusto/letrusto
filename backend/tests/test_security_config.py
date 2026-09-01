@@ -52,6 +52,20 @@ def test_credentialed_cors_allows_only_configured_origins():
     assert "access-control-allow-origin" not in blocked.headers
 
 
+def test_local_frontend_port_3100_can_call_auth_api():
+    client = TestClient(app)
+    response = client.options(
+        "/api/v1/auth/login",
+        headers={
+            "Origin": "http://localhost:3100",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3100"
+
+
 def test_production_cors_filters_localhost_and_wildcard():
     origins = _build_cors_origins("*, http://localhost:3000, https://shop.example.com", "production")
     assert "*" not in origins

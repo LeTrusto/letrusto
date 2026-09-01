@@ -16,8 +16,7 @@
 - PostgreSQL: **VERIFIED online**.
 - Alembic revision: **VERIFIED `20260821_27`**.
 - Razorpay LIVE: **VERIFIED configured**.
-- CJ authentication: **VERIFIED**.
-- CJ inventory and freight: **VERIFIED working**.
+- Historical CJ authentication, inventory, and freight validation: **PRESERVED**.
 - Admin Preflight UI: **NOT YET VERIFIED in production**; implemented locally and awaiting deployment.
 
 The latest production commits include:
@@ -84,4 +83,4 @@ This is a historical safety lesson, not an active order to retry. It must not be
 
 ## Historical Architecture Context
 
-LeTrusto retains earlier AI/software discovery, affiliate, storefront, and content systems in the repository. They are historical or supporting surfaces; the current business roadmap is governed by the production CJ commerce sequence in [development-roadmap.md](development-roadmap.md).
+LeTrusto retains earlier AI/software discovery, affiliate, storefront, and content systems in the repository. CJ evidence and compatibility code are historical or supporting surfaces; the current business roadmap is governed by the Printful production sequence in [development-roadmap.md](development-roadmap.md).

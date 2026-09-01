@@ -8,7 +8,7 @@ import { API_BASE_URL } from "@/services/api";
 import FulfillmentPreflightPanel from "./FulfillmentPreflightPanel";
 
 const API_BASE = API_BASE_URL;
-const LEGACY_CJ_WORKFLOW_ENABLED = true;
+const LEGACY_CJ_WORKFLOW_ENABLED = false;
 
 type Variant = {
   id: string;
@@ -67,8 +67,6 @@ type PrintfulConnection = { connected: boolean; store: string | null; status: st
 type PrintfulProduct = { supplier_product_id: string; name: string; thumbnail_url: string | null; finalized: boolean; imported_product_id: string | null };
 type PrintfulProductsResponse = { products: PrintfulProduct[]; total: number };
 type PrintfulShippingRate = { region: string; label: string; status: "AVAILABLE" | "REQUIRES_VERIFICATION" | "MISSING"; shipping_method: string | null; single_product_rate: number | null; additional_product_rate: number | null; currency: string; country_codes: string[]; source: string; rate_source: string; effective_at: string | null; updated_at: string | null; active: boolean; requires_verification: boolean };
-type LegacyArchiveResponse = { supplier: "cj"; archived_count: number; status: string };
-
 type FulfillmentOrder = {
   order_id: string;
   order_number: string;
@@ -443,23 +441,6 @@ export default function AdminProductsView() {
     }
   }
 
-  async function archiveLegacyCjProducts() {
-    setPrintfulWorking(true);
-    setError("");
-    setMessage("");
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/admin/products/archive-legacy-cj`, { method: "POST", headers: apiHeaders() });
-      if (!response.ok) throw new Error(await apiError(response));
-      const result = (await response.json()) as LegacyArchiveResponse;
-      setMessage(`Archived ${result.archived_count} legacy supplier product${result.archived_count === 1 ? "" : "s"}.`);
-      await loadProducts();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to archive legacy supplier products");
-    } finally {
-      setPrintfulWorking(false);
-    }
-  }
-
   async function savePrintfulPricing(product: Product, payload: { india_price_inr: string; international_price_usd: string; shipping_reviewed: boolean }) {
     setPrintfulWorking(true);
     setError("");
@@ -736,9 +717,6 @@ export default function AdminProductsView() {
             <button type="button" onClick={() => void loadPrintfulProducts()} disabled={printfulWorking} className="lt-btn lt-btn-primary">
               {printfulWorking ? "Loading..." : "Find Products"}
             </button>
-            <button type="button" onClick={() => void archiveLegacyCjProducts()} disabled={printfulWorking} className="lt-btn lt-btn-secondary">
-              Archive Legacy Catalog
-            </button>
           </div>
         </div>
         {printfulConnection && <p className="mt-4 text-sm font-semibold text-[var(--text-primary)]">Printful connection: {printfulConnection.connected ? "Connected" : "Unavailable"}{printfulConnection.store ? ` · Store: ${printfulConnection.store}` : ""}{printfulConnection.message ? ` · ${printfulConnection.message}` : ""}</p>}
@@ -854,11 +832,11 @@ export default function AdminProductsView() {
 
       {LEGACY_CJ_WORKFLOW_ENABLED && <FulfillmentPreflightPanel products={products.map((product) => ({ id: product.id, name: product.name, variants: product.variants }))} />}
 
-      {LEGACY_CJ_WORKFLOW_ENABLED && <section className="mb-6 border-y border-[var(--border)] py-5">
+      <section className="mb-6 border-y border-[var(--border)] py-5">
         <h2 className="text-lg font-semibold">Paid order fulfillment</h2>
         <p className="text-sm text-[var(--text-muted)] mt-1">Supplier status and tracking are synchronized server-side.</p>
-        {fulfillmentOrders.length === 0 ? <p className="mt-4 text-sm text-[var(--text-muted)]">No paid orders require fulfillment.</p> : <div className="mt-4 overflow-x-auto"><table className="w-full text-sm whitespace-nowrap"><thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2 pr-3">Order</th><th className="pr-3">Payment</th><th className="pr-3">Fulfillment</th><th className="pr-3">CJ order</th><th className="pr-3">Tracking</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{fulfillmentOrders.map((order) => <tr key={order.order_id} className="border-t border-[var(--border)]"><td className="py-3 pr-3">{order.order_number}<span className="block text-xs text-[var(--text-muted)]">{order.customer_email}</span></td><td className="pr-3">{order.payment_status}</td><td className="pr-3">{order.fulfillment_status}<span className="block text-xs text-[var(--text-muted)]">{order.supplier_status ?? "-"}</span></td><td className="pr-3">{order.supplier_order_id ?? "Not submitted"}</td><td className="pr-3">{order.tracking_number ? `${order.tracking_carrier ?? "Carrier"} · ${order.tracking_number}` : "-"}</td><td><button type="button" onClick={() => void syncFulfillment(order.order_id)} disabled={syncingOrderId !== null || order.fulfillment_status === "DELIVERED"} className="lt-btn lt-btn-secondary text-sm">{syncingOrderId === order.order_id ? "Syncing..." : "Sync status"}</button></td></tr>)}</tbody></table></div>}
-      </section>}
+        {fulfillmentOrders.length === 0 ? <p className="mt-4 text-sm text-[var(--text-muted)]">No paid orders require fulfillment.</p> : <div className="mt-4 overflow-x-auto"><table className="w-full text-sm whitespace-nowrap"><thead><tr className="text-left text-[var(--text-muted)]"><th className="py-2 pr-3">Order</th><th className="pr-3">Payment</th><th className="pr-3">Fulfillment</th><th className="pr-3">Supplier order</th><th className="pr-3">Tracking</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{fulfillmentOrders.map((order) => <tr key={order.order_id} className="border-t border-[var(--border)]"><td className="py-3 pr-3">{order.order_number}<span className="block text-xs text-[var(--text-muted)]">{order.customer_email}</span></td><td className="pr-3">{order.payment_status}</td><td className="pr-3">{order.fulfillment_status}<span className="block text-xs text-[var(--text-muted)]">{order.supplier_status ?? "-"}</span></td><td className="pr-3">{order.supplier_order_id ?? "Not submitted"}</td><td className="pr-3">{order.tracking_number ? `${order.tracking_carrier ?? "Carrier"} · ${order.tracking_number}` : "-"}</td><td><button type="button" onClick={() => void syncFulfillment(order.order_id)} disabled={syncingOrderId !== null || order.fulfillment_status === "DELIVERED"} className="lt-btn lt-btn-secondary text-sm">{syncingOrderId === order.order_id ? "Syncing..." : "Sync status"}</button></td></tr>)}</tbody></table></div>}
+      </section>
 
       {loading ? (
         <p className="text-sm text-[var(--text-muted)]">Loading catalog...</p>

@@ -173,6 +173,8 @@ class FulfillmentService:
         if not order.items:
             raise BadRequestError("Order has no items")
         supplier = self._supplier(order)
+        if supplier != "printful":
+            raise BadRequestError("CJ is a legacy supplier and cannot receive new fulfillment orders")
         address = self._address(order, supplier)
         payload_items = []
         for item in order.items:

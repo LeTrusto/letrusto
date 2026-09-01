@@ -63,8 +63,8 @@ class Settings(BaseSettings):
     LOW_STOCK_THRESHOLD: int = 5
     ALERT_EMAIL_COOLDOWN_MINUTES: int = 60
 
-    # Supplier integration (Phase 2 validation)
-    SUPPLIER_PROVIDER: str = "cj"
+    # Printful is the only active production supplier. CJ remains available for legacy validation data.
+    SUPPLIER_PROVIDER: str = "printful"
     CJ_API_KEY: str = ""
     PRINTFUL_API_KEY: str = ""
 

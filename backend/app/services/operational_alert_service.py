@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models.entities import OperationalAlertState, Product, ProductVariant
+from app.models.entities import OperationalAlertState
 from app.services.email_service import EmailService
 
 
@@ -27,66 +27,13 @@ class OperationalAlertService:
         self.cooldown = timedelta(minutes=settings.ALERT_EMAIL_COOLDOWN_MINUTES)
 
     def evaluate_low_stock(self, now: datetime | None = None) -> dict[str, int]:
-        now = now or datetime.now(timezone.utc)
-        variants = list(self.db.scalars(
-            select(ProductVariant).join(Product).where(Product.status == "ACTIVE", Product.supplier == "cj", ProductVariant.active.is_(True))
-        ).all())
-        sent = suppressed = recovered = delivery_failures = 0
-        current_keys: set[str] = set()
-        for variant in variants:
-            key = str(variant.id)
-            current_keys.add(key)
-            stock = max(0, variant.cj_inventory or 0)
-            state = self._state("LOW_STOCK", key)
-            if stock <= self.threshold:
-                if state is None:
-                    state = OperationalAlertState(alert_type="LOW_STOCK", alert_key=key)
-                    self.db.add(state)
-                    self.db.flush()
-                if state.is_active and not (
-                    state.delivery_failed_at
-                    and state.last_alert_at
-                    and now - state.last_alert_at >= self.cooldown
-                ):
-                    suppressed += 1
-                    continue
-                state.is_active = True
-                state.recovered_at = None
-                state.last_alert_at = now
-                try:
-                    self.email_service.send_template(
-                        "operational_alert",
-                        to=self.recipient,
-                        from_email=self.from_email,
-                        context={
-                            "subject": "[LeTrusto Alert] Low inventory detected",
-                            "details": [
-                                ("Product", variant.product.name),
-                                ("Variant / SKU", variant.supplier_variant_sku or variant.name or str(variant.id)),
-                                ("Current sellable stock", str(stock)),
-                                ("Alert threshold", str(self.threshold)),
-                                ("Supplier", "cj"),
-                                ("Detected at", now.isoformat()),
-                            ],
-                        },
-                    )
-                    state.delivery_failed_at = None
-                    state.delivery_failure_reason = None
-                    sent += 1
-                except Exception as exc:
-                    delivery_failures += 1
-                    self._record_delivery_failure(state, exc, now)
-                    logger.warning("Operational alert delivery failed", extra={"alert_type": "LOW_STOCK", "error_category": type(exc).__name__})
-            elif state is not None and state.is_active:
-                state.is_active = False
-                state.recovered_at = now
-                recovered += 1
-        self.db.commit()
-        return {"sent": sent, "suppressed": suppressed, "recovered": recovered, "delivery_failures": delivery_failures}
+        # Printful POD has no active warehouse quantity. Keep the alert infrastructure
+        # available for a future inventory source without treating POD availability as stock.
+        return {"sent": 0, "suppressed": 0, "recovered": 0, "delivery_failures": 0}
 
     def process_inventory_sync_failures(self, failures: list[dict[str, str]], now: datetime | None = None) -> dict[str, int]:
         now = now or datetime.now(timezone.utc)
-        state = self._state("INVENTORY_SYNC_FAILURE", "cj")
+        state = self._state("INVENTORY_SYNC_FAILURE", "inventory")
         if not failures:
             if state is not None and state.is_active:
                 state.is_active = False
@@ -100,7 +47,7 @@ class OperationalAlertService:
         if state is not None and state.is_active and state.fingerprint == fingerprint and state.last_alert_at and now - state.last_alert_at < self.cooldown:
             return {"sent": 0, "suppressed": 1, "recovered": 0, "delivery_failures": 0}
         if state is None:
-            state = OperationalAlertState(alert_type="INVENTORY_SYNC_FAILURE", alert_key="cj")
+            state = OperationalAlertState(alert_type="INVENTORY_SYNC_FAILURE", alert_key="inventory")
             self.db.add(state)
         state.is_active = True
         state.fingerprint = fingerprint
@@ -115,7 +62,7 @@ class OperationalAlertService:
                 context={
                     "subject": "[LeTrusto Alert] Inventory synchronization failed",
                     "details": [
-                        ("Supplier", "cj"),
+                            ("Source", "active inventory monitor"),
                         ("Failed products", str(len(failures))),
                         ("Failure categories", fingerprint),
                         ("Detected at", now.isoformat()),

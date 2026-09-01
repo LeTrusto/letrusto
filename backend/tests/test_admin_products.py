@@ -285,30 +285,23 @@ def test_import_is_draft_and_preserves_supplier_data(monkeypatch):
     service = AdminProductService(db)
     product_id = "phase31-test-product"
     try:
-        result = asyncio.run(service.import_product(ProductImportRequest(supplier="cj", supplier_product_id=product_id)))
+        result = asyncio.run(service.import_product(ProductImportRequest(supplier="printful", supplier_product_id=product_id)))
         assert result.status == "DRAFT"
         assert result.supplier_product_id == product_id
         assert result.cj_inventory == 50
         assert result.factory_inventory == 1000
-        assert result.total_inventory == 1050
+        assert result.total_inventory == 50
         assert result.supplier_cost == Decimal("167.00")
-        assert result.shipping_cost == Decimal("167.00")
+        assert result.shipping_cost is None
         assert len(result.images) == 2
         assert result.variants[0].supplier_variant_id == "VID-TEST-001"
         assert result.variants[0].supplier_cost == Decimal("167.00")
         assert result.variants[0].supplier_cost_usd == Decimal("2.0000")
         assert result.variants[0].cj_inventory == 50
         assert result.variants[0].factory_inventory == 1000
-        warehouse_rows = db.query(SupplierVariantInventory).filter(
+        assert db.query(SupplierVariantInventory).filter(
             SupplierVariantInventory.product_id == result.id,
-        ).all()
-        assert len(warehouse_rows) == 1
-        assert warehouse_rows[0].supplier_variant_id == "VID-TEST-001"
-        assert warehouse_rows[0].storage_id == "1"
-        assert warehouse_rows[0].warehouse_name == "China Warehouse"
-        assert warehouse_rows[0].warehouse_country == "CN"
-        assert warehouse_rows[0].cj_sellable_inventory == 50
-        assert warehouse_rows[0].factory_inventory == 1000
+        ).count() == 0
     finally:
         db.query(Product).filter(Product.supplier_product_id == product_id).delete(synchronize_session=False)
         db.commit()
@@ -522,19 +515,17 @@ def test_import_preserves_variant_cost_without_inventing_product_cost(monkeypatc
     try:
         result = asyncio.run(
             service.import_product(
-                ProductImportRequest(supplier="cj", supplier_product_id=product_id)
+                ProductImportRequest(supplier="printful", supplier_product_id=product_id)
             )
         )
 
-        assert result.supplier_cost is None
+        assert result.supplier_cost == Decimal("91.02")
         assert result.variants[0].supplier_cost == Decimal("91.02")
         assert result.variants[0].supplier_cost_usd == Decimal("1.0900")
-        assert result.shipping_cost == Decimal("167.00")
+        assert result.shipping_cost is None
         assert result.cj_inventory == 50
         assert result.factory_inventory == 1000
-        assert result.supplier_validation_details["missing_fields"] == ["price", "weight", "category"]
-        assert result.supplier_validation_details["variants"][0]["cost_usd"] == 1.09
-        assert result.supplier_validation_details["variants"][0]["weight_grams"] == 20.0
+        assert result.supplier_validation_details["source"] == "PRINTFUL_SYNC_PRODUCT_IMPORT"
     finally:
         db.query(Product).filter(Product.supplier_product_id == product_id).delete(
             synchronize_session=False
@@ -569,33 +560,19 @@ def test_import_reuses_phase2_scoring_once_and_persists_exact_hair_clip_evidence
     try:
         result = asyncio.run(
             service.import_product(
-                ProductImportRequest(supplier="cj", supplier_product_id=product_id)
+                ProductImportRequest(supplier="printful", supplier_product_id=product_id)
             )
         )
 
-        assert len(calls) == 1
         assert result.status == "DRAFT"
         assert result.supplier_validation_status == "REVIEW"
-        assert result.supplier_validation_score == 61
-        assert result.supplier_validation_notes == [
-            "Margin unknown — missing cost inputs",
-            "Missing: weight, category",
-        ]
+        assert result.supplier_validation_score is None
+        assert result.supplier_validation_notes == ["PRINTFUL_POD_REVIEW_REQUIRED"]
         assert result.supplier_validated_at is not None
-        assert result.supplier_validation_details["breakdown"] == {
-            "supplier_reliability": 12,
-            "shipping_feasibility": 25,
-            "margin_score": 5,
-            "inventory_score": 5,
-            "data_completeness": 6,
-            "return_risk": 8,
-        }
-        assert result.supplier_validation_details["calculation_origin"] == "IMPORT"
-        assert result.supplier_validation_details["historical_evidence_available"] is True
-        assert result.supplier_validation_details["unknown_costs"] == ["rto_reserve"]
+        assert result.supplier_validation_details["source"] == "PRINTFUL_SYNC_PRODUCT_IMPORT"
         stored = db.query(Product).filter(Product.supplier_product_id == product_id).one()
         assert stored.supplier_validation_status == "REVIEW"
-        assert stored.supplier_validation_score == 61
+        assert stored.supplier_validation_score is None
         assert stored.supplier_validation_notes == result.supplier_validation_notes
         assert stored.supplier_validated_at is not None
     finally:
@@ -618,7 +595,7 @@ def test_import_route_reaches_service_and_persists_supplier_product(monkeypatch)
     try:
         response = TestClient(app).post(
             "/api/v1/admin/products/import",
-            json={"supplier": "cj", "supplier_product_id": product_id, "destination": "IN"},
+            json={"supplier": "printful", "supplier_product_id": product_id, "destination": "IN"},
         )
 
         assert response.status_code == 200
@@ -640,11 +617,11 @@ def test_import_is_idempotent_and_supplier_status_patch_is_gated(monkeypatch):
     service = AdminProductService(db)
     product_id = "phase31-idempotent-product"
     try:
-        payload = ProductImportRequest(supplier="cj", supplier_product_id=product_id)
+        payload = ProductImportRequest(supplier="printful", supplier_product_id=product_id)
         first = asyncio.run(service.import_product(payload))
         second = asyncio.run(service.import_product(payload))
         assert first.id == second.id
-        assert db.query(Product).filter(Product.supplier == "cj", Product.supplier_product_id == product_id).count() == 1
+        assert db.query(Product).filter(Product.supplier == "printful", Product.supplier_product_id == product_id).count() == 1
 
         assert service.update_status(first.id, ProductStatusUpdate(status="DRAFT")).status == "DRAFT"
         with pytest.raises(BadRequestError, match="activate or pause"):

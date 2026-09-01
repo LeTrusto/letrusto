@@ -1,6 +1,6 @@
 # Catalog Readiness Foundation
 
-This document describes the implemented readiness guardrails before real CJ onboarding.
+This document describes the implemented readiness guardrails for the active Printful catalog. The CJ mapping and inventory references below are historical Phase 2 compatibility only.
 
 ## Source of truth
 
@@ -20,7 +20,7 @@ The initial LeTrusto taxonomy is configuration-backed in `app.core.catalog_readi
 - `baby-care`
 - `pet-care`
 
-CJ mapping priority is:
+Historical CJ mapping priority was:
 
 1. CJ category ID
 2. CJ category path
@@ -44,7 +44,7 @@ Supplier-backed products must have:
 - name and description
 - category and approved brand classification
 - valid approved-host primary image
-- active variants with supplier IDs, SKUs, prices, and sellable CJ inventory
+	- active variants with supplier IDs, SKUs, prices, and a valid active-supplier availability model
 - shipping cost
 - approved commercial review
 - supplier validation approval
@@ -78,7 +78,7 @@ URLs are stored as source references. No image download, proxy, or CDN migration
 
 ## Inventory
 
-CJ sellable inventory remains the customer availability source. Factory inventory is never used as sellable fallback. `CatalogInventorySyncService` provides a reusable active-product sync primitive; no scheduler framework exists in the repository, so scheduling is not started in this phase.
+Printful POD availability is not converted into warehouse quantities. There is currently no active warehouse inventory source for Printful, and `CatalogInventorySyncService` reports `NOT_APPLICABLE_POD` without fabricating quantities. CJ sellable inventory remains available only for historical records and compatibility paths.
 
 ## Re-import policy
 

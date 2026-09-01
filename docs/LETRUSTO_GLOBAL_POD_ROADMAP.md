@@ -43,7 +43,7 @@
 | HOMEPAGE_POPULAR_COMPARISONS | Legacy | REMOVE |
 | HOMEPAGE_TRENDING_SEARCHES (AI queries) | Legacy | REMOVE |
 | Old CATALOG_TREE (Electronics, SaaS, etc.) | Legacy | REPLACE |
-| CJ supplier validation UI (/admin/supplier-validation) | Keep in backend, hide from public | HIDE |
+| CJ supplier validation UI (/admin/supplier-validation) | Historical Phase 2 compatibility; keep in backend and hide from launch UI | HIDE |
 | Old product seeds (smartphones, hosting) | Dead | IGNORE (already disabled) |
 
 ### What We Need (New)

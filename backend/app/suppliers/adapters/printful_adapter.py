@@ -110,16 +110,9 @@ class PrintfulAdapter:
         return product.variants if product else []
 
     async def get_inventory(self, variant_id: str, *, strict: bool = False) -> InventorySnapshot | None:
-        try:
-            result = await self._request("GET", f"/products/variant/{variant_id}")
-        except (httpx.HTTPError, ValueError):
-            if strict:
-                raise
-            return None
-        variant = result.get("variant", {})
-        inventory = variant.get("availability") if isinstance(variant, dict) else None
-        quantity = int(inventory) if isinstance(inventory, (int, float, str)) and str(inventory).isdigit() else 0
-        return InventorySnapshot(total_inventory=quantity, cj_inventory=quantity, factory_inventory=0)
+        # Printful POD availability is not a warehouse quantity and must not be
+        # projected into the legacy inventory fields.
+        return None
 
     async def calculate_shipping(
         self, variant_id: str, destination_country: str, *, origin_country: str = "", quantity: int = 1

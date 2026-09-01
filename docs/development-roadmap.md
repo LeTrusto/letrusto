@@ -1,6 +1,6 @@
 # LeTrusto Commerce Roadmap
 
-> Current direction: production CJ commerce and controlled business scaling.
+> Current direction: Printful-only production commerce and controlled business scaling. CJ references in this document are historical Phase 2 compatibility unless explicitly marked otherwise.
 > Status labels are intentional: COMPLETED, CURRENT GATE, NEXT, PRE-PUBLIC-LAUNCH, and PUBLIC LAUNCH.
 
 The earlier brand, storefront, AI-platform, commerce-foundation, supplier-integration, checkout, and analytics work is preserved in repository history. This document is now the authoritative operating roadmap for the current commerce phase.
@@ -9,14 +9,10 @@ The earlier brand, storefront, AI-platform, commerce-foundation, supplier-integr
 
 - Brand, storefront, authentication, and core commerce foundation.
 - Product ingestion, normalization, review, pricing, economics, and admin approval workflow.
-- Razorpay LIVE checkout and payment verification.
+- Razorpay checkout and payment verification.
 - Razorpay webhook handling.
-- CJ V2/V3 adapter foundation and authenticated supplier lifecycle.
-- CJ supplier payment foundation.
-- Warehouse-aware CJ inventory and destination-aware fulfillment preflight.
-- CJ warehouse identity persistence and production migration `20260821_27`.
-- Product 1 CN warehouse inventory verification.
-- India freight verification.
+- Historical CJ V2/V3 adapter foundation, supplier payment, and warehouse validation.
+- Printful catalog, shipping, order, and tracking integration.
 - Admin-only fulfillment preflight UI implementation, locally validated and awaiting deployment.
 
 ## CURRENT GATE
@@ -26,11 +22,10 @@ The earlier brand, storefront, AI-platform, commerce-foundation, supplier-integr
 3. Confirm product activation/readiness gates.
 4. Confirm Razorpay payment gateway, webhook, order creation, reservation, and idempotency behavior.
 5. Execute one controlled paid order with explicit rollback/refund plan.
-6. Verify CJ order creation and supplier payment.
-7. Verify CJ shipment creation, tracking number, and status synchronization.
-8. Verify customer-facing order status.
-9. Verify transactional email notification.
-10. Verify logs, alerts, and failure visibility.
+6. Verify Printful order creation and shipment tracking in a non-production-safe test path.
+7. Verify customer-facing order status.
+8. Verify transactional email notification.
+9. Verify logs, alerts, and failure visibility.
 
 No controlled real customer transaction should occur until the production preflight gate passes.
 

@@ -91,21 +91,15 @@ def test_unpaid_order_is_blocked_before_cj(monkeypatch):
     finally: cleanup(db, user, product)
 
 
-def test_paid_order_maps_stored_cj_ids_and_is_idempotent(monkeypatch):
+def test_paid_legacy_cj_order_cannot_create_new_fulfillment_order(monkeypatch):
     db = SessionLocal(); user, product, order = make_paid_order(db); fake = FakeCJ(); fake.calls = []
     monkeypatch.setattr("app.services.fulfillment_service.build_supplier_adapter", lambda _: fake)
     monkeypatch.setattr("app.services.fulfillment_service.get_settings", lambda: SimpleNamespace(CJ_API_KEY="configured"))
     try:
         service = FulfillmentService(db)
-        first = asyncio.run(service.submit(order.id))
-        second = asyncio.run(service.submit(order.id))
-        assert first.supplier_order_id == f"CJ-ORDER-{product.supplier_product_id}"
-        assert second.supplier_order_id == f"CJ-ORDER-{product.supplier_product_id}"
-        assert len(fake.calls) == 1
-        assert fake.calls[0]["products"][0]["pid"] == product.supplier_product_id
-        assert fake.calls[0]["products"][0]["vid"] == product.variants[0].supplier_variant_id
-        assert first.fulfillment_status == "SUBMITTED"
-        assert first.payment_status == "PAID"
+        with pytest.raises(BadRequestError, match="legacy supplier"):
+            asyncio.run(service.submit(order.id))
+        assert fake.calls == []
     finally: cleanup(db, user, product)
 
 
@@ -130,7 +124,7 @@ def test_missing_address_fails_without_cj_call(monkeypatch):
     monkeypatch.setattr("app.services.fulfillment_service.build_supplier_adapter", lambda _: fake)
     monkeypatch.setattr("app.services.fulfillment_service.get_settings", lambda: SimpleNamespace(CJ_API_KEY="configured"))
     try:
-        with pytest.raises(BadRequestError, match="missing"):
+        with pytest.raises(BadRequestError, match="legacy supplier"):
             asyncio.run(FulfillmentService(db).submit(order.id))
         assert fake.calls == []
     finally: cleanup(db, user, product)

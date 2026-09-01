@@ -41,7 +41,7 @@ This checklist separates repository work from actions that require LeTrusto owne
 - [ ] Add provider product search, product details, variants, mockups, inventory, and shipping-rate mapping.
 - [ ] Add provider-specific catalog import and duplicate detection.
 - [ ] Store supplier traceability and source image URLs for every imported item.
-- [ ] Route fulfillment by product supplier without changing existing CJ validation semantics.
+- [ ] Route fulfillment through Printful without changing historical CJ validation semantics.
 - [ ] Add provider tracking synchronization and webhook handling.
 - [ ] Add admin controls for provider products, mockups, availability, and publish status.
 - [ ] Add provider contract tests using mocked API responses only.

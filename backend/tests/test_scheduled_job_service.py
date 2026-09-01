@@ -151,40 +151,17 @@ def test_scheduler_rolls_back_and_propagates_database_failure(monkeypatch):
     assert sessions.session.rolled_back is True
 
 
-def test_catalog_inventory_sync_query_is_cj_only_and_retries_after_partial_failure(monkeypatch):
-    class ScalarResult:
-        def all(self):
-            return [SimpleNamespace(id=uuid4()), SimpleNamespace(id=uuid4())]
-
+def test_catalog_inventory_sync_does_not_run_cj_or_printful_warehouse_sync():
     class FakeDb:
-        def __init__(self):
-            self.statement = None
-            self.rollbacks = 0
+        def scalars(self, _statement):
+            raise AssertionError("no inventory source should be queried")
 
-        def scalars(self, statement):
-            self.statement = statement
-            return ScalarResult()
-
-        def rollback(self):
-            self.rollbacks += 1
-
-    db = FakeDb()
-    service = CatalogInventorySyncService(db)
-    calls = []
-
-    async def sync(product_id):
-        calls.append(product_id)
-        if len(calls) == 1:
-            raise TimeoutError("supplier timeout")
-
-    service.products.sync_inventory = sync
+    service = CatalogInventorySyncService(FakeDb())
     result = asyncio.run(service.sync_active_products())
 
-    sql = str(db.statement)
-    assert "products.supplier =" in sql
-    assert result["supplier"] == "cj"
-    assert result["attempted"] == 2
-    assert result["synced"] == 1
-    assert result["failed"] == 1
-    assert db.rollbacks == 1
-    assert len(calls) == 2
+    assert result["supplier"] == "printful"
+    assert result["status"] == "NOT_APPLICABLE_POD"
+    assert result["attempted"] == 0
+    assert result["synced"] == 0
+    assert result["failed"] == 0
+    assert result["failures"] == []

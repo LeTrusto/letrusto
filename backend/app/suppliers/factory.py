@@ -9,13 +9,9 @@ from app.suppliers.adapters.printful_adapter import PrintfulAdapter
 
 
 def build_supplier_adapter(provider: str | None = None) -> SupplierAdapter:
-    """Return an adapter instance for the configured supplier.
-
-    Currently only CJ is implemented. The architecture supports future adapters
-    without changing callers.
-    """
+    """Return an adapter for the active provider or an explicit legacy provider."""
     settings = get_settings()
-    name = (provider or getattr(settings, "SUPPLIER_PROVIDER", "cj")).lower()
+    name = (provider or getattr(settings, "SUPPLIER_PROVIDER", "printful")).lower()
 
     if name == "cj":
         api_key = getattr(settings, "CJ_API_KEY", "")

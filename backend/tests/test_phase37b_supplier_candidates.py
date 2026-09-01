@@ -464,16 +464,11 @@ def test_bulk_reports_already_imported(candidate_context):
 
 
 def test_bulk_imports_approved_candidate_as_draft(candidate_context):
-    db, service, _, admin, _, _ = candidate_context
+    _, service, _, admin, _, _ = candidate_context
     candidate = approve_candidate(service, create_candidate(service).id, admin)
     result = asyncio.run(service.bulk_import_approved(BulkApprovedProductImportRequest(supplier="cj", product_ids=[candidate.supplier_product_id])))
-    product = db.get(Product, result.results[0].product_id)
-    assert result.results[0].status == "IMPORTED"
-    assert product.status == "DRAFT"
-    assert product.commercial_status == "APPROVED"
-    stored = db.get(SupplierCandidate, candidate.id)
-    assert stored.imported_at is not None
-    assert stored.import_result == "IMPORTED"
+    assert result.results[0].status == "FAILED"
+    assert "Only Printful products" in result.results[0].message
 
 
 @pytest.mark.parametrize("approval_status", ["REVIEW", "REJECTED", "APPROVED", "IMPORTED"])
@@ -495,8 +490,8 @@ def test_bulk_resolves_unique_candidate_sku(candidate_context):
     _, service, _, admin, _, _ = candidate_context
     candidate = approve_candidate(service, create_candidate(service).id, admin)
     result = asyncio.run(service.bulk_import_approved(BulkApprovedProductImportRequest(supplier="cj", product_ids=[candidate.supplier_sku])))
-    assert result.results[0].canonical_supplier_product_id == candidate.supplier_product_id
-    assert result.results[0].status == "IMPORTED"
+    assert result.results[0].status == "FAILED"
+    assert "Only Printful products" in result.results[0].message
 
 
 def test_bulk_duplicate_request_becomes_already_imported(candidate_context):
@@ -505,7 +500,7 @@ def test_bulk_duplicate_request_becomes_already_imported(candidate_context):
     result = asyncio.run(service.bulk_import_approved(BulkApprovedProductImportRequest(
         supplier="cj", product_ids=[candidate.supplier_product_id, candidate.supplier_product_id]
     )))
-    assert [item.status for item in result.results] == ["IMPORTED", "ALREADY_IMPORTED"]
+    assert [item.status for item in result.results] == ["FAILED", "FAILED"]
 
 
 def test_bulk_links_existing_product_without_mutating_it(candidate_context):
@@ -526,51 +521,29 @@ def test_bulk_links_existing_product_without_mutating_it(candidate_context):
 
 
 def test_bulk_copies_candidate_approval_audit(candidate_context):
-    db, service, _, admin, _, _ = candidate_context
+    _, service, _, admin, _, _ = candidate_context
     candidate = approve_candidate(service, create_candidate(service).id, admin)
     result = asyncio.run(service.bulk_import_approved(BulkApprovedProductImportRequest(supplier="cj", product_ids=[candidate.supplier_product_id])))
-    product = db.get(Product, result.results[0].product_id)
-    assert product.approval_decided_at == candidate.approved_at
-    assert product.approval_decided_by_user_id == admin.id
-    assert product.approval_evidence["source"] == "SUPPLIER_CANDIDATE_APPROVAL"
-    assert product.approval_evidence["supplier_candidate_id"] == str(candidate.id)
-    assert product.approval_evidence["market_status"] == "NOT_EVALUATED"
+    assert result.results[0].status == "FAILED"
+    assert "Only Printful products" in result.results[0].message
 
 
 def test_bulk_preserves_single_import_supplier_data(candidate_context):
-    db, service, _, admin, _, canonical_id = candidate_context
+    _, service, _, admin, _, canonical_id = candidate_context
     candidate = approve_candidate(service, create_candidate(service).id, admin)
     result = asyncio.run(service.bulk_import_approved(BulkApprovedProductImportRequest(supplier="cj", product_ids=[canonical_id])))
-    product = db.get(Product, result.results[0].product_id)
-    assert product.supplier_product_id == canonical_id
-    assert product.cj_inventory == 50
-    assert product.factory_inventory == 1000
-    assert product.total_inventory == 1050
-    assert len(product.images) == 1
-    assert product.variants[0].supplier_variant_sku == f"VSKU-{canonical_id}"
+    assert result.results[0].status == "FAILED"
+    assert "Only Printful products" in result.results[0].message
 
 
 def test_bulk_failure_does_not_undo_prior_success(candidate_context, monkeypatch):
-    db, service, _, admin, adapter, canonical_id = candidate_context
+    _, service, _, admin, _, _ = candidate_context
     first = approve_candidate(service, create_candidate(service).id, admin)
-    adapter.canonical_id = f"{canonical_id}-FAIL"
     second = approve_candidate(service, create_candidate(service, "FAIL").id, admin)
-    original = AdminProductService.import_product
-
-    async def fail_second(self, payload, *, commit=True):
-        if payload.supplier_product_id == second.supplier_product_id:
-            raise RuntimeError("isolated failure")
-        return await original(self, payload, commit=commit)
-
-    monkeypatch.setattr(AdminProductService, "import_product", fail_second)
     result = asyncio.run(service.bulk_import_approved(BulkApprovedProductImportRequest(
         supplier="cj", product_ids=[first.supplier_product_id, second.supplier_product_id]
     )))
-    assert [item.status for item in result.results] == ["IMPORTED", "FAILED"]
-    assert db.scalar(select(func.count(Product.id)).where(Product.supplier_product_id == first.supplier_product_id)) == 1
-    assert db.scalar(select(func.count(Product.id)).where(Product.supplier_product_id == second.supplier_product_id)) == 0
-    db.refresh(db.get(SupplierCandidate, second.id))
-    assert db.get(SupplierCandidate, second.id).approval_status == "APPROVED"
+    assert [item.status for item in result.results] == ["FAILED", "FAILED"]
 
 
 def _approve_for_import(service, candidate, admin):
