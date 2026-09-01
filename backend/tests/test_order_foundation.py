@@ -133,6 +133,30 @@ def test_international_checkout_is_blocked_while_razorpay_is_inr_only():
         cleanup(db, user, product)
 
 
+def test_printful_pod_resolution_rejects_missing_or_inactive_variant_mapping():
+    db = SessionLocal()
+    product = Product(
+        slug=f"pod-order-{uuid4().hex[:10]}", name="POD order product", description="POD",
+        status="ACTIVE", supplier="printful", supplier_product_id=f"pod-{uuid4().hex[:10]}",
+        verified_warehouse="POD_ON_DEMAND", price_value=Decimal("4499.00"), selling_price=Decimal("4499.00"),
+    )
+    valid = ProductVariant(product=product, supplier_variant_id="5470928074", position=1, selling_price=Decimal("4499.00"), active=True)
+    missing = ProductVariant(product=product, supplier_variant_id="", position=2, selling_price=Decimal("4499.00"), active=True)
+    inactive = ProductVariant(product=product, supplier_variant_id="5470928076", position=3, selling_price=Decimal("4499.00"), active=False)
+    db.add(product)
+    db.commit()
+    try:
+        assert OrderService._resolve_variant(db, product.slug, "5470928074")[1] is valid
+        with pytest.raises(BadRequestError, match="unavailable"):
+            OrderService._resolve_variant(db, product.slug, "variant-2")
+        with pytest.raises(BadRequestError, match="unavailable"):
+            OrderService._resolve_variant(db, product.slug, "variant-3")
+    finally:
+        db.delete(product)
+        db.commit()
+        db.close()
+
+
 def test_printful_shipping_is_added_to_server_order_total(monkeypatch):
     db = SessionLocal()
     user, product, _ = make_order_fixture(db)

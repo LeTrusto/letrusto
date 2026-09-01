@@ -53,6 +53,8 @@ class OrderService:
             variant = next((item for item in product.variants if item.position == position), None)
         if variant is None or not variant.active or variant.selling_price is None:
             raise BadRequestError("Product variant is unavailable")
+        if product.supplier == "printful" and product.verified_warehouse == "POD_ON_DEMAND" and not variant.supplier_variant_id:
+            raise BadRequestError("Product variant is unavailable")
         return product, variant
 
     @staticmethod

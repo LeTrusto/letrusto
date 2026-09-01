@@ -20,7 +20,7 @@ const PLACEHOLDER_IMAGE = "/images/products/placeholder.svg";
 export default function CommerceProductCard({ product }: Props) {
   const { addItem } = useCart();
   const [imageFailed, setImageFailed] = useState(false);
-  const selectedVariant = product.catalogVariants?.find((variant) => variant.available && variant.inventory > 0);
+  const selectedVariant = product.catalogVariants?.find((variant) => variant.available);
   const canAdd = product.catalogVariants?.length ? Boolean(selectedVariant) : product.availability !== "out-of-stock";
   const image = product.images[0];
 

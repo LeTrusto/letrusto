@@ -58,13 +58,20 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
     public_price = product.price_value or (min(stored_variant_prices) if stored_variant_prices else None)
     if public_price is None:
         raise ValueError(f"Product {product.slug} has no stored customer selling price")
+    made_to_order = product.supplier == "printful" and product.verified_warehouse == "POD_ON_DEMAND"
     public_variants = [
         ProductVariantDTO(
             id=f"variant-{variant.position}",
             label=variant.name or variant.attributes or f"Option {variant.position}",
             price=format_inr(variant.selling_price),
             priceValue=variant.selling_price,
-            available=bool(variant.active and (product.verified_warehouse == "POD_ON_DEMAND" or (variant.cj_inventory or 0) > 0)),
+            available=bool(
+                variant.active
+                and (
+                    (made_to_order and bool(variant.supplier_variant_id))
+                    or (variant.cj_inventory or 0) > 0
+                )
+            ),
             inventory=max(0, variant.cj_inventory or 0),
         )
         for variant in sorted(product.variants, key=lambda item: item.position)
@@ -84,7 +91,7 @@ def to_product_dto(product: Product, similar_slugs: list[str] | None = None) -> 
         images=images,
         fallbackImage=fallback_image,
         variants=public_variants,
-        madeToOrder=product.supplier == "printful",
+        madeToOrder=made_to_order,
         category=category_slug,
         parentCategory=parent_category,
         availability=product.availability,

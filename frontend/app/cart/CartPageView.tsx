@@ -77,6 +77,7 @@ export default function CartPageView() {
             const product = products[item.productId];
             if (!product) return null;
             const selectedVariant = product.catalogVariants?.find((variant) => variant.id === item.selectedVariantId);
+            const maxQuantity = product.madeToOrder ? 99 : (selectedVariant?.inventory ?? 1);
             const image = product.images[0];
 
             return (
@@ -122,7 +123,7 @@ export default function CartPageView() {
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.productId, item.quantity + 1, item.selectedVariantId)}
-                        disabled={selectedVariant ? item.quantity >= selectedVariant.inventory : false}
+                        disabled={item.quantity >= maxQuantity}
                         className="w-8 h-8 flex items-center justify-center hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                         aria-label={`Increase quantity for ${product.name}`}
                       >

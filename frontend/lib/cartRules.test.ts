@@ -12,6 +12,20 @@ const catalog: CartCatalog = {
   },
 };
 
+const podCatalog: CartCatalog = {
+  hoodie: {
+    price: 4499,
+    madeToOrder: true,
+    catalogVariants: ["S", "M", "L", "XL", "2XL"].map((size, index) => ({
+      id: `variant-${index + 1}`,
+      label: `Unisex Hoodie / ${size}`,
+      price: 4499,
+      available: true,
+      inventory: 0,
+    })),
+  },
+};
+
 describe("cart rules", () => {
   it("clamps persisted quantities to live inventory", () => {
     expect(normalizeCartItems([{ productId: "hoodie", selectedVariantId: "variant-1", quantity: 9 }], catalog)).toEqual([
@@ -45,5 +59,13 @@ describe("cart rules", () => {
   it("uses live variant prices for subtotal display", () => {
     const items = [{ productId: "hoodie", selectedVariantId: "variant-1", quantity: 2 }];
     expect(cartSubtotal(items, catalog)).toBe(8998);
+  });
+
+  it("allows every mapped made-to-order variant with null inventory", () => {
+    for (const variant of podCatalog.hoodie.catalogVariants ?? []) {
+      expect(addCartItem([], podCatalog, "hoodie", 1, variant.id)).toEqual([
+        { productId: "hoodie", selectedVariantId: variant.id, quantity: 1 },
+      ]);
+    }
   });
 });

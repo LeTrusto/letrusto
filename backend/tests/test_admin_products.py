@@ -825,6 +825,42 @@ def test_public_catalog_exposes_only_safe_active_variant_data():
         db.close()
 
 
+def test_public_catalog_marks_all_mapped_pod_variants_available_without_inventory():
+    from app.api.deps import get_product_service
+
+    db = SessionLocal()
+    suffix = str(uuid4())[:8]
+    category = Category(name=f"POD Category {suffix}", slug=f"pod-category-{suffix}")
+    brand = Brand(name=f"POD Brand {suffix}", slug=f"pod-brand-{suffix}")
+    product = Product(
+        id=uuid4(), slug=f"pod-product-{suffix}", name="POD product", description="POD",
+        status="ACTIVE", supplier="printful", supplier_product_id=f"printful-{suffix}",
+        verified_warehouse="POD_ON_DEMAND", category=category, brand=brand,
+        price_value=Decimal("4499.00"), selling_price=Decimal("4499.00"),
+        availability="In Stock", ai_summary="", review_summary="",
+    )
+    product.variants = [
+        ProductVariant(
+            supplier_variant_id=f"547092807{position}", name=label, position=position,
+            selling_price=Decimal("4499.00"), cj_inventory=None, active=True,
+        )
+        for position, label in enumerate(["S", "M", "L", "XL", "2XL"], start=4)
+    ]
+    db.add(product)
+    db.commit()
+    try:
+        response = get_product_service(db).get_product(product.slug)
+        assert response.madeToOrder is True
+        assert [variant.label for variant in response.variants] == ["S", "M", "L", "XL", "2XL"]
+        assert all(variant.available and variant.inventory == 0 for variant in response.variants)
+    finally:
+        db.delete(product)
+        db.delete(brand)
+        db.delete(category)
+        db.commit()
+        db.close()
+
+
 def test_public_catalog_hides_active_product_without_stored_customer_price():
     from app.services.product_service import ProductService
     from app.repositories.product_repository import ProductRepository

@@ -220,7 +220,7 @@ export default function ProductDetailView({ product, related }: Props) {
                     <button
                       key={variant.id}
                       type="button"
-                      disabled={!variant.available || variant.inventory <= 0}
+                      disabled={!variant.available}
                       onClick={() => { setSelectedVariantId(variant.id); setQuantity(1); }}
                       className={`max-w-full break-words px-3 py-1.5 text-left text-sm rounded-md border transition-colors ${
                         selectedVariantId === variant.id
@@ -228,7 +228,7 @@ export default function ProductDetailView({ product, related }: Props) {
                           : variant.available ? "border-[var(--border)] hover:border-[var(--border-hover)]" : "border-[var(--border)] text-[var(--text-muted)] line-through"
                       }`}
                     >
-                      <span className="block font-semibold">{variant.label}</span><span className="block text-xs opacity-80">{formatPrice(variant.price)}</span>{(!variant.available || variant.inventory <= 0) && <span className="block text-xs">Unavailable</span>}
+                      <span className="block font-semibold">{variant.label}</span><span className="block text-xs opacity-80">{formatPrice(variant.price)}</span>{!variant.available && <span className="block text-xs">Unavailable</span>}
                     </button>
                   ))}
                 </div>
