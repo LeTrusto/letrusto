@@ -2,9 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 
-import CommerceNavbar from "@/components/layout/CommerceNavbar";
-import CommerceFooter from "@/components/layout/CommerceFooter";
-import MobileNav from "@/components/layout/MobileNav";
+import CommerceShell from "@/components/layout/CommerceShell";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import SchemaOrg from "@/components/SchemaOrg";
 import { AuthProvider } from "@/lib/authContext";
@@ -131,10 +129,7 @@ export default function RootLayout({
         <ConsentProvider>
           <AuthProvider>
             <CartProvider>
-            <CommerceNavbar />
-            <main className="flex-1 pb-16 lg:pb-0">{children}</main>
-            <CommerceFooter />
-            <MobileNav />
+            <CommerceShell>{children}</CommerceShell>
             </CartProvider>
           </AuthProvider>
           <CookieConsent />
