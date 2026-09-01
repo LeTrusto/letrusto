@@ -683,7 +683,7 @@ export default function AdminProductsView() {
           <h1 className="text-2xl font-bold">Catalog Products</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">Printful POD products and publish status.</p>
         </div>
-        <span className="text-sm text-[var(--text-muted)]">{products.length} loaded</span>
+        <div className="flex flex-wrap items-center gap-3"><Link href="/admin/fulfillment-history" className="lt-btn lt-btn-secondary text-sm">Fulfillment history</Link><span className="text-sm text-[var(--text-muted)]">{products.length} loaded</span></div>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">

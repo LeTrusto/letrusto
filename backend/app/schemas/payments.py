@@ -63,6 +63,49 @@ class AdminFulfillmentOrderDTO(FulfillmentDTO):
     last_supplier_sync_at: str | None = None
 
 
+class AdminFulfillmentTimelineEventDTO(BaseModel):
+    name: str
+    occurred_at: str
+
+
+class AdminFulfillmentHistoryItemDTO(BaseModel):
+    order_id: UUID
+    order_number: str
+    created_at: str
+    updated_at: str
+    customer_email: str
+    payment_status: str
+    payment_provider: str | None = None
+    provider_order_id: str | None = None
+    provider_reference: str | None = None
+    amount: Decimal
+    currency: str
+    order_status: str
+    fulfillment_status: str
+    printful_order_id: str | None = None
+    printful_status: str | None = None
+    tracking_status: str
+    tracking_carrier: str | None = None
+    tracking_number: str | None = None
+    tracking_url: str | None = None
+    cancellation_status: str | None = None
+    cancellation_reason: str | None = None
+    refund_status: str | None = None
+    refund_amount: Decimal | None = None
+    fulfillment_failure_category: str | None = None
+    fulfillment_failure: bool
+    last_fulfillment_attempt_at: str | None = None
+    has_printful_order: bool
+    timeline: list[AdminFulfillmentTimelineEventDTO]
+
+
+class AdminFulfillmentHistoryResponse(BaseModel):
+    items: list[AdminFulfillmentHistoryItemDTO]
+    total: int
+    page: int
+    page_size: int
+
+
 class SupplierPaymentRequest(BaseModel):
     required_amount_usd: Decimal
 

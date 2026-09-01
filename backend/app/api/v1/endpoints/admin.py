@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -48,7 +48,7 @@ from app.services.inventory_reservation_service import InventoryReservationServi
 from app.services.order_reconciliation_service import OrderLifecycleReconciliationService
 from app.schemas.reconciliation import ReconciliationResultDTO
 from app.schemas.reservations import AdminInventoryReservationDTO
-from app.schemas.payments import AdminFulfillmentOrderDTO, AdminSupplierPaymentDTO, FulfillmentDTO, SupplierPaymentRequest
+from app.schemas.payments import AdminFulfillmentHistoryResponse, AdminFulfillmentOrderDTO, AdminSupplierPaymentDTO, FulfillmentDTO, SupplierPaymentRequest
 from app.schemas.admin_analytics import AnalyticsPeriod, AnalyticsSummary, InventoryAnalyticsDTO, OrderProfitabilityDTO, ProductPerformanceDTO, SalesTrendPoint, VariantPerformanceDTO
 from app.services.admin_analytics_service import AdminAnalyticsService
 from app.schemas.marketing import AttributionCreate, AttributionDTO, MarketingCACResponse, MarketingSpendCreate, MarketingSpendDTO
@@ -273,6 +273,22 @@ def list_fulfillment_orders(
     service: FulfillmentService = Depends(get_fulfillment_service),
 ):
     return service.list_orders()
+
+
+@router.get("/fulfillment-history", response_model=AdminFulfillmentHistoryResponse)
+def list_fulfillment_history(
+    page: int = Query(default=1, ge=1, le=100000), page_size: int = Query(default=25, ge=1, le=100),
+    order_number: str | None = Query(default=None, max_length=64), fulfillment_status: str | None = Query(default=None, max_length=32),
+    payment_status: str | None = Query(default=None, max_length=32), tracking_available: bool | None = Query(default=None),
+    failed_fulfillment: bool | None = Query(default=None), created_from: date | None = Query(default=None), created_to: date | None = Query(default=None),
+    _: User = Depends(get_current_admin), service: FulfillmentService = Depends(get_fulfillment_service),
+) -> AdminFulfillmentHistoryResponse:
+    return service.list_history(
+        page=page, page_size=page_size, order_number=order_number, fulfillment_status=fulfillment_status,
+        payment_status=payment_status, tracking_available=tracking_available, failed_fulfillment=failed_fulfillment,
+        created_from=datetime.combine(created_from, datetime.min.time(), tzinfo=timezone.utc) if created_from else None,
+        created_to=datetime.combine(created_to + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc) if created_to else None,
+    )
 
 
 @router.post("/orders/{order_id}/fulfillment", response_model=FulfillmentDTO)
