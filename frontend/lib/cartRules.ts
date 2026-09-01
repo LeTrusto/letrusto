@@ -1,6 +1,6 @@
 import type { CartItem, CommerceProduct } from "@/types/commerce";
 
-export type CartCatalog = Record<string, Pick<CommerceProduct, "price" | "catalogVariants">>;
+export type CartCatalog = Record<string, Pick<CommerceProduct, "price" | "catalogVariants" | "madeToOrder">>;
 
 function variantFor(catalog: CartCatalog, item: CartItem) {
   return catalog[item.productId]?.catalogVariants?.find((variant) => variant.id === item.selectedVariantId);
