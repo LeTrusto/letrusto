@@ -161,6 +161,7 @@ class SupplierTrackingResult:
     supplier_status: str | None = None
     tracking_number: str | None = None
     carrier: str | None = None
+    tracking_url: str | None = None
     shipped_at: str | None = None
     delivered_at: str | None = None
     error: str = ""

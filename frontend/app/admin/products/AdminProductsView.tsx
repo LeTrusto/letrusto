@@ -8,7 +8,7 @@ import { API_BASE_URL } from "@/services/api";
 import FulfillmentPreflightPanel from "./FulfillmentPreflightPanel";
 
 const API_BASE = API_BASE_URL;
-const LEGACY_CJ_WORKFLOW_ENABLED = false;
+const LEGACY_CJ_WORKFLOW_ENABLED = true;
 
 type Variant = {
   id: string;

@@ -81,3 +81,38 @@ def test_email_delivery_failure_is_safely_wrapped():
         )
 
     assert not transport.sent
+
+
+def test_shipment_templates_include_order_tracking_and_public_links():
+    transport = FakeTransport()
+    service = EmailService(transport=transport, from_email="support@letrusto.com", retry_delay_seconds=0)
+
+    service.send_template(
+        "order_shipped",
+        to="buyer@example.com",
+        context={
+            "customer_name": "Buyer",
+            "order_number": "LT-1001",
+            "items_summary": "Hoodie x1",
+            "tracking_number": "TRACK-1",
+            "carrier": "Printful Carrier",
+            "tracking_url": "https://carrier.example/track/TRACK-1",
+            "order_url": "https://letrusto.com/orders/order-1",
+        },
+    )
+    service.send_template(
+        "order_delivered",
+        to="buyer@example.com",
+        context={
+            "customer_name": "Buyer",
+            "order_number": "LT-1001",
+            "items_summary": "Hoodie x1",
+            "order_url": "https://letrusto.com/orders/order-1",
+        },
+    )
+
+    assert [email.to for email in transport.sent] == ["buyer@example.com", "buyer@example.com"]
+    assert "LT-1001" in transport.sent[0].text
+    assert "https://carrier.example/track/TRACK-1" in transport.sent[0].text
+    assert "https://letrusto.com/orders/order-1" in transport.sent[0].text
+    assert "LT-1001" in transport.sent[1].text

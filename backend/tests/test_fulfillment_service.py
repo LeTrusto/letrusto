@@ -43,6 +43,16 @@ class FakeCJ:
         return SupplierOrderResult(accepted=True, supplier_order_id="CJ-EXPLICIT", shipment_order_id=shipment_order_id, status="AWAITING_PAYMENT", supplier_status="UNPAID", payment_state="PENDING", pay_id="PAY-EXPLICIT")
 
 
+class FakeEmailService:
+    sent = []
+    failure = False
+
+    def send_template(self, template, *, to, context):
+        if self.failure:
+            raise RuntimeError("provider unavailable with secret not for logs")
+        self.sent.append((template, to, context))
+
+
 def make_paid_order(db):
     suffix = uuid4().hex[:8]
     user = User(email=f"fulfillment-{suffix}@example.com", full_name="Fulfillment Test")
@@ -157,6 +167,42 @@ def test_unknown_tracking_status_does_not_downgrade_or_erase_tracking(monkeypatc
         assert result.fulfillment_status == "SHIPPED"
         assert result.tracking_number == "KEEP-1"
         assert result.supplier_status == "mystery"
+    finally: cleanup(db, user, product)
+
+
+def test_tracking_notifications_are_transitioned_idempotently_and_retry_on_failure(monkeypatch, caplog):
+    db = SessionLocal(); user, product, order = make_paid_order(db); fake = FakeCJ(); email = FakeEmailService(); email.sent = []; email.failure = False
+    settings = SimpleNamespace(CJ_API_KEY="configured", PUBLIC_APP_URL="https://letrusto.com", RESEND_API_KEY="configured", FROM_EMAIL="support@letrusto.com", SUPPORT_EMAIL="hello@letrusto.com")
+    monkeypatch.setattr("app.services.fulfillment_service.build_supplier_adapter", lambda _: fake)
+    monkeypatch.setattr("app.services.fulfillment_service.get_settings", lambda: settings)
+    monkeypatch.setattr("app.services.fulfillment_service.EmailService.from_settings", lambda _: email)
+    try:
+        order.supplier_order_id = f"CJ-ORDER-{product.supplier_product_id}"; order.fulfillment_status = "PROCESSING"; db.commit()
+        service = FulfillmentService(db)
+        first = asyncio.run(service.sync_tracking(order.id))
+        duplicate = asyncio.run(service.sync_tracking(order.id))
+        assert first.fulfillment_status == "SHIPPED"
+        assert duplicate.fulfillment_status == "SHIPPED"
+        assert len(email.sent) == 1
+        assert email.sent[0][0] == "order_shipped"
+        assert email.sent[0][1] == "buyer@example.com"
+        assert email.sent[0][2]["order_url"].startswith("https://letrusto.com/")
+
+        async def delivered(_):
+            return SupplierTrackingResult(supported=True, supplier_status="delivered", tracking_number="TRACK-1", carrier="Test Carrier")
+        fake.get_tracking = delivered
+        delivered_order = asyncio.run(service.sync_tracking(order.id))
+        asyncio.run(service.sync_tracking(order.id))
+        assert delivered_order.fulfillment_status == "DELIVERED"
+        assert [item[0] for item in email.sent] == ["order_shipped", "order_delivered"]
+
+        order.fulfillment_status = "PROCESSING"; order.delivered_email_sent_at = None; db.commit()
+        email.failure = True
+        asyncio.run(service.sync_tracking(order.id))
+        db.refresh(order)
+        assert order.notification_failure_reason == "Email delivery failed"
+        assert order.delivered_email_sent_at is None
+        assert "secret not for logs" not in caplog.text
     finally: cleanup(db, user, product)
 
 

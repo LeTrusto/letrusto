@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -11,8 +12,12 @@ from app.schemas.payments import AdminFulfillmentOrderDTO
 from app.services.cancellation_service import is_fulfillable
 from app.services.inventory_reservation_service import InventoryReservationService
 from app.services.cj_supplier_payment_service import CJSupplierPaymentService, SupplierPaymentRecord, apply_payment_record_to_order
+from app.services.email_service import EmailService
 from app.suppliers.base import SupplierAdapter, SupplierTrackingResult
 from app.suppliers.factory import build_supplier_adapter
+
+
+logger = logging.getLogger(__name__)
 
 
 class FulfillmentService:
@@ -68,7 +73,7 @@ class FulfillmentService:
         return mapping.get(normalized, current)
 
     async def sync_tracking(self, order_id: UUID) -> Order:
-        order = self._get_order(order_id)
+        order = self._get_order(order_id, for_update=True)
         if not order.supplier_order_id:
             raise BadRequestError("Order has no CJ order ID; tracking was not requested")
         if order.fulfillment_status in {"DELIVERED", "CANCELLED"}:
@@ -91,19 +96,58 @@ class FulfillmentService:
             order.fulfillment_failure_reason = result.error or "CJ tracking is unavailable"
             self.db.commit()
             return order
+        previous_status = order.fulfillment_status
         order.supplier_status = result.supplier_status or order.supplier_status
         order.fulfillment_status = self.map_supplier_status(result.supplier_status, order.fulfillment_status)
         if result.tracking_number:
             order.tracking_number = result.tracking_number
         if result.carrier:
             order.tracking_carrier = result.carrier
+        if result.tracking_url:
+            order.tracking_url = result.tracking_url if result.tracking_url.startswith(("https://", "http://")) else None
         if result.shipped_at:
             order.shipped_at = datetime.fromisoformat(result.shipped_at.replace("Z", "+00:00"))
         if result.delivered_at:
             order.delivered_at = datetime.fromisoformat(result.delivered_at.replace("Z", "+00:00"))
         order.fulfillment_failure_reason = None
         self.db.commit()
+        if order.fulfillment_status in {"SHIPPED", "DELIVERED"} and order.fulfillment_status != previous_status:
+            self._send_shipment_notification(order, order.fulfillment_status, settings)
         return order
+
+    def _send_shipment_notification(self, order: Order, status: str, settings: object) -> None:
+        public_app_url = getattr(settings, "PUBLIC_APP_URL", "")
+        if not public_app_url:
+            return
+        sent_field = "shipped_email_sent_at" if status == "SHIPPED" else "delivered_email_sent_at"
+        template = "order_shipped" if status == "SHIPPED" else "order_delivered"
+        locked_order = self._get_order(order.id, for_update=True)
+        if getattr(locked_order, sent_field):
+            self.db.rollback()
+            return
+        setattr(locked_order, sent_field, datetime.now(timezone.utc))
+        locked_order.notification_failure_reason = None
+        locked_order.notification_failed_at = None
+        self.db.commit()
+        items_summary = ", ".join(f"{item.product_name} x{item.quantity}" for item in locked_order.items)
+        context = {
+            "customer_name": locked_order.customer_name,
+            "order_number": locked_order.order_number,
+            "items_summary": items_summary or "Your LeTrusto order",
+            "tracking_number": locked_order.tracking_number,
+            "carrier": locked_order.tracking_carrier,
+            "tracking_url": locked_order.tracking_url,
+            "order_url": f"{public_app_url}/orders/{locked_order.id}",
+        }
+        try:
+            EmailService.from_settings(settings).send_template(template, to=locked_order.customer_email, context=context)
+        except Exception:
+            logger.warning("Shipment notification delivery failed", extra={"order_id": str(locked_order.id), "notification": template})
+            failed_order = self._get_order(locked_order.id, for_update=True)
+            setattr(failed_order, sent_field, None)
+            failed_order.notification_failure_reason = "Email delivery failed"
+            failed_order.notification_failed_at = datetime.now(timezone.utc)
+            self.db.commit()
 
     async def sync_pending_fulfillments(self) -> list[Order]:
         orders = list(self.db.scalars(select(Order).where(Order.payment_status == "PAID", Order.supplier_order_id.is_not(None), Order.fulfillment_status.not_in({"DELIVERED", "CANCELLED"}))).all())

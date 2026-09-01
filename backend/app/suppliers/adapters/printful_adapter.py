@@ -208,6 +208,7 @@ class PrintfulAdapter:
             supplier_status=str(result.get("status", "")) or None,
             tracking_number=shipment.get("tracking_number"),
             carrier=shipment.get("carrier"),
+            tracking_url=shipment.get("tracking_url"),
         )
 
     async def add_to_cart(self, supplier_order_id: str) -> SupplierOrderResult:

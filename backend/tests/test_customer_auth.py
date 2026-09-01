@@ -239,6 +239,7 @@ def test_production_rejects_mock_sms_provider(monkeypatch):
     monkeypatch.setenv("CASHFREE_ENV", "production")
     monkeypatch.setenv("JWT_SECRET_KEY", "12345678901234567890123456789012")
     monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")
+    monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
     monkeypatch.setenv("SMS_PROVIDER", "mock")
     get_settings.cache_clear()
     try:

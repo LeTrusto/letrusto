@@ -270,6 +270,93 @@ def _password_reset_template(context: Mapping[str, Any]) -> RenderedEmail:
     return RenderedEmail(subject="Reset your LeTrusto password", html=html, text=text)
 
 
+def _order_confirmation_template(context: Mapping[str, Any]) -> RenderedEmail:
+    order_number = str(context["order_number"])
+    customer_name = str(context["customer_name"])
+    total = str(context["total"])
+    currency = str(context.get("currency", "INR"))
+    order_url = str(context.get("order_url", ""))
+    html = _html_document(
+        f"Payment confirmed for LeTrusto order {order_number}",
+        (
+            '<h1 style="margin:0 0 10px 0;font-size:27px;line-height:1.2;color:#0f172a;">Order confirmed</h1>'
+            f'<p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#475569;">Thank you, {escape(customer_name)}. We received your payment and are preparing your order.</p>'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:1px solid #e2e8f0;">'
+            '<tr><td style="padding:18px 20px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">'
+            f"{_render_label_value('Order number', order_number)}"
+            f"{_render_label_value('Amount paid', f'{currency} {total}')}"
+            '</table></td></tr></table>'
+            + (f'<div style="margin-top:24px;"><a href="{escape(order_url)}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 18px;border-radius:8px;">View order</a></div>' if order_url else '')
+        ),
+        logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
+        website_url=str(context.get("website_url", "https://letrusto.com")),
+    )
+    text_lines = [
+        "Order confirmed",
+        f"Thank you, {customer_name}. We received your payment and are preparing your order.",
+        f"Order number: {order_number}",
+        f"Amount paid: {currency} {total}",
+    ]
+    if order_url:
+        text_lines.append(f"View order: {order_url}")
+    text_lines.append("This email was generated automatically by LeTrusto.")
+    return RenderedEmail(subject=f"Order confirmed: {order_number}", html=html, text=_text_block(text_lines))
+
+
+def _shipment_template(context: Mapping[str, Any]) -> RenderedEmail:
+    status = str(context["status"])
+    order_number = str(context["order_number"])
+    customer_name = str(context["customer_name"])
+    items_summary = str(context["items_summary"])
+    tracking_number = str(context.get("tracking_number") or "")
+    carrier = str(context.get("carrier") or "")
+    tracking_url = str(context.get("tracking_url") or "")
+    delivered = status == "delivered"
+    title = "Your order was delivered" if delivered else "Your order has shipped"
+    message = "Your LeTrusto order has been delivered." if delivered else "Your LeTrusto order is on the way."
+    tracking_rows = ""
+    if tracking_number:
+        tracking_rows += _render_label_value("Tracking number", tracking_number)
+    if carrier:
+        tracking_rows += _render_label_value("Carrier", carrier)
+    html = _html_document(
+        f"{title}: {order_number}",
+        (
+            f'<h1 style="margin:0 0 10px 0;font-size:27px;line-height:1.2;color:#0f172a;">{title}</h1>'
+            f'<p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#475569;">{escape(customer_name)}, {escape(message)}</p>'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:1px solid #e2e8f0;">'
+            '<tr><td style="padding:18px 20px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">'
+            f"{_render_label_value('Order number', order_number)}"
+            f"{_render_label_value('Items', items_summary)}"
+            f"{tracking_rows}"
+            '</table></td></tr></table>'
+            + (f'<div style="margin-top:24px;"><a href="{escape(tracking_url)}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 18px;border-radius:8px;">Track shipment</a></div>' if tracking_url else '')
+            + (f'<p style="margin:18px 0 0 0;font-size:13px;color:#64748b;">View your order at <a href="{escape(str(context["order_url"]))}" style="color:#1d4ed8;">LeTrusto</a>.</p>' if context.get("order_url") else '')
+        ),
+        logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
+        website_url=str(context.get("website_url", "https://letrusto.com")),
+    )
+    text_lines = [title, message, f"Order number: {order_number}", f"Items: {items_summary}"]
+    if tracking_number:
+        text_lines.append(f"Tracking number: {tracking_number}")
+    if carrier:
+        text_lines.append(f"Carrier: {carrier}")
+    if tracking_url:
+        text_lines.append(f"Track shipment: {tracking_url}")
+    if context.get("order_url"):
+        text_lines.append(f"View order: {context['order_url']}")
+    text_lines.append("This email was generated automatically by LeTrusto.")
+    return RenderedEmail(subject=f"{title}: {order_number}", html=html, text=_text_block(text_lines))
+
+
+def _shipped_template(context: Mapping[str, Any]) -> RenderedEmail:
+    return _shipment_template({**context, "status": "shipped"})
+
+
+def _delivered_template(context: Mapping[str, Any]) -> RenderedEmail:
+    return _shipment_template({**context, "status": "delivered"})
+
+
 class EmailService:
     def __init__(
         self,
@@ -307,6 +394,9 @@ class EmailService:
         registry.register("support_ticket_customer_confirmation", _support_confirmation_template)
         registry.register("email_verification", _email_verification_template)
         registry.register("password_reset", _password_reset_template)
+        registry.register("order_confirmation", _order_confirmation_template)
+        registry.register("order_shipped", _shipped_template)
+        registry.register("order_delivered", _delivered_template)
         return registry
 
     def register_template(self, name: str, renderer: Callable[[Mapping[str, Any]], RenderedEmail]) -> None:

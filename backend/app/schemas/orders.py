@@ -104,6 +104,7 @@ class OrderDTO(BaseModel):
     paid_at: str | None = None
     tracking_number: str | None = None
     tracking_carrier: str | None = None
+    tracking_url: str | None = None
     shipped_at: str | None = None
     delivered_at: str | None = None
     cancelled_at: str | None = None

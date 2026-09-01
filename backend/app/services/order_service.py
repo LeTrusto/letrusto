@@ -260,6 +260,7 @@ class OrderService:
             paid_at=order.paid_at.isoformat() if order.paid_at else None,
             tracking_number=order.tracking_number,
             tracking_carrier=order.tracking_carrier,
+            tracking_url=order.tracking_url,
             shipped_at=order.shipped_at.isoformat() if order.shipped_at else None,
             delivered_at=order.delivered_at.isoformat() if order.delivered_at else None,
             cancelled_at=order.cancelled_at.isoformat() if order.cancelled_at else None,

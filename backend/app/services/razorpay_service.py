@@ -14,6 +14,7 @@ from app.core.exceptions import BadRequestError, NotFoundError
 from app.models.entities import Order, PaymentAttempt, RefundRequest, User
 from app.schemas.payments import PaymentStatusDTO, RazorpayOrderDTO, RazorpayPaymentVerification
 from app.services.fulfillment_service import FulfillmentService
+from app.services.email_service import EmailService
 from app.services.inventory_reservation_service import InventoryReservationService
 
 
@@ -336,6 +337,20 @@ class RazorpayService:
         self.db.commit()
         if reservation_safe:
             await FulfillmentService(self.db).submit(order.id)
+        try:
+            EmailService.from_settings(self.settings).send_template(
+                "order_confirmation",
+                to=order.customer_email,
+                context={
+                    "customer_name": order.customer_name,
+                    "order_number": order.order_number,
+                    "total": str(order.total),
+                    "currency": order.currency,
+                    "order_url": f"{self.settings.PUBLIC_APP_URL}/orders/{order.id}",
+                },
+            )
+        except Exception:
+            pass
         return self._status(order)
 
     @staticmethod
