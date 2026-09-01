@@ -55,6 +55,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "oss-cf.cjdropshipping.com",
       },
+      {
+        protocol: "https",
+        hostname: "files.cdn.printful.com",
+      },
     ],
   },
 };
