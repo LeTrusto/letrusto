@@ -319,6 +319,10 @@ class PrintfulShippingRateDTO(BaseModel):
     single_product_rate: Decimal | None
     additional_product_rate: Decimal | None
     currency: str
+    supplier_single_product_rate: Decimal | None
+    supplier_additional_product_rate: Decimal | None
+    supplier_currency: str | None
+    supplier_to_customer_fx_rate: Decimal | None
     country_codes: list[str]
     source: str
     rate_source: str
@@ -335,7 +339,11 @@ class PrintfulShippingUpdate(BaseModel):
     single_product_rate: Decimal | None = Field(default=None, ge=0, decimal_places=2)
     additional_product_rate: Decimal | None = Field(default=None, ge=0, decimal_places=2)
     currency: Literal["INR", "USD"] = "USD"
-    rate_source: Literal["PRINTFUL_PUBLISHED", "LETRUSTO_ESTIMATE"] = "PRINTFUL_PUBLISHED"
+    rate_source: Literal["verified", "PRINTFUL_PUBLISHED", "LETRUSTO_ESTIMATE"] = "PRINTFUL_PUBLISHED"
+    supplier_single_product_rate: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    supplier_additional_product_rate: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    supplier_currency: Literal["USD"] | None = None
+    supplier_to_customer_fx_rate: Decimal | None = Field(default=None, gt=0, decimal_places=4)
     effective_at: datetime | None = None
     active: bool = True
     requires_verification: bool = False
@@ -351,6 +359,13 @@ class PrintfulShippingUpdate(BaseModel):
                 raise ValueError("Unverified India shipping must be a LeTrusto estimate")
             if self.single_product_rate is None or self.additional_product_rate is None:
                 raise ValueError("India shipping estimate requires both rates")
+            if self.rate_source == "verified":
+                if self.requires_verification:
+                    raise ValueError("Verified India shipping cannot require verification")
+                if self.supplier_single_product_rate is None or self.supplier_additional_product_rate is None:
+                    raise ValueError("Verified India shipping requires supplier USD rates")
+                if self.supplier_currency != "USD" or self.supplier_to_customer_fx_rate is None:
+                    raise ValueError("Verified India shipping requires USD supplier currency and FX rate")
         elif not self.country_codes:
             raise ValueError("At least one country code is required")
         return self

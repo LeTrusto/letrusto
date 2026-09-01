@@ -33,11 +33,7 @@ def test_printful_hoodie_rates_and_destination_mapping():
 
     assert region_for_country("IN") == "IN"
     india = service.estimate(product, "IN")
-    assert india["status"] == "AVAILABLE"
-    assert india["shipping_price"] == Decimal("299")
-    assert india["currency"] == "INR"
-    assert india["rate_source"] == "LETRUSTO_ESTIMATE"
-    assert india["estimated"] is True
+    assert india["status"] == "REQUIRES_VERIFICATION"
 
 
 def test_printful_additional_rate_and_review_blockers():
@@ -45,9 +41,11 @@ def test_printful_additional_rate_and_review_blockers():
     service._rows = lambda _: configured_rates()  # type: ignore[method-assign]
     product = shipping_product()
     assert service.estimate(product, "US", quantity=3)["shipping_price"] == Decimal("13.49")
-    assert service.estimate(product, "IN", quantity=2)["shipping_price"] == Decimal("399")
-    assert service.estimate(product, "IN", quantity=3)["shipping_price"] == Decimal("499")
-    assert service.review(product) == (True, [])
+    assert service.estimate(product, "IN", quantity=2)["status"] == "REQUIRES_VERIFICATION"
+    assert service.estimate(product, "IN", quantity=3)["status"] == "REQUIRES_VERIFICATION"
+    reviewed, blockers = service.review(product)
+    assert reviewed is False
+    assert "SHIPPING_RATE_REQUIRES_VERIFICATION_IN" in blockers
 
     incomplete = configured_rates()
     incomplete = [row for row in incomplete if row.destination_region != "JP"]
@@ -63,6 +61,27 @@ def test_india_estimate_update_requires_inr_rates_and_source():
     assert payload.country_codes == []
     assert payload.single_product_rate == Decimal("299")
     assert payload.additional_product_rate == Decimal("100")
+
+
+def test_verified_india_rate_preserves_printful_usd_and_uses_approved_fx_rate():
+    payload = PrintfulShippingUpdate(
+        region="IN",
+        currency="INR",
+        rate_source="verified",
+        single_product_rate=Decimal("1733.62"),
+        additional_product_rate=Decimal("784.00"),
+        supplier_single_product_rate=Decimal("17.69"),
+        supplier_additional_product_rate=Decimal("8.00"),
+        supplier_currency="USD",
+        supplier_to_customer_fx_rate=Decimal("98.00"),
+        requires_verification=False,
+    )
+
+    assert payload.rate_source == "verified"
+    assert payload.supplier_single_product_rate == Decimal("17.69")
+    assert payload.supplier_additional_product_rate == Decimal("8.00")
+    assert payload.single_product_rate == Decimal("1733.62")
+    assert payload.additional_product_rate == Decimal("784.00")
 
 
 def test_product_shipping_estimate_is_serialized_for_the_storefront(monkeypatch):

@@ -46,18 +46,22 @@ def make_hoodie(db, *, requires_verification: bool = True):
     rate = PrintfulShippingRate(
         product_id=product.id,
         source="printful",
-        rate_source="LETRUSTO_ESTIMATE",
+        rate_source="LETRUSTO_ESTIMATE" if requires_verification else "verified",
         destination_region="IN",
         category_key="hoodies-sweatshirts",
         country_codes=[],
         shipping_method="Standard",
-        single_product_rate=Decimal("299"),
-        additional_product_rate=Decimal("100"),
+        single_product_rate=Decimal("299") if requires_verification else Decimal("1733.62"),
+        additional_product_rate=Decimal("100") if requires_verification else Decimal("784.00"),
         currency="INR",
         effective_at=now,
         updated_at=now,
         active=True,
         requires_verification=requires_verification,
+        supplier_single_product_rate=None if requires_verification else Decimal("17.69"),
+        supplier_additional_product_rate=None if requires_verification else Decimal("8.00"),
+        supplier_currency=None if requires_verification else "USD",
+        supplier_to_customer_fx_rate=None if requires_verification else Decimal("98.00"),
     )
     db.add(rate)
     db.commit()
@@ -82,11 +86,11 @@ def quote_request(product_slug: str, quantity: int, country: str = "IN") -> Orde
 
 @pytest.mark.parametrize(
     ("quantity", "shipping"),
-    [(1, Decimal("299")), (2, Decimal("399")), (3, Decimal("499"))],
+    [(1, Decimal("1733.62")), (2, Decimal("2517.62")), (3, Decimal("3301.62"))],
 )
 def test_india_hoodie_quote_charges_first_and_additional_shipping(quantity, shipping):
     db = SessionLocal()
-    user, product, rate = make_hoodie(db)
+    user, product, rate = make_hoodie(db, requires_verification=False)
     try:
         quote = OrderService(db).quote_order(user, quote_request(product.slug, quantity))
         assert quote.currency == "INR"
@@ -95,14 +99,14 @@ def test_india_hoodie_quote_charges_first_and_additional_shipping(quantity, ship
         assert quote.total == quote.subtotal + quote.shipping_amount
         assert quote.shipping_status == "AVAILABLE"
         assert quote.purchasable is True
-        assert quote.shipping_message == "Estimated shipping; pending Printful verification"
+        assert quote.shipping_message is None
     finally:
         cleanup(db, user, product, rate)
 
 
 def test_quote_never_reports_zero_shipping_when_rate_is_missing(monkeypatch):
     db = SessionLocal()
-    user, product, rate = make_hoodie(db)
+    user, product, rate = make_hoodie(db, requires_verification=False)
     monkeypatch.setattr(
         "app.services.order_service.PrintfulShippingService.estimate",
         lambda *_args, **_kwargs: {"status": "REQUIRES_VERIFICATION", "message": "Shipping rate requires Printful verification"},
@@ -147,7 +151,7 @@ def test_unsupported_destination_is_reported_without_shipping_charge():
 
 def test_shipping_currency_mismatch_is_reported_as_invalid_configuration():
     db = SessionLocal()
-    user, product, rate = make_hoodie(db)
+    user, product, rate = make_hoodie(db, requires_verification=False)
     try:
         service = OrderService(db)
         status, amount, _ = service._shipping_quote(
@@ -161,11 +165,11 @@ def test_shipping_currency_mismatch_is_reported_as_invalid_configuration():
 
 def test_quote_charges_shipping_once_per_line_item():
     db = SessionLocal()
-    user, product, rate = make_hoodie(db)
+    user, product, rate = make_hoodie(db, requires_verification=False)
     try:
         service = OrderService(db)
         single = service.quote_order(user, quote_request(product.slug, 1))
         double = service.quote_order(user, quote_request(product.slug, 2))
-        assert double.shipping_amount - single.shipping_amount == Decimal("100")
+        assert double.shipping_amount - single.shipping_amount == Decimal("784.00")
     finally:
         cleanup(db, user, product, rate)

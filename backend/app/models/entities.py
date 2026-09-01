@@ -288,6 +288,10 @@ class PrintfulShippingRate(Base):
     single_product_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     additional_product_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     currency: Mapped[str] = mapped_column(String(8), nullable=False, default="USD")
+    supplier_single_product_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    supplier_additional_product_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    supplier_currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    supplier_to_customer_fx_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
     effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()

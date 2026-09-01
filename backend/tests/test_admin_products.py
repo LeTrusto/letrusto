@@ -456,13 +456,12 @@ def test_printful_pricing_and_activation_do_not_require_legacy_commercial_approv
         with pytest.raises(BadRequestError, match="Legacy commercial review"):
             service.commercial_review(product.id)
         pricing = service.update_printful_pricing(product.id, PrintfulPricingUpdate(india_price_inr=Decimal("3499.00"), international_price_usd=Decimal("59.00"), shipping_reviewed=True))
-        activated = service.activate(product.id)
+        with pytest.raises(BadRequestError, match="SHIPPING_RATE_REQUIRES_VERIFICATION_IN"):
+            service.activate(product.id)
 
         assert pricing.india_price_inr == Decimal("3499.00")
         assert pricing.international_price_usd == Decimal("59.00")
-        assert activated.status == "ACTIVE"
-        assert activated.commercial_status == "DRAFT"
-        assert activated.commercial_target_margin_percent == service.launch_pricing_policy.target_contribution_margin_pct
+        assert db.get(Product, product.id).status == "DRAFT"
         assert db.get(Product, product.id).supplier_validation_details["printful_customer_pricing"]["international_price_usd"] == "59.00"
     finally:
         db.delete(db.get(Product, product.id))

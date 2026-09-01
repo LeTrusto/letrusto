@@ -6,7 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.config import get_settings
 from app.models.entities import PrintfulShippingRate, Product
+from app.services.pricing_engine import round_inr
 
 REGIONS = ("IN", "US", "GB", "EU", "CA", "AU_NZ", "JP", "BR", "WORLDWIDE")
 REGION_LABELS = {
@@ -54,6 +56,8 @@ class PrintfulShippingService:
                 continue
             if row.source != "printful" or (not row.country_codes and not (region == "IN" and row.requires_verification)):
                 blockers.append(f"SHIPPING_DESTINATION_MAPPING_INVALID_{region}")
+            if row.requires_verification:
+                blockers.append(f"SHIPPING_RATE_REQUIRES_VERIFICATION_{region}")
             if row.currency not in {"USD", "INR"} or (region == "IN" and row.currency != "INR"):
                 blockers.append(f"SHIPPING_CURRENCY_INVALID_{region}")
             if row.single_product_rate is None or row.additional_product_rate is None:
@@ -73,7 +77,7 @@ class PrintfulShippingService:
         if region is None:
             raise BadRequestError("Destination country is required")
         row = {item["region"]: item for item in self.list_for_product(product)}.get(region)
-        if not row or row["single_product_rate"] is None or row["additional_product_rate"] is None:
+        if not row or row["single_product_rate"] is None or row["additional_product_rate"] is None or row["requires_verification"]:
             return {"country": country.upper(), "region": region, "status": "REQUIRES_VERIFICATION", "message": "Shipping rate requires Printful verification"}
         return {"country": country.upper(), "region": region, "status": "AVAILABLE", "currency": row["currency"], "shipping_method": row["shipping_method"], "shipping_price": row["single_product_rate"] + max(quantity - 1, 0) * row["additional_product_rate"], "rate_source": row["rate_source"], "estimated": row["requires_verification"], "message": "Estimated shipping; pending Printful verification" if row["requires_verification"] else None, "estimated_delivery": None}
 
@@ -83,6 +87,10 @@ class PrintfulShippingService:
             "region": region, "label": REGION_LABELS[region], "status": "REQUIRES_VERIFICATION" if row and row.requires_verification else "AVAILABLE" if row else "MISSING",
             "shipping_method": row.shipping_method if row else None, "single_product_rate": row.single_product_rate if row else None,
             "additional_product_rate": row.additional_product_rate if row else None, "currency": row.currency if row else "USD",
+            "supplier_single_product_rate": row.supplier_single_product_rate if row else None,
+            "supplier_additional_product_rate": row.supplier_additional_product_rate if row else None,
+            "supplier_currency": row.supplier_currency if row else None,
+            "supplier_to_customer_fx_rate": row.supplier_to_customer_fx_rate if row else None,
             "country_codes": row.country_codes if row else [], "source": row.source if row else "printful", "rate_source": row.rate_source if row else "PRINTFUL_PUBLISHED",
             "effective_at": row.effective_at if row else None, "updated_at": row.updated_at if row else None,
             "active": row.active if row else False, "requires_verification": row.requires_verification if row else False,
@@ -91,11 +99,22 @@ class PrintfulShippingService:
     def update(self, product: Product, payload: dict) -> dict:
         region = payload["region"]
         if region not in REGIONS: raise BadRequestError("Unsupported Printful destination region")
+        if region == "IN" and payload["rate_source"] == "verified":
+            fx_rate = get_settings().PRICING_FX_RATE
+            if payload.get("supplier_currency") != "USD" or payload.get("supplier_to_customer_fx_rate") != fx_rate:
+                raise BadRequestError("Verified India shipping must use the approved USD-to-INR pricing FX rate")
+            supplier_single = payload.get("supplier_single_product_rate")
+            supplier_additional = payload.get("supplier_additional_product_rate")
+            if supplier_single is None or supplier_additional is None:
+                raise BadRequestError("Verified India shipping requires supplier USD rates")
+            if payload.get("single_product_rate") != round_inr(supplier_single * fx_rate) or payload.get("additional_product_rate") != round_inr(supplier_additional * fx_rate):
+                raise BadRequestError("Customer INR shipping does not match the approved supplier conversion")
         row = self.db.scalar(select(PrintfulShippingRate).where(PrintfulShippingRate.category_key == self.category_for(product), PrintfulShippingRate.destination_region == region, PrintfulShippingRate.product_id.is_(None)))
         if row is None:
             row = PrintfulShippingRate(category_key=self.category_for(product), destination_region=region)
             self.db.add(row)
         row.source = "printful"; row.rate_source = payload["rate_source"]; row.country_codes = [code.upper() for code in payload["country_codes"]]; row.shipping_method = payload["shipping_method"]
         row.single_product_rate = payload.get("single_product_rate"); row.additional_product_rate = payload.get("additional_product_rate"); row.currency = payload["currency"]; row.effective_at = payload.get("effective_at") or datetime.now(timezone.utc); row.active = payload["active"]; row.requires_verification = payload["requires_verification"]
+        row.supplier_single_product_rate = payload.get("supplier_single_product_rate"); row.supplier_additional_product_rate = payload.get("supplier_additional_product_rate"); row.supplier_currency = payload.get("supplier_currency"); row.supplier_to_customer_fx_rate = payload.get("supplier_to_customer_fx_rate")
         self.db.commit(); self.db.refresh(row)
         return self._serialize(row, region)
