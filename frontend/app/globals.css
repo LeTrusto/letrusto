@@ -274,6 +274,27 @@ body {
   box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
 }
 
+@media print {
+  .invoice-tool-controls,
+  nav,
+  footer,
+  header {
+    display: none !important;
+  }
+
+  .invoice-page {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .invoice-preview {
+    box-shadow: none !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+}
+
 /* ── Typography helpers ──────────────────────────────────── */
 .lt-heading-1 {
   font-size: 2.25rem;

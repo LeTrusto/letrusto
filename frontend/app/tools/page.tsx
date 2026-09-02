@@ -7,8 +7,6 @@ export const metadata: Metadata = {
 };
 
 const PLANNED_TOOLS = [
-  "Invoice Generator",
-  "Profit Margin Calculator",
   "Pricing Calculator",
   "Break-Even Calculator",
   "Expense Calculator",
@@ -25,11 +23,18 @@ export default function ToolsPage() {
       </div>
       <section className="mt-14 border-t border-[var(--border)] pt-8">
         <p className="lt-eyebrow">Available now</p>
-        <Link href="/tools/profit-margin-calculator" className="mt-4 block border border-[var(--lt-primary)] bg-[var(--surface-soft)] p-6 transition-colors hover:border-[var(--lt-accent)]">
-          <h2 className="lt-heading-2">Profit Margin Calculator</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">Calculate profit, profit margin and markup from your cost price and selling price.</p>
-          <span className="mt-5 inline-block text-sm font-bold text-[var(--lt-primary)]">Open calculator &rarr;</span>
-        </Link>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <Link href="/tools/profit-margin-calculator" className="block border border-[var(--border)] bg-[var(--surface-soft)] p-6 transition-colors hover:border-[var(--lt-accent)]">
+            <h2 className="lt-heading-2">Profit Margin Calculator</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">Calculate profit, profit margin and markup from your cost price and selling price.</p>
+            <span className="mt-5 inline-block text-sm font-bold text-[var(--lt-primary)]">Open calculator &rarr;</span>
+          </Link>
+          <Link href="/tools/invoice-generator" className="block border border-[var(--lt-primary)] bg-[var(--surface-soft)] p-6 transition-colors hover:border-[var(--lt-accent)]">
+            <h2 className="lt-heading-2">Invoice Generator</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">Create, review and print a professional invoice in INR.</p>
+            <span className="mt-5 inline-block text-sm font-bold text-[var(--lt-primary)]">Open generator &rarr;</span>
+          </Link>
+        </div>
       </section>
       <section className="mt-14 border-t border-[var(--border)] pt-8">
         <h2 className="lt-heading-2">Planned tools</h2>
