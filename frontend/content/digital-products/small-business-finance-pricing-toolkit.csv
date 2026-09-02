@@ -1,0 +1,25 @@
+Small Business Finance & Pricing Toolkit - editable workbook source
+Instructions,Enter your own figures in the input columns. Duplicate this file for each month.
+
+Pricing decision worksheet
+Offer,Unit cost (INR),Target margin (%),Suggested price (INR),Notes
+Example offer,300,40,500,Replace this example with your own offer
+
+Monthly expense tracker
+Date,Expense,Category,Amount (INR),Paid?
+2026-09-01,Replace this example,Software,0,No
+
+Break-even planning
+Metric,Value
+Fixed costs (INR),0
+Selling price per unit (INR),0
+Variable cost per unit (INR),0
+Contribution per unit (INR),0
+Break-even units,0
+
+Monthly finance dashboard
+Metric,Value (INR)
+Revenue,0
+Total expenses,0
+Operating profit,0
+Operating margin (%),0

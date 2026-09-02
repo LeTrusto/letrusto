@@ -13,6 +13,7 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/tools/break-even-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
   { url: `${BASE_URL}/tools/expense-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
   { url: `${BASE_URL}/digital-products`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+  { url: `${BASE_URL}/digital-products/small-business-finance-pricing-toolkit`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
   { url: `${BASE_URL}/services`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
   { url: `${BASE_URL}/minku-dinku`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   { url: `${BASE_URL}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },

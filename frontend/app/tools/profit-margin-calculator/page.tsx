@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import SchemaOrg from "@/components/SchemaOrg";
+import DigitalProductCallout from "@/components/digital-products/DigitalProductCallout";
 import ProfitMarginCalculator from "./ProfitMarginCalculator";
 
 export const metadata: Metadata = {
@@ -48,6 +49,7 @@ export default function ProfitMarginCalculatorPage() {
           <p className="mt-6 text-xs leading-relaxed text-[var(--text-muted)]">When cost or selling price is ₹0, the related percentage is shown as not available because division by zero is undefined.</p>
         </div>
       </section>
+      <DigitalProductCallout />
     </main>
   );
 }
