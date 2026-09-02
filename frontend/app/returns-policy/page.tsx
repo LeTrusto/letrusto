@@ -4,6 +4,9 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Returns & Refunds",
   description: "LeTrusto returns and refund policy.",
+  alternates: {
+    canonical: "/returns-policy",
+  },
 };
 
 export default function ReturnsPolicyPage() {
@@ -20,7 +23,7 @@ export default function ReturnsPolicyPage() {
         <h2 className="lt-heading-3 mt-6">Non-Returnable Items</h2>
         <p>Personalized, printed, and made-to-order items are not returnable unless they arrive damaged, defective, or incorrectly fulfilled.</p>
         <h2 className="lt-heading-3 mt-6">Digital products</h2>
-        <p>Digital products are currently preview-only. Checkout, payment, entitlement creation, and download access are not available, so there is no digital purchase or download to refund at this time. When digital sales are enabled, the applicable access and refund terms will be shown before payment.</p>
+        <p>Digital products are delivered through authenticated protected downloads after payment verification. Because access may begin immediately, digital purchases are generally non-refundable after download, except where required by applicable law or where LeTrusto cannot provide the purchased file. Contact support promptly if the file is unavailable or materially different from the product description.</p>
         <h2 className="lt-heading-3 mt-6">Services</h2>
         <p>Submitting a service enquiry does not create an order or payment obligation. Any separately agreed service scope, price, payment terms, and cancellation terms will be discussed before work begins.</p>
         <h2 className="lt-heading-3 mt-6">Refund Timing</h2>

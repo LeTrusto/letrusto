@@ -7,7 +7,7 @@ import { getDigitalProductBySlug } from "@/lib/digitalProducts";
 import { getServiceBySlug } from "@/lib/services";
 import { useConsent } from "@/lib/consentContext";
 
-const TOOL_NAMES = new Set(["profit-margin-calculator", "invoice-generator", "pricing-calculator", "break-even-calculator", "expense-calculator"]);
+const TOOL_NAMES = new Set(["profit-margin-calculator", "invoice-generator", "pricing-calculator", "break-even-calculator", "expense-calculator", "commission-calculator", "discount-calculator", "freelancer-rate-calculator"]);
 
 export default function FunnelAnalytics() {
   const pathname = usePathname();

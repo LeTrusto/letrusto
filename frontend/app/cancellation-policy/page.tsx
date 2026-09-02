@@ -45,7 +45,7 @@ export default function CancellationPolicyPage() {
         </section>
         <section>
           <h2 className="lt-heading-3 mt-6">Digital products and services</h2>
-          <p>Digital products are currently preview-only and cannot be purchased or downloaded. A service enquiry is not an order, so there is no service booking or payment to cancel when an enquiry is submitted. Any future digital purchase or separately agreed service terms will be shown before payment or work begins.</p>
+          <p>Digital products are delivered through a protected download after payment verification. A cancellation request is not available after access has been delivered, except where required by applicable law or where LeTrusto cannot provide the purchased file. A service enquiry is not an order, so there is no service booking or payment to cancel when an enquiry is submitted. Any separately agreed service terms will be shown before work begins.</p>
         </section>
       </div>
     </main>

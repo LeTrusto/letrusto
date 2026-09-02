@@ -2,7 +2,7 @@
 
 ## Current state
 
-The published catalog currently contains two products with workbook assets stored outside `frontend/public/`: Small Business Finance & Pricing Toolkit (INR 499) and Freelancer Rate & Project Pricing Toolkit (INR 399). Authenticated customers pay through the dedicated Razorpay digital flow and download the selected asset after server verification.
+The published catalog currently contains three products with workbook assets stored outside `frontend/public/`: Small Business Finance & Pricing Toolkit (INR 499), Freelancer Rate & Project Pricing Toolkit (INR 399), and Freelancer & Agency Client-Work Workbook (INR 599). Authenticated customers pay through the dedicated Razorpay digital flow and download the selected asset after server verification.
 
 Digital products do not use the physical cart, `Order`, shipping address, inventory reservation, Printful fulfillment, or physical checkout flow.
 

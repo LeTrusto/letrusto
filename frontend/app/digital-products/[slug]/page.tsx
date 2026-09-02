@@ -22,6 +22,11 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 export default async function DigitalProductPage({ params }: ProductPageProps) {
   const product = getDigitalProductBySlug((await params).slug);
   if (!product) notFound();
+  const toolLinks = product.slug === "freelancer-agency-client-work-workbook"
+    ? [{ href: "/tools/freelancer-rate-calculator", label: "Freelancer rate" }, { href: "/tools/pricing-calculator", label: "Pricing" }, { href: "/tools/invoice-generator", label: "Invoice" }, { href: "/tools/commission-calculator", label: "Commission" }]
+    : product.slug === "freelancer-rate-project-pricing-toolkit"
+      ? [{ href: "/tools/freelancer-rate-calculator", label: "Freelancer rate" }, { href: "/tools/invoice-generator", label: "Invoice" }]
+      : [{ href: "/tools/profit-margin-calculator", label: "Profit margin" }, { href: "/tools/pricing-calculator", label: "Pricing" }, { href: "/tools/break-even-calculator", label: "Break-even" }, { href: "/tools/expense-calculator", label: "Expenses" }];
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-20">
@@ -49,7 +54,7 @@ export default async function DigitalProductPage({ params }: ProductPageProps) {
           <p className="lt-eyebrow">A simple working loop</p>
           <h2 className="lt-heading-2 mt-2">Use the tools, then keep the habit</h2>
           <p className="lt-body mt-4">Use the free calculators for a quick decision, then use the toolkit to keep the inputs, scenarios and monthly review together.</p>
-          <div className="mt-6 flex flex-wrap gap-3 text-sm font-semibold">{product.slug === "freelancer-rate-project-pricing-toolkit" ? <><Link href="/tools/freelancer-rate-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Freelancer rate</Link><Link href="/tools/invoice-generator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Invoice</Link></> : <><Link href="/tools/profit-margin-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Profit margin</Link><Link href="/tools/pricing-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Pricing</Link><Link href="/tools/break-even-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Break-even</Link><Link href="/tools/expense-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Expenses</Link></>}</div>
+          <div className="mt-6 flex flex-wrap gap-3 text-sm font-semibold">{toolLinks.map((tool) => <Link key={tool.href} href={tool.href} className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">{tool.label}</Link>)}</div>
         </div>
         <div className="border border-[var(--border)] bg-[var(--surface-soft)] p-6 md:p-8">
           <h2 className="lt-heading-2">What happens after purchase?</h2>

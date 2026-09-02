@@ -1,3 +1,4 @@
+import csv
 from types import SimpleNamespace
 from decimal import Decimal
 from uuid import uuid4
@@ -49,6 +50,28 @@ def test_freelancer_toolkit_is_an_allowlisted_product():
     product = product_service._product("freelancer-rate-project-pricing-toolkit")
 
     assert product == {"amount": Decimal("399.00"), "currency": "INR", "filename": "freelancer-rate-project-pricing-toolkit.csv"}
+
+
+def test_client_work_workbook_is_an_allowlisted_product():
+    product_service = service(ScalarDB(None))
+
+    product = product_service._product("freelancer-agency-client-work-workbook")
+
+    assert product == {"amount": Decimal("599.00"), "currency": "INR", "filename": "freelancer-agency-client-work-workbook.csv"}
+
+
+def test_client_work_workbook_contains_linked_quote_and_profitability_formulas():
+    with (ASSET_ROOT / "freelancer-agency-client-work-workbook.csv").open(newline="", encoding="utf-8") as handle:
+        parsed_rows = list(csv.DictReader(handle))
+
+    assert parsed_rows
+    assert all(None not in row for row in parsed_rows)
+    rows = {row["Field"]: row["Input / Example"] for row in parsed_rows}
+
+    assert rows["Base quote"] == "=C22*C23"
+    assert rows["Recommended quote"] == "=C25+C26"
+    assert rows["Total project cost"] == "=C53*C54+C55"
+    assert rows["Profit margin %"] == "=IF(C52=0,0,C57/C52*100)"
 
 
 def test_all_allowlisted_assets_exist_outside_public_assets():

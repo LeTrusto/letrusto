@@ -65,6 +65,29 @@ export const DIGITAL_PRODUCTS: DigitalProduct[] = [
         { question: "Is this tax or financial advice?", answer: "No. It is a planning worksheet, not tax, accounting or investment advice." },
       ],
     },
+  {
+    id: "dpt-freelancer-agency-client-work-workbook",
+    name: "Freelancer & Agency Client-Work Workbook",
+    slug: "freelancer-agency-client-work-workbook",
+    description: "A practical editable workbook for moving client work from lead and scope through quoting, delivery, invoicing, follow-up and project profitability.",
+    valueProposition: "Keep the client-work lifecycle visible from first conversation to paid, profitable delivery.",
+    category: DIGITAL_PRODUCT_CATEGORIES[1],
+    format: "Editable CSV workbook (.csv), compatible with Excel and Google Sheets",
+    price: 599,
+    currency: "INR",
+    previewLabel: "Client-work flow preview",
+    included: ["Start-here setup instructions and status key", "Client and project scope tracker", "Quote planner with revision buffer", "Delivery milestone log", "Invoice, outstanding payment and follow-up tracker", "Project profitability review and monthly operating check"],
+    audience: ["Freelancers and consultants", "Small creative or technical agencies", "Service businesses managing several client projects"],
+    usage: ["Replace the clearly marked DEMO rows with your own client and project records.", "Move each project through scope, quote, delivery, invoice and follow-up reviews.", "Use the quote and profitability formulas as decision support, then confirm the final scope and payment terms yourself."],
+    status: "published",
+    delivery: "protected-download",
+    assetVersion: "1.0",
+    faq: [
+      { question: "What format is the workbook?", answer: "It is an editable CSV workbook that can be opened and extended in Excel or Google Sheets." },
+      { question: "Does it send invoices or reminders?", answer: "No. It helps you track the workflow and prepare decisions; sending invoices and follow-ups still happens through your chosen tools." },
+      { question: "Is it project-management or accounting software?", answer: "No. It is a lightweight planning workbook for client work, pricing, delivery and review, not a replacement for accounting or project-management software." },
+    ],
+  },
 ];
 
 export function getPublishedDigitalProducts() {

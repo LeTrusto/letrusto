@@ -101,12 +101,12 @@ describe("legal and policy route coverage", () => {
     expect(publicSources).toContain("Razorpay");
   });
 
-  it("explains separate digital preview and service enquiry states", () => {
+  it("explains digital delivery and separate service enquiry states", () => {
     const terms = source("./terms-of-use/page.tsx");
     const returns = source("./returns-policy/page.tsx");
-    expect(terms).toContain("Digital products are currently preview-only");
+    expect(terms).toContain("Digital products are editable files delivered through a protected download");
     expect(terms).toContain("A service enquiry is a request for discussion and a quote");
-    expect(returns).toContain("there is no digital purchase or download to refund");
+    expect(returns).toContain("Digital products are delivered through authenticated protected downloads");
     expect(returns).toContain("does not create an order or payment obligation");
   });
 });

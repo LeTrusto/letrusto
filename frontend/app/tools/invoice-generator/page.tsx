@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import SchemaOrg from "@/components/SchemaOrg";
+import DigitalProductCallout from "@/components/digital-products/DigitalProductCallout";
 import ServiceCallout from "@/components/services/ServiceCallout";
 import InvoiceGenerator from "./InvoiceGenerator";
 
@@ -47,6 +48,7 @@ export default function InvoiceGeneratorPage() {
           <Link href="/tools/profit-margin-calculator" className="mt-6 inline-block text-sm font-bold text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Check your profit margin &rarr;</Link>
         </div>
       </section>
+      <DigitalProductCallout clientWork />
       <ServiceCallout />
     </main>
   );
