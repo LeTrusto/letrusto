@@ -3,7 +3,15 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Free Tools",
-  description: "Practical online tools and calculators for business, finance, career and productivity.",
+  description: "Practical online calculators and a free invoice generator for Indian businesses, freelancers and professionals.",
+  alternates: { canonical: "/tools" },
+  openGraph: {
+    title: "Free Tools | LeTrusto",
+    description: "Practical online calculators and a free invoice generator for Indian businesses, freelancers and professionals.",
+    url: "/tools",
+    siteName: "LeTrusto",
+    type: "website",
+  },
 };
 
 const PLANNED_TOOLS = [
@@ -26,7 +34,7 @@ export default function ToolsPage() {
       <div className="max-w-2xl">
         <p className="lt-eyebrow">LeTrusto Tools</p>
         <h1 className="lt-heading-1 mt-3">Free tools for practical work</h1>
-        <p className="mt-5 text-lg leading-relaxed text-[var(--text-secondary)]">We are preparing a focused collection of calculators, generators and utilities for businesses, freelancers, creators and professionals.</p>
+        <p className="mt-5 text-lg leading-relaxed text-[var(--text-secondary)]">Use focused calculators and a free invoice generator for everyday pricing, finance and client-work decisions.</p>
       </div>
       <section className="mt-14 border-t border-[var(--border)] pt-8">
         <p className="lt-eyebrow">Available now</p>

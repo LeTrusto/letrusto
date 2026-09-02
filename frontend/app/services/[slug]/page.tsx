@@ -6,7 +6,7 @@ import { SERVICES, getServiceBySlug } from "@/lib/services";
 
 type Props = { params: Promise<{ slug: string }> };
 export function generateStaticParams() { return SERVICES.filter((service) => service.status === "published").map((service) => ({ slug: service.slug })); }
-export async function generateMetadata({ params }: Props): Promise<Metadata> { const service = getServiceBySlug((await params).slug); return service ? { title: service.seo.title, description: service.seo.description, alternates: { canonical: `/services/${service.slug}` }, openGraph: { title: `${service.seo.title} | LeTrusto`, description: service.seo.description, url: `/services/${service.slug}`, siteName: "LeTrusto", type: "website" } } : { title: "Service" }; }
+export async function generateMetadata({ params }: Props): Promise<Metadata> { const service = getServiceBySlug((await params).slug); return service ? { title: service.seo.title.replace(/\s*\|\s*LeTrusto$/i, ""), description: service.seo.description, alternates: { canonical: `/services/${service.slug}` }, openGraph: { title: `${service.seo.title.replace(/\s*\|\s*LeTrusto$/i, "")} | LeTrusto`, description: service.seo.description, url: `/services/${service.slug}`, siteName: "LeTrusto", type: "website" } } : { title: "Service" }; }
 
 export default async function ServiceDetailPage({ params }: Props) {
   const service = getServiceBySlug((await params).slug);
