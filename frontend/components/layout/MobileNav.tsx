@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, LayoutGrid, Package, UserCircle } from "lucide-react";
+import { Home, Wrench, BriefcaseBusiness, Package, UserCircle } from "lucide-react";
 import clsx from "clsx";
 
 const TABS = [
   { label: "Home", href: "/", icon: Home },
-  { label: "Discover", href: "/shop", icon: Compass },
-  { label: "Categories", href: "/shop?view=categories", icon: LayoutGrid },
+  { label: "Tools", href: "/tools", icon: Wrench },
+  { label: "Services", href: "/services", icon: BriefcaseBusiness },
   { label: "Orders", href: "/dashboard", icon: Package },
   { label: "Account", href: "/account", icon: UserCircle },
 ] as const;

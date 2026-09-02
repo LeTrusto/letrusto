@@ -1,23 +1,19 @@
 import type { Metadata } from "next";
 
 import Hero from "@/components/home/Hero";
-import ProductRail from "@/components/home/ProductRail";
-import ShopByStyle from "@/components/home/ShopByStyle";
+import DigitalOverview from "@/components/home/DigitalOverview";
 import TrustSection from "@/components/home/TrustSection";
 import NewsletterSignup from "@/components/home/NewsletterSignup";
-import CreatorFinds from "@/components/home/CreatorFinds";
 import SchemaOrg from "@/components/SchemaOrg";
-import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
-import type { CommerceProduct } from "@/types/commerce";
 import { SITE_URL } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Unique Designs. Freshly Printed.",
-  description: "Custom apparel, wall art and accessories printed on demand for the current India launch. LeTrusto — unique designs, freshly printed.",
+  title: "Tools, Templates & Digital Services",
+  description: "Practical free tools, ready-to-use digital products and affordable digital services for Indian businesses, freelancers and creators.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "LeTrusto — Unique Designs. Freshly Printed.",
-    description: "Custom apparel, wall art and accessories printed on demand for the current India launch.",
+    title: "LeTrusto — Tools, Templates & Digital Services",
+    description: "Practical free tools, ready-to-use digital products and affordable digital services for Indian businesses, freelancers and creators.",
     url: "/",
     siteName: "LeTrusto",
     type: "website",
@@ -26,29 +22,11 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  let products: CommerceProduct[] = [];
-  try {
-    products = (await getPublicProducts()).map(toCommerceProduct);
-  } catch {
-    products = [];
-  }
-
   return (
     <main className="bg-[var(--background)]">
-      <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Unique Designs. Freshly Printed.", url: SITE_URL, description: "Custom apparel, wall art and accessories printed on demand for the current India launch." }} />
+      <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Digital tools and services", url: SITE_URL, description: "Practical digital tools, templates and services for Indian businesses." }} />
       <Hero />
-      {products.length > 0 ? (
-        <ProductRail title="Fresh prints" subtitle="Custom designs printed on demand" products={products.slice(0, 8)} href="/shop" />
-      ) : (
-        <section className="bg-[var(--background)] px-4 py-16 md:py-20 text-center md:px-6">
-          <div className="max-w-[1280px] mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-2">Our catalog is being prepared</h2>
-            <p className="text-[var(--text-secondary)] font-medium">Unique printed products will appear here soon.</p>
-          </div>
-        </section>
-      )}
-      <ShopByStyle />
-      <CreatorFinds />
+      <DigitalOverview />
       <TrustSection />
       <NewsletterSignup />
     </main>

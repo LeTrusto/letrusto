@@ -1,20 +1,20 @@
-import { Truck, RotateCcw, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Clock3, Lightbulb } from "lucide-react";
 
 const SIGNALS = [
   {
-    icon: Truck,
-    title: "Shipping details",
-    description: "Delivery information is shown during checkout.",
+    icon: Lightbulb,
+    title: "Practical first",
+    description: "Solutions are shaped around real tasks and useful outcomes.",
   },
   {
-    icon: RotateCcw,
-    title: "Returns & refunds",
-    description: "Review the returns policy before placing an order.",
+    icon: Clock3,
+    title: "Built to save time",
+    description: "Simple resources and services for work that needs doing.",
   },
   {
-    icon: ShieldCheck,
-    title: "Order updates",
-    description: "View payment and fulfillment status from your account.",
+    icon: BadgeCheck,
+    title: "Clear and transparent",
+    description: "What is available, planned or scoped is stated plainly.",
   },
 ];
 
