@@ -21,7 +21,7 @@ export default function CommerceShell({ children }: { children: React.ReactNode 
   return (
     <>
       {!isAuthRoute && <CommerceNavbar />}
-      <main className={isAuthRoute ? "flex-1" : "flex-1 pb-16 lg:pb-0"}>{children}</main>
+      <main className={isAuthRoute ? "flex-1" : "flex-1 pb-[68px] lg:pb-0"}>{children}</main>
       {!isAuthRoute && <CommerceFooter />}
       {!isAuthRoute && <MobileNav />}
     </>

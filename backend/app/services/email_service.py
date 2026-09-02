@@ -195,7 +195,7 @@ def _support_confirmation_template(context: Mapping[str, Any]) -> RenderedEmail:
             '</div>'
             '<div style="margin-top:18px;padding:16px 18px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;">'
             f"<p style='margin:0 0 10px 0;font-size:14px;line-height:1.7;color:#0f172a;'>If you need to add more details, reply to this email or write to <a href='mailto:{escape(str(context['support_email']))}' style='color:#4f46e5;text-decoration:none;font-weight:700;'>{escape(str(context['support_email']))}</a>.</p>"
-            f"<p style='margin:0;font-size:14px;line-height:1.7;color:#0f172a;'>Visit <a href='{escape(str(context['website_url']))}' style='color:#4f46e5;text-decoration:none;font-weight:700;'>LeTrusto</a> anytime for comparisons, guides, and AI buying help.</p>"
+            f"<p style='margin:0;font-size:14px;line-height:1.7;color:#0f172a;'>We will review the request and follow up using the contact information provided.</p>"
             '</div>'
             '<div style="margin-top:16px;color:#64748b;font-size:12px;line-height:1.6;">'
             "This email was generated automatically by LeTrusto."
@@ -211,7 +211,6 @@ def _support_confirmation_template(context: Mapping[str, Any]) -> RenderedEmail:
             "Thank you for contacting LeTrusto.",
             f"Subject: {context['subject']}",
             f"Submitted Time: {context['created_time']}",
-            "Expected response: 24–48 hours",
             f"Support email: {context['support_email']}",
             f"Website: {context['website_url']}",
             "This email was generated automatically by LeTrusto.",

@@ -58,7 +58,7 @@ export default function CookieConsent() {
         <aside role="dialog" aria-label="Cookie consent" className="fixed inset-x-3 bottom-3 z-[70] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-premium)] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:max-w-xl sm:p-5">
           <h2 className="text-base font-bold text-[var(--text-primary)]">Cookie preferences</h2>
           <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">We use essential cookies to keep LeTrusto working. With your permission, we may also use optional cookies for analytics and marketing.</p>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
             <button type="button" onClick={() => choose(true, true)} className="lt-btn lt-btn-primary">Accept All</button>
             <button type="button" onClick={() => choose(false, false)} className="lt-btn lt-btn-secondary">Reject Non-Essential</button>
             <button type="button" onClick={manage} className="lt-btn lt-btn-secondary">Manage Preferences</button>
@@ -73,7 +73,7 @@ export default function CookieConsent() {
             <PreferenceRow label="Essential" description="Always Active" checked disabled />
             <PreferenceRow label="Analytics" description="Helps us understand storefront performance." checked={analytics} onChange={setAnalytics} />
             <PreferenceRow label="Marketing" description="No marketing tools are currently configured." checked={marketing} onChange={setMarketing} />
-            <div className="mt-6 flex justify-end">
+            <div className="mt-7 flex justify-end">
               <button type="button" onClick={() => choose(analytics, marketing)} className="lt-btn lt-btn-primary">Save Preferences</button>
             </div>
           </section>

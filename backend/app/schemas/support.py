@@ -22,6 +22,8 @@ class SupportTicketRequest(BaseModel):
     current_website: str | None = Field(default=None, max_length=500)
     timeline: str | None = Field(default=None, max_length=120)
     budget_range: str | None = Field(default=None, max_length=120)
+    website_status: str | None = Field(default=None, max_length=60)
+    business_type: str | None = Field(default=None, max_length=120)
 
 
 class SupportTicketResponse(BaseModel):

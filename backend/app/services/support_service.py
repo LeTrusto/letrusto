@@ -112,6 +112,8 @@ class SupportService:
             raise HTTPException(status_code=422, detail="Choose a valid service before submitting an enquiry.")
         if req.category != "service_enquiry" and req.service_slug is not None:
             raise HTTPException(status_code=422, detail="Service details are only valid for service enquiries.")
+        if req.category != "service_enquiry" and (req.website_status is not None or req.business_type is not None):
+            raise HTTPException(status_code=422, detail="Service details are only valid for service enquiries.")
         try:
             ticket = SupportTicket(
                 user_id=user_id,
@@ -140,7 +142,7 @@ class SupportService:
             return SupportTicketResponse(
                 id=ticket.id,
                 status=ticket.status,
-                message="Your support ticket has been received. We'll get back to you within 24-48 hours.",
+                message="Your service enquiry has been received. We will review the details and follow up using the contact information provided." if req.category == "service_enquiry" else "Your support ticket has been received. We'll get back to you within 24-48 hours.",
             )
         except Exception:
             self.db.rollback()

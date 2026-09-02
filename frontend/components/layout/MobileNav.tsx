@@ -9,7 +9,7 @@ const TABS = [
   { label: "Home", href: "/", icon: Home },
   { label: "Tools", href: "/tools", icon: Wrench },
   { label: "Services", href: "/services", icon: BriefcaseBusiness },
-  { label: "Orders", href: "/dashboard", icon: Package },
+  { label: "Orders", href: "/account/orders", icon: Package },
   { label: "Account", href: "/account", icon: UserCircle },
 ] as const;
 
@@ -18,7 +18,7 @@ export default function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--surface)] safe-area-pb lg:hidden" aria-label="Mobile navigation">
-      <div className="flex items-center justify-around h-16">
+      <div className="flex h-[68px] items-center justify-around px-1">
         {TABS.map((tab) => {
           const isActive = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href.split("?")[0]);
           const Icon = tab.icon;
@@ -27,7 +27,7 @@ export default function MobileNav() {
               key={tab.label}
               href={tab.href}
               className={clsx(
-                "flex flex-col items-center justify-center gap-0.5 w-full h-full text-[10px] font-medium transition-colors",
+                "flex h-full w-full flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors",
                 isActive ? "text-[var(--lt-primary)]" : "text-[var(--text-muted)]"
               )}
             >
