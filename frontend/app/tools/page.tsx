@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 const PLANNED_TOOLS = [
-  "Salary / Hike Calculator",
+  "Cash Flow Planner",
 ];
 
 const BUSINESS_FINANCE_TOOLS = [
@@ -15,6 +15,9 @@ const BUSINESS_FINANCE_TOOLS = [
   { title: "Pricing Calculator", href: "/tools/pricing-calculator", description: "Find a selling price from your cost and desired profit margin." },
   { title: "Break-Even Calculator", href: "/tools/break-even-calculator", description: "Estimate the units and revenue needed to cover your costs." },
   { title: "Expense Calculator", href: "/tools/expense-calculator", description: "Organize business expenses and see totals by category." },
+  { title: "Commission Calculator", href: "/tools/commission-calculator", description: "Calculate commission and net amount from a sale or invoice." },
+  { title: "Discount Calculator", href: "/tools/discount-calculator", description: "Calculate savings and final price from an original price and discount." },
+  { title: "Freelancer Rate Calculator", href: "/tools/freelancer-rate-calculator", description: "Estimate an hourly and daily rate from targets, costs and billable time." },
 ];
 
 export default function ToolsPage() {

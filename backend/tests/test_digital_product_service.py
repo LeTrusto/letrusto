@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -39,6 +40,14 @@ def test_download_requires_an_entitlement():
 
     assert error.value.status_code == 403
     assert "filesystem" not in str(error.value.detail).lower()
+
+
+def test_freelancer_toolkit_is_an_allowlisted_product():
+    product_service = service(ScalarDB(None))
+
+    product = product_service._product("freelancer-rate-project-pricing-toolkit")
+
+    assert product == {"amount": Decimal("399.00"), "currency": "INR", "filename": "freelancer-rate-project-pricing-toolkit.csv"}
 
 
 def test_verified_attempt_rejects_replayed_callback_with_different_payment():

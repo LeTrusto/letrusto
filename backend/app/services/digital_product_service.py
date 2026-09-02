@@ -16,6 +16,7 @@ from app.schemas.digital_products import DigitalPaymentOrderDTO, DigitalPaymentV
 
 PRODUCTS = {
     "small-business-finance-pricing-toolkit": {"amount": Decimal("499.00"), "currency": "INR", "filename": "small-business-finance-pricing-toolkit.csv"},
+    "freelancer-rate-project-pricing-toolkit": {"amount": Decimal("399.00"), "currency": "INR", "filename": "freelancer-rate-project-pricing-toolkit.csv"},
 }
 ASSET_ROOT = Path(__file__).resolve().parents[2] / "content" / "digital-products"
 

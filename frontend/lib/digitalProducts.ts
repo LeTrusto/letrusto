@@ -42,6 +42,29 @@ export const DIGITAL_PRODUCTS: DigitalProduct[] = [
       { question: "What currency does it use?", answer: "The templates are labelled for INR, but the spreadsheet structure can be adapted to another currency." },
     ],
   },
+    {
+      id: "dpt-freelancer-rate-project-pricing-toolkit",
+      name: "Freelancer Rate & Project Pricing Toolkit",
+      slug: "freelancer-rate-project-pricing-toolkit",
+      description: "An editable spreadsheet for turning income goals, operating costs and project hours into clearer freelance rates and quotes.",
+      valueProposition: "Set a sustainable rate, price projects with a buffer and review your freelance pipeline every month.",
+      category: DIGITAL_PRODUCT_CATEGORIES[1],
+      format: "Editable CSV spreadsheet (.csv), compatible with Excel and Google Sheets",
+      price: 399,
+      currency: "INR",
+      previewLabel: "Rate planner preview",
+      included: ["Start-here setup instructions", "Monthly rate planner for income, expenses and billable hours", "Project quote worksheet with revision and admin buffer", "Monthly review section for booked work and rate decisions"],
+      audience: ["Freelancers and consultants", "Small creative or technical agencies", "People moving from hourly work to project pricing"],
+      usage: ["Enter your monthly target, costs and realistic billable hours.", "Use the suggested hourly rate as a floor for new conversations.", "Estimate project quotes with a visible buffer for uncertainty and revisions."],
+      status: "published",
+      delivery: "protected-download",
+      assetVersion: "1.0",
+      faq: [
+        { question: "Can I edit the spreadsheet?", answer: "Yes. It is an editable CSV that you can extend in Excel or Google Sheets." },
+        { question: "Does it set my market rate?", answer: "No. It helps you understand the minimum rate your own targets and working pattern require; market positioning still needs judgment." },
+        { question: "Is this tax or financial advice?", answer: "No. It is a planning worksheet, not tax, accounting or investment advice." },
+      ],
+    },
 ];
 
 export function getPublishedDigitalProducts() {
