@@ -16,7 +16,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const product = getDigitalProductBySlug((await params).slug);
-  return product ? { title: product.name, description: product.description, alternates: { canonical: `/digital-products/${product.slug}` } } : { title: "Digital Product" };
+  return product ? { title: product.name, description: product.description, alternates: { canonical: `/digital-products/${product.slug}` }, openGraph: { title: `${product.name} | LeTrusto`, description: product.description, url: `/digital-products/${product.slug}`, siteName: "LeTrusto", type: "website" } } : { title: "Digital Product" };
 }
 
 export default async function DigitalProductPage({ params }: ProductPageProps) {
@@ -26,6 +26,7 @@ export default async function DigitalProductPage({ params }: ProductPageProps) {
   return (
     <main className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-20">
       <SchemaOrg type="Product" data={{ name: product.name, description: product.description, category: product.category.name, brand: { "@type": "Brand", name: "LeTrusto" }, offers: { "@type": "Offer", price: product.price, priceCurrency: product.currency, availability: "https://schema.org/InStock", url: `/digital-products/${product.slug}` } }} />
+      <SchemaOrg type="FAQPage" data={{ mainEntity: product.faq.map((item) => ({ "@type": "Question", name: item.question, acceptedAnswer: { "@type": "Answer", text: item.answer } })) }} />
       <DigitalProductViewTracker product={product} />
       <Link href="/digital-products" className="text-sm font-semibold text-[var(--lt-primary)]">&larr; Digital Products</Link>
       <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-start">
@@ -42,6 +43,7 @@ export default async function DigitalProductPage({ params }: ProductPageProps) {
         <section><h2 className="lt-heading-2">Who it is for</h2><ul className="mt-5 space-y-3 text-sm leading-6 text-[var(--text-secondary)]">{product.audience.map((item) => <li key={item} className="border-b border-[var(--border)] pb-3">{item}</li>)}</ul><p className="mt-6 text-sm font-semibold text-[var(--text-primary)]">{formatDigitalProductPrice(product)} one-time purchase with protected download.</p></section>
       </div>
       <section className="mt-16 border-t border-[var(--border)] pt-12"><h2 className="lt-heading-2">How it helps</h2><ul className="mt-5 grid gap-3 text-sm leading-6 text-[var(--text-secondary)] md:grid-cols-2">{product.usage.map((item) => <li key={item} className="border-b border-[var(--border)] pb-3">{item}</li>)}</ul></section>
+      <section className="mt-16 border-t border-[var(--border)] pt-12"><h2 className="lt-heading-2">Questions before you buy</h2><div className="mt-5 grid gap-6 md:grid-cols-2">{product.faq.map((item) => <div key={item.question}><h3 className="text-sm font-semibold text-[var(--text-primary)]">{item.question}</h3><p className="lt-body mt-2">{item.answer}</p></div>)}</div></section>
       <section className="mt-16 grid gap-10 border-t border-[var(--border)] pt-12 md:grid-cols-2">
         <div>
           <p className="lt-eyebrow">A simple working loop</p>

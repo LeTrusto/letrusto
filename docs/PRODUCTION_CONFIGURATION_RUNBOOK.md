@@ -57,3 +57,18 @@ For sandbox testing, configure `RAZORPAY_ENV=sandbox`, matching test key ID/secr
 - Confirm `CORS_ORIGINS` contains only intended HTTPS origins.
 - Confirm no paid asset is under `frontend/public/`.
 - Confirm physical Razorpay, cart, order, shipping, inventory, and Printful flows remain separate from digital commerce.
+
+## Final launch checklist
+
+Complete this checklist against the production providers; keep values in provider secret stores and deployment settings only.
+
+- [ ] Railway: set `APP_ENV=production`, the Railway `DATABASE_URL`, a rotated 32+ character `JWT_SECRET_KEY`, `JWT_ALGORITHM=HS256`, exact HTTPS `CORS_ORIGINS`, and `PUBLIC_APP_URL`.
+- [ ] Railway: set `RESEND_API_KEY`, verified-domain `FROM_EMAIL`, and `SUPPORT_EMAIL`; confirm the sender domain and DNS are verified in Resend.
+- [ ] Railway: set matching production Razorpay `RAZORPAY_ENV`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`; keep the secret values server-side.
+- [ ] Vercel: set `NEXT_PUBLIC_API_BASE_URL` to the HTTPS Railway origin and `NEXT_PUBLIC_APP_URL` to the canonical HTTPS site origin; do not add backend secrets.
+- [ ] Database: confirm PostgreSQL connectivity, run `alembic upgrade head`, and verify migration `20260902_39` completes before application traffic is enabled.
+- [ ] URLs and CORS: verify the deployed app calls the deployed API, the API allows only intended HTTPS frontend origins, and no wildcard or localhost origin is present.
+- [ ] GA4: confirm measurement ID configuration, production consent banner behavior, and a consented test event without collecting payment IDs, emails, secrets, or form contents.
+- [ ] Email: test verification, password reset, support, and service enquiry messages using `PUBLIC_APP_URL`; inspect provider logs without exposing tokens or message contents.
+- [ ] Payment: with Razorpay sandbox credentials only, complete one digital-product order and verify order creation, payment verification, entitlement, and authenticated download. With production credentials, perform a small real transaction only through the approved launch process.
+- [ ] Post-deployment: check public tools, both digital products, services, quote form, authentication, legal pages, and Minku & Dinku; then review application/provider errors and rotate any credential that was exposed during development.
