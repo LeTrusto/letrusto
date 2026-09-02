@@ -10,9 +10,11 @@ describe("digital product routes", () => {
   it("keeps the catalog and product page in the digital product domain", () => {
     const catalog = source("./page.tsx");
     const detail = source("./[slug]/page.tsx");
+    const purchase = source("../../components/digital-products/DigitalProductPurchase.tsx");
     expect(catalog).toContain("DigitalProductCard");
     expect(catalog).toContain("getPublishedDigitalProducts");
     expect(detail).toContain("DigitalProductPurchase");
+    expect(purchase).toContain("purchase.status.toLowerCase() === \"verified\"");
     expect(detail).toContain("generateStaticParams");
     expect(detail).not.toContain("createOrder");
     expect(detail).not.toContain("Printful");

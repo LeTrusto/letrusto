@@ -62,6 +62,27 @@ For sandbox testing, configure `RAZORPAY_ENV=sandbox`, matching test key ID/secr
 
 Complete this checklist against the production providers; keep values in provider secret stores and deployment settings only.
 
+### Code verified
+
+- FastAPI startup runs database migrations, catalog initialization, and Uvicorn in that order.
+- Current Alembic head is `20260902_39`; the deployed migration remains additive and must not be rewritten for offline generation.
+- Production validation rejects localhost databases, placeholder JWT secrets, non-HTTPS public URLs, invalid CORS origins, mismatched payment environments, and incomplete configured Razorpay webhook settings.
+- Digital payments verify the allowlisted product, provider order, amount, currency, captured status, signature, user ownership, and replay state before creating an entitlement.
+- Digital downloads require an entitlement, increment download audit fields, and serve files from outside `frontend/public/`.
+- Resend uses `FROM_EMAIL` as sender and `SUPPORT_EMAIL` as reply-to/operational recipient; delivery errors are logged without exposing message contents or credentials.
+- Frontend analytics is production-only, consent-aware, allowlisted, and excludes payment IDs, email addresses, form contents, and secrets.
+- The public funnel has eight tools, three digital products, nine services, canonical metadata, sitemap/robots handling, and preserved physical commerce routes.
+
+### External operation required
+
+- Railway: set and verify production `DATABASE_URL`, `JWT_SECRET_KEY`, `CORS_ORIGINS`, `PUBLIC_APP_URL`, Resend values, and matching Razorpay production values in the provider secret store.
+- Vercel: set `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_APP_URL`; keep backend secrets out of Vercel client-visible configuration.
+- Database: confirm PostgreSQL connectivity and run `alembic upgrade head` online, verifying migration `20260902_39` before traffic is enabled.
+- Razorpay: verify the production account, webhook secret, webhook endpoint, and one approved sandbox transaction before live payments. Do not fabricate payment results.
+- Resend: verify the sender domain/DNS and test verification, password reset, support, and service enquiry delivery without sending unnecessary customer data.
+- GA4: verify the measurement ID, consent banner, and a consented event in the production property.
+- Launch operations: rotate any credential previously exposed during development and review provider/application logs after deployment.
+
 - [ ] Railway: set `APP_ENV=production`, the Railway `DATABASE_URL`, a rotated 32+ character `JWT_SECRET_KEY`, `JWT_ALGORITHM=HS256`, exact HTTPS `CORS_ORIGINS`, and `PUBLIC_APP_URL`.
 - [ ] Railway: set `RESEND_API_KEY`, verified-domain `FROM_EMAIL`, and `SUPPORT_EMAIL`; confirm the sender domain and DNS are verified in Resend.
 - [ ] Railway: set matching production Razorpay `RAZORPAY_ENV`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`; keep the secret values server-side.
@@ -71,4 +92,4 @@ Complete this checklist against the production providers; keep values in provide
 - [ ] GA4: confirm measurement ID configuration, production consent banner behavior, and a consented test event without collecting payment IDs, emails, secrets, or form contents.
 - [ ] Email: test verification, password reset, support, and service enquiry messages using `PUBLIC_APP_URL`; inspect provider logs without exposing tokens or message contents.
 - [ ] Payment: with Razorpay sandbox credentials only, complete one digital-product order and verify order creation, payment verification, entitlement, and authenticated download. With production credentials, perform a small real transaction only through the approved launch process.
-- [ ] Post-deployment: check public tools, both digital products, services, quote form, authentication, legal pages, and Minku & Dinku; then review application/provider errors and rotate any credential that was exposed during development.
+- [ ] Post-deployment: check public tools, all three digital products, services, quote form, authentication, legal pages, and Minku & Dinku; then review application/provider errors and rotate any credential that was exposed during development.
