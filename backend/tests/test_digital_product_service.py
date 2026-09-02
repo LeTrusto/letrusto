@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 from decimal import Decimal
 from uuid import uuid4
+from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
@@ -8,7 +9,7 @@ from fastapi import HTTPException
 from app.core.config import Settings
 from app.models.entities import User
 from app.schemas.digital_products import DigitalPaymentVerification
-from app.services.digital_product_service import DigitalProductService
+from app.services.digital_product_service import ASSET_ROOT, PRODUCTS, DigitalProductService
 
 
 class ScalarDB:
@@ -48,6 +49,15 @@ def test_freelancer_toolkit_is_an_allowlisted_product():
     product = product_service._product("freelancer-rate-project-pricing-toolkit")
 
     assert product == {"amount": Decimal("399.00"), "currency": "INR", "filename": "freelancer-rate-project-pricing-toolkit.csv"}
+
+
+def test_all_allowlisted_assets_exist_outside_public_assets():
+    public_root = Path(__file__).resolve().parents[2] / "frontend" / "public"
+
+    for product in PRODUCTS.values():
+        asset = ASSET_ROOT / str(product["filename"])
+        assert asset.is_file()
+        assert public_root not in asset.parents
 
 
 def test_verified_attempt_rejects_replayed_callback_with_different_payment():

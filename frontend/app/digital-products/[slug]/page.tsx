@@ -25,7 +25,7 @@ export default async function DigitalProductPage({ params }: ProductPageProps) {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-20">
-      <SchemaOrg type="Product" data={{ name: product.name, description: product.description, category: product.category.name, brand: { "@type": "Brand", name: "LeTrusto" } }} />
+      <SchemaOrg type="Product" data={{ name: product.name, description: product.description, category: product.category.name, brand: { "@type": "Brand", name: "LeTrusto" }, offers: { "@type": "Offer", price: product.price, priceCurrency: product.currency, availability: "https://schema.org/InStock", url: `/digital-products/${product.slug}` } }} />
       <DigitalProductViewTracker product={product} />
       <Link href="/digital-products" className="text-sm font-semibold text-[var(--lt-primary)]">&larr; Digital Products</Link>
       <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-start">
@@ -47,12 +47,7 @@ export default async function DigitalProductPage({ params }: ProductPageProps) {
           <p className="lt-eyebrow">A simple working loop</p>
           <h2 className="lt-heading-2 mt-2">Use the tools, then keep the habit</h2>
           <p className="lt-body mt-4">Use the free calculators for a quick decision, then use the toolkit to keep the inputs, scenarios and monthly review together.</p>
-          <div className="mt-6 flex flex-wrap gap-3 text-sm font-semibold">
-            <Link href="/tools/profit-margin-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Profit margin</Link>
-            <Link href="/tools/pricing-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Pricing</Link>
-            <Link href="/tools/break-even-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Break-even</Link>
-            <Link href="/tools/expense-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Expenses</Link>
-          </div>
+          <div className="mt-6 flex flex-wrap gap-3 text-sm font-semibold">{product.slug === "freelancer-rate-project-pricing-toolkit" ? <><Link href="/tools/freelancer-rate-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Freelancer rate</Link><Link href="/tools/invoice-generator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Invoice</Link></> : <><Link href="/tools/profit-margin-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Profit margin</Link><Link href="/tools/pricing-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Pricing</Link><Link href="/tools/break-even-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Break-even</Link><Link href="/tools/expense-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">Expenses</Link></>}</div>
         </div>
         <div className="border border-[var(--border)] bg-[var(--surface-soft)] p-6 md:p-8">
           <h2 className="lt-heading-2">What happens after purchase?</h2>

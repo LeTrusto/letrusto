@@ -3,14 +3,14 @@ Start Here,Setup,Monthly income target,,Enter the monthly take-home target in IN
 Start Here,Setup,Monthly business expenses,,Include recurring tools, software and operating costs.
 Start Here,Setup,Monthly billable hours,,Use realistic client-facing hours, not total working hours.
 Start Here,Setup,Unpaid-time buffer (%),20,Allow for sales, admin, leave and revisions.
-Rate Planner,Rate,Monthly target,,Income target plus business expenses.
-Rate Planner,Rate,Adjusted billable hours,,Billable hours multiplied by (1 - buffer / 100).
-Rate Planner,Rate,Minimum hourly rate,,Monthly target divided by adjusted billable hours.
-Rate Planner,Rate,8-hour day rate,,Hourly rate multiplied by 8.
+Rate Planner,Rate,Monthly target,=D2+D3,Income target plus business expenses.
+Rate Planner,Rate,Adjusted billable hours,=D4*(1-D5/100),Billable hours multiplied by (1 - buffer / 100).
+Rate Planner,Rate,Minimum hourly rate,=D6/D7,Monthly target divided by adjusted billable hours.
+Rate Planner,Rate,8-hour day rate,=D8*8,Hourly rate multiplied by 8.
 Project Quote,Project,Estimated project hours,,Enter the expected delivery hours.
-Project Quote,Project,Hourly rate,,Link or copy the selected hourly rate.
+Project Quote,Project,Hourly rate,=D8,Link or copy the selected hourly rate.
 Project Quote,Project,Revision and admin buffer (%),15,Add a project-specific buffer when scope is uncertain.
-Project Quote,Project,Recommended quote,,Project hours multiplied by hourly rate multiplied by (1 + buffer / 100).
+Project Quote,Project,Recommended quote,=D10*D11*(1+D12/100),Project hours multiplied by hourly rate multiplied by (1 + buffer / 100).
 Review,Monthly check,Booked billable hours,,Review against the monthly target.
 Review,Monthly check,Quotes sent,,Track pipeline activity separately from paid work.
 Review,Monthly check,Rate change decision,,Record what changed and why.

@@ -37,7 +37,7 @@ Railway startup runs `alembic upgrade head`, initializes the production catalog,
 
 ## Payment verification
 
-The digital product flow creates a server-side Razorpay order, checks the order amount/currency and payment relationship, verifies the signature and captured status, then creates the entitlement. The frontend must show success and enable download only after the verification response. The paid CSV stays outside `frontend/public/` and is served through an authenticated entitlement check.
+The digital product flow creates a server-side Razorpay order, checks the selected product's allowlisted amount/currency and payment relationship, verifies the signature and captured status, then creates the entitlement. The frontend must show success and enable download only after the verification response. Both paid CSV workbooks stay outside `frontend/public/` and are served through an authenticated entitlement check.
 
 For sandbox testing, configure `RAZORPAY_ENV=sandbox`, matching test key ID/secret, and webhook secret in Railway or a local ignored `.env`. Perform one controlled purchase and confirm verification, entitlement, protected download, and download audit fields. Never use fabricated payment IDs or signatures.
 

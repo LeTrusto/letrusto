@@ -2,7 +2,7 @@
 
 ## Current state
 
-The Small Business Finance & Pricing Toolkit is a published page with a workbook asset stored outside `frontend/public/`. Authenticated customers can pay INR 499 through the dedicated Razorpay digital flow and download the asset after server verification.
+The published catalog currently contains two products with workbook assets stored outside `frontend/public/`: Small Business Finance & Pricing Toolkit (INR 499) and Freelancer Rate & Project Pricing Toolkit (INR 399). Authenticated customers pay through the dedicated Razorpay digital flow and download the selected asset after server verification.
 
 Digital products do not use the physical cart, `Order`, shipping address, inventory reservation, Printful fulfillment, or physical checkout flow.
 
@@ -20,6 +20,7 @@ The implementation uses additive `digital_payment_attempts` and `digital_entitle
 - Avoid shipping addresses, physical inventory, and Printful calls.
 - Make repeated verification and download requests idempotent and auditable.
 - Preserve the existing physical Razorpay and Printful order behavior.
+- Add future products by defining one stable slug, price, and filename in both the frontend catalog and the backend `PRODUCTS` allowlist; never derive asset paths from request input.
 
 ## Conversion measurement
 

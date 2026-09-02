@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
+import { trackSafeEvent } from "@/lib/analytics";
 import { calculateFreelancerRate, validateFreelancerRateInputs } from "@/lib/freelancerRateCalculator";
 
 const format = (value: number) => `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(value)}`;
@@ -11,6 +12,8 @@ export default function FreelancerRateCalculator() {
   const parsedIncome = Number(income); const parsedExpenses = Number(expenses); const parsedHours = Number(hours); const parsedBuffer = Number(buffer);
   const error = income.trim() === "" ? "Monthly income target is required." : expenses.trim() === "" ? "Monthly expenses are required." : hours.trim() === "" ? "Monthly billable hours are required." : buffer.trim() === "" ? "Unpaid-time buffer is required." : validateFreelancerRateInputs(parsedIncome, parsedExpenses, parsedHours, parsedBuffer);
   const result = error ? null : calculateFreelancerRate(parsedIncome, parsedExpenses, parsedHours, parsedBuffer);
+  const completionTracked = useRef(false);
+  useEffect(() => { if (result && !completionTracked.current) { trackSafeEvent("tool_complete", { tool_name: "freelancer-rate-calculator" }); completionTracked.current = true; } }, [result]);
   function reset() { setIncome(""); setExpenses(""); setHours(""); setBuffer(""); }
   return <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.85fr)]"><form className="lt-card" onSubmit={(event) => event.preventDefault()} noValidate><div className="flex items-start justify-between gap-4"><div><p className="lt-eyebrow">Inputs</p><h2 className="lt-heading-2 mt-2">Set your target</h2></div><button type="button" onClick={reset} className="lt-btn lt-btn-sm lt-btn-ghost shrink-0" aria-label="Reset freelancer rate calculator"><RotateCcw size={15} /> Reset</button></div><div className="mt-8 space-y-6"><Field id="rate-income" label="Monthly income target" value={income} onChange={setIncome} placeholder="60000" help="The monthly amount you want to take home, in INR." /><Field id="rate-expenses" label="Monthly business expenses" value={expenses} onChange={setExpenses} placeholder="10000" help="Recurring business costs in INR." /><Field id="rate-hours" label="Monthly billable hours" value={hours} onChange={setHours} placeholder="80" help="Hours available for paid client work." /><Field id="rate-buffer" label="Unpaid-time buffer" value={buffer} onChange={setBuffer} placeholder="20" suffix="%" help="Time for sales, admin, leave and revisions." /></div>{error && <p className="mt-5 text-xs font-semibold text-[var(--lt-accent-dark)]" role="alert">{error}</p>}</form><section className="lt-card" aria-live="polite" aria-label="Freelancer rate calculator results"><p className="lt-eyebrow">Your result</p>{result ? <div className="mt-6 grid gap-3"><Result label="Suggested hourly rate" value={format(result.hourlyRate)} /><div className="grid gap-3 sm:grid-cols-2"><Result label="Suggested 8-hour day" value={format(result.dailyRate)} /><Result label="Monthly target" value={format(result.monthlyTarget)} /></div></div> : <div className="flex min-h-64 items-center justify-center py-10 text-center"><p className="max-w-xs text-sm leading-relaxed text-[var(--text-secondary)]">Add your target, costs, hours and unpaid-time buffer to estimate a rate.</p></div>}</section></div>;
 }
