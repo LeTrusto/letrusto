@@ -98,7 +98,11 @@ export default function DigitalOverview() {
             <Link href="/tools" className="lt-btn lt-btn-md lt-btn-primary mt-7 inline-flex">Explore tools <ArrowRight size={16} /></Link>
           </div>
           <ul className="grid content-start gap-3 sm:grid-cols-2">
-            {UPCOMING_TOOLS.map((tool) => <li key={tool} className="border-l-2 border-[var(--lt-accent)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">{tool}</li>)}
+            {UPCOMING_TOOLS.map((tool) => (
+              <li key={tool} className="border-l-2 border-[var(--lt-accent)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">
+                {tool === "Profit Margin Calculator" ? <Link href="/tools/profit-margin-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">{tool}</Link> : tool}
+              </li>
+            ))}
           </ul>
         </div>
       </section>

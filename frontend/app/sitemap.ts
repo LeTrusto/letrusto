@@ -7,6 +7,7 @@ const BASE_URL = SITE_URL;
 const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/`, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
   { url: `${BASE_URL}/tools`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+  { url: `${BASE_URL}/tools/profit-margin-calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
   { url: `${BASE_URL}/digital-products`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
   { url: `${BASE_URL}/services`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
   { url: `${BASE_URL}/minku-dinku`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
