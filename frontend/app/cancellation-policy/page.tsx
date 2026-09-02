@@ -43,6 +43,10 @@ export default function CancellationPolicyPage() {
             A cancellation request does not guarantee cancellation. If production or fulfillment has already progressed, the order may continue and any issue after delivery will be reviewed under the <Link className="underline" href="/returns-policy">Returns &amp; Refunds Policy</Link>.
           </p>
         </section>
+        <section>
+          <h2 className="lt-heading-3 mt-6">Digital products and services</h2>
+          <p>Digital products are currently preview-only and cannot be purchased or downloaded. A service enquiry is not an order, so there is no service booking or payment to cancel when an enquiry is submitted. Any future digital purchase or separately agreed service terms will be shown before payment or work begins.</p>
+        </section>
       </div>
     </main>
   );

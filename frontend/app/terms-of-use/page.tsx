@@ -18,11 +18,11 @@ export default function TermsOfUsePage() {
       <div className="mt-8 space-y-6 text-sm leading-7 text-gray-700">
         <section>
           <h2 className="text-lg font-bold text-gray-900">1. Platform Scope</h2>
-          <p>LeTrusto operates an ecommerce storefront for made-to-order printed products. Products are produced after purchase through print-on-demand fulfillment. Product images, mockups, colors, placement, and measurements may vary slightly between screens, materials, and production batches.</p>
+          <p>LeTrusto provides free business tools, digital product previews, productized services, and a separate storefront for made-to-order printed products. Free tools are informational utilities. A service enquiry is a request for discussion and a quote, not an order or completed purchase. Digital products are currently preview-only and cannot be purchased or downloaded through the site.</p>
         </section>
         <section>
           <h2 className="text-lg font-bold text-gray-900">2. Content and Availability</h2>
-          <p>Prices, product availability, product options, production times, and shipping estimates may change. The details shown at checkout apply to your order. We may reject, cancel, or refund an order if a product, price, shipping rate, or checkout detail is unavailable or affected by an obvious error.</p>
+          <p>Prices, product availability, product options, production times, and shipping estimates for physical products may change. The details shown at checkout apply to your order. We may reject, cancel, or refund an order if a product, price, shipping rate, or checkout detail is unavailable or affected by an obvious error. Digital product pricing shown on preview pages is not an active offer until secure digital checkout is enabled.</p>
         </section>
         <section>
           <h2 className="text-lg font-bold text-gray-900">3. Accounts</h2>
@@ -34,7 +34,7 @@ export default function TermsOfUsePage() {
         </section>
         <section>
           <h2 className="text-lg font-bold text-gray-900">5. Orders and Payment</h2>
-          <p>India is the active purchasing destination at this stage. International visitors may browse the storefront, but international checkout is currently unavailable. Active checkout payment is through Razorpay in INR.</p>
+          <p>India is the active purchasing destination for the physical storefront at this stage. International visitors may browse the storefront, but international checkout is currently unavailable. Active physical checkout payment is through Razorpay in INR. Service enquiries do not use physical checkout or create an order.</p>
         </section>
         <section>
           <h2 className="text-lg font-bold text-gray-900">6. Shipping, Cancellations, Returns, and Refunds</h2>

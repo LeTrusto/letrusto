@@ -19,6 +19,10 @@ export default function ReturnsPolicyPage() {
         <p>LeTrusto will review the claim. Depending on the outcome, LeTrusto may provide a replacement or a refund. If a replacement is unavailable, a refund may be provided.</p>
         <h2 className="lt-heading-3 mt-6">Non-Returnable Items</h2>
         <p>Personalized, printed, and made-to-order items are not returnable unless they arrive damaged, defective, or incorrectly fulfilled.</p>
+        <h2 className="lt-heading-3 mt-6">Digital products</h2>
+        <p>Digital products are currently preview-only. Checkout, payment, entitlement creation, and download access are not available, so there is no digital purchase or download to refund at this time. When digital sales are enabled, the applicable access and refund terms will be shown before payment.</p>
+        <h2 className="lt-heading-3 mt-6">Services</h2>
+        <p>Submitting a service enquiry does not create an order or payment obligation. Any separately agreed service scope, price, payment terms, and cancellation terms will be discussed before work begins.</p>
         <h2 className="lt-heading-3 mt-6">Refund Timing</h2>
         <p>After an approved refund or cancellation, LeTrusto generally initiates the applicable refund within approximately 5-7 business days where applicable. Your bank or payment provider may take additional time to process and credit the amount. Refunds are not instant and bank-credit timing cannot be guaranteed by LeTrusto.</p>
         <h2 className="lt-heading-3 mt-6">Contact</h2>

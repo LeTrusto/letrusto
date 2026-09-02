@@ -18,16 +18,16 @@ export default function PrivacyPolicyPage() {
       <div className="mt-8 space-y-6 text-sm leading-7 text-gray-700">
         <section>
           <h2 className="text-lg font-bold text-gray-900">1. Information We Collect</h2>
-          <p>We collect information you provide when creating an account, placing an order, using checkout, contacting support, or requesting updates. This may include your name, email address, phone number, delivery address, order information, selected products and variants, payment status, provider order identifiers, support messages, and cookie-consent preferences.</p>
+          <p>We collect information you provide when creating an account, placing an order, using checkout, contacting support, requesting a service quote, or requesting updates. This may include your name, email address, phone number, delivery address for physical orders, order information, selected products and variants, payment status, provider order identifiers, service enquiry details, support messages, and cookie-consent preferences.</p>
           <p className="mt-3">LeTrusto uses email and password authentication. Passwords are handled through the authentication system and are not displayed to LeTrusto staff in plain text.</p>
         </section>
         <section>
           <h2 className="text-lg font-bold text-gray-900">2. How We Use Data</h2>
-          <p>We use customer data to create and manage accounts, calculate checkout totals, process orders, arrange fulfillment and delivery, provide customer support, send transactional updates, maintain account security, prevent misuse, improve the storefront, and keep records needed to operate the business.</p>
+          <p>We use customer data to create and manage accounts, calculate physical checkout totals, process physical orders, arrange fulfillment and delivery, review service enquiries, provide customer support, send transactional updates, maintain account security, prevent misuse, improve the storefront, and keep records needed to operate the business. Free tools can be used without an account unless a feature says otherwise.</p>
         </section>
         <section>
           <h2 className="text-lg font-bold text-gray-900">3. Third-Party Services</h2>
-          <p>We share information with service providers only where needed for the service they provide. Razorpay processes active checkout payments. Printful receives the order and delivery details needed to produce and ship made-to-order products. Resend may be used for transactional email delivery. LeTrusto is hosted using application infrastructure providers used by the frontend and backend deployments.</p>
+          <p>We share information with service providers only where needed for the service they provide. Razorpay processes active physical checkout payments. Printful receives the order and delivery details needed to produce and ship made-to-order products. Resend may be used for transactional email delivery. LeTrusto is hosted using application infrastructure providers used by the frontend and backend deployments. Service enquiries are reviewed through LeTrusto&apos;s support workflow.</p>
           <p className="mt-3">Payment credentials such as full card details are handled by Razorpay. LeTrusto stores order, payment status, and provider identifiers needed to verify and support orders, but does not store full card credentials.</p>
           <p className="mt-3">We do not sell personal information.</p>
         </section>
