@@ -831,6 +831,46 @@ class PaymentAttempt(Base):
     order: Mapped[Order] = relationship(back_populates="payment_attempts")
 
 
+class DigitalPaymentAttempt(Base):
+    __tablename__ = "digital_payment_attempts"
+    __table_args__ = (
+        UniqueConstraint("provider_order_id", name="uq_digital_payment_attempt_provider_order"),
+        UniqueConstraint("provider", "provider_payment_id", name="uq_digital_payment_attempt_provider_payment"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    product_slug: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(30), nullable=False, default="RAZORPAY")
+    provider_order_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    provider_payment_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="INR")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING", index=True)
+    failure_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    user: Mapped[User] = relationship()
+    entitlement: Mapped["DigitalEntitlement | None"] = relationship(back_populates="payment_attempt", uselist=False)
+
+
+class DigitalEntitlement(Base):
+    __tablename__ = "digital_entitlements"
+    __table_args__ = (UniqueConstraint("user_id", "product_slug", name="uq_digital_entitlement_user_product"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    payment_attempt_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("digital_payment_attempts.id", ondelete="RESTRICT"), unique=True)
+    product_slug: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
+    download_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user: Mapped[User] = relationship()
+    payment_attempt: Mapped[DigitalPaymentAttempt] = relationship(back_populates="entitlement")
+
+
 class RefundRequest(Base):
     __tablename__ = "refund_requests"
     __table_args__ = (UniqueConstraint("idempotency_key", name="uq_refund_requests_idempotency_key"),)

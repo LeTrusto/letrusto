@@ -36,7 +36,7 @@ def _build_cors_origins(raw_origins: str, app_env: str) -> list[str]:
     if app_env == "production":
         origins = [
             origin for origin in origins
-            if origin != "*" and not origin.lower().startswith(("http://localhost", "http://127.0.0.1"))
+            if origin != "*" and origin.lower().startswith("https://")
         ]
 
     # Keep order stable while removing duplicates.

@@ -1,0 +1,59 @@
+from types import SimpleNamespace
+from uuid import uuid4
+
+import pytest
+from fastapi import HTTPException
+
+from app.core.config import Settings
+from app.models.entities import User
+from app.schemas.digital_products import DigitalPaymentVerification
+from app.services.digital_product_service import DigitalProductService
+
+
+class ScalarDB:
+    def __init__(self, value):
+        self.value = value
+
+    def scalar(self, _statement):
+        return self.value
+
+
+def service(db) -> DigitalProductService:
+    return DigitalProductService(db, Settings(RAZORPAY_KEY_ID="key", RAZORPAY_KEY_SECRET="secret"))
+
+
+def test_product_catalog_rejects_unknown_and_traversal_slugs():
+    product_service = service(ScalarDB(None))
+
+    for slug in ("missing", "../small-business-finance-pricing-toolkit", "small-business-finance-pricing-toolkit/../../secret"):
+        with pytest.raises(HTTPException) as error:
+            product_service._product(slug)
+        assert error.value.status_code == 404
+
+
+def test_download_requires_an_entitlement():
+    product_service = service(ScalarDB(None))
+
+    with pytest.raises(HTTPException) as error:
+        product_service.download_path(User(id=uuid4()), "small-business-finance-pricing-toolkit")
+
+    assert error.value.status_code == 403
+    assert "filesystem" not in str(error.value.detail).lower()
+
+
+def test_verified_attempt_rejects_replayed_callback_with_different_payment():
+    attempt = SimpleNamespace(status="VERIFIED", provider_payment_id="pay_original")
+    product_service = service(ScalarDB(attempt))
+
+    with pytest.raises(HTTPException) as error:
+        product_service.verify_payment(
+            User(id=uuid4()),
+            "small-business-finance-pricing-toolkit",
+            DigitalPaymentVerification(
+                razorpay_order_id="order_original",
+                razorpay_payment_id="pay_replayed",
+                razorpay_signature="signature",
+            ),
+        )
+
+    assert error.value.status_code == 409

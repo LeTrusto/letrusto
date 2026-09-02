@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     categories,
     compare,
     deals,
+    digital_products,
     favorites,
     health,
     notifications,
@@ -42,6 +43,7 @@ api_router.include_router(users.router)
 api_router.include_router(notifications.router)
 api_router.include_router(orders.router)
 api_router.include_router(deals.router)
+api_router.include_router(digital_products.router)
 api_router.include_router(support.router)
 api_router.include_router(analytics.router)
 api_router.include_router(admin.router)

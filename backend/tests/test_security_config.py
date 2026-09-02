@@ -73,6 +73,12 @@ def test_production_cors_filters_localhost_and_wildcard():
     assert "https://shop.example.com" in origins
 
 
+def test_production_cors_rejects_non_https_origins():
+    origins = _build_cors_origins("http://shop.example.com, https://shop.example.com", "production")
+    assert "http://shop.example.com" not in origins
+    assert "https://shop.example.com" in origins
+
+
 def test_production_requires_razorpay_webhook_secret_when_credentials_are_configured(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")

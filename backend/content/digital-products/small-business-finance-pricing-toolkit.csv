@@ -1,0 +1,13 @@
+Small Business Finance & Pricing Toolkit - editable workbook source
+Instructions,Enter your own figures in the input columns. Duplicate this file for each month.
+
+Pricing decision worksheet
+Offer,Unit cost (INR),Target margin (%),Suggested price (INR),Notes
+Example service,100,40,=B5/(1-C5/100),Replace this example with your offer
+
+Monthly summary
+Metric,Value (INR),Notes
+Revenue,,Enter monthly revenue
+Variable costs,,Enter monthly variable costs
+Fixed costs,,Enter monthly fixed costs
+Operating profit,=B10-B11-B12,Revenue minus variable and fixed costs
