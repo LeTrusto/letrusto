@@ -7,10 +7,14 @@ export const metadata: Metadata = {
 };
 
 const PLANNED_TOOLS = [
-  "Pricing Calculator",
-  "Break-Even Calculator",
-  "Expense Calculator",
   "Salary / Hike Calculator",
+];
+
+const BUSINESS_FINANCE_TOOLS = [
+  { title: "Profit Margin Calculator", href: "/tools/profit-margin-calculator", description: "Calculate profit, profit margin and markup from cost and selling price." },
+  { title: "Pricing Calculator", href: "/tools/pricing-calculator", description: "Find a selling price from your cost and desired profit margin." },
+  { title: "Break-Even Calculator", href: "/tools/break-even-calculator", description: "Estimate the units and revenue needed to cover your costs." },
+  { title: "Expense Calculator", href: "/tools/expense-calculator", description: "Organize business expenses and see totals by category." },
 ];
 
 export default function ToolsPage() {
@@ -23,17 +27,13 @@ export default function ToolsPage() {
       </div>
       <section className="mt-14 border-t border-[var(--border)] pt-8">
         <p className="lt-eyebrow">Available now</p>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Link href="/tools/profit-margin-calculator" className="block border border-[var(--border)] bg-[var(--surface-soft)] p-6 transition-colors hover:border-[var(--lt-accent)]">
-            <h2 className="lt-heading-2">Profit Margin Calculator</h2>
-            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">Calculate profit, profit margin and markup from your cost price and selling price.</p>
-            <span className="mt-5 inline-block text-sm font-bold text-[var(--lt-primary)]">Open calculator &rarr;</span>
-          </Link>
-          <Link href="/tools/invoice-generator" className="block border border-[var(--lt-primary)] bg-[var(--surface-soft)] p-6 transition-colors hover:border-[var(--lt-accent)]">
-            <h2 className="lt-heading-2">Invoice Generator</h2>
-            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">Create, review and print a professional invoice in INR.</p>
-            <span className="mt-5 inline-block text-sm font-bold text-[var(--lt-primary)]">Open generator &rarr;</span>
-          </Link>
+        <h2 className="lt-heading-2 mt-8">Business &amp; finance</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {BUSINESS_FINANCE_TOOLS.map((tool) => <Link key={tool.href} href={tool.href} className="block border border-[var(--border)] bg-[var(--surface-soft)] p-6 transition-colors hover:border-[var(--lt-accent)]"><h3 className="text-lg font-bold text-[var(--text-primary)]">{tool.title}</h3><p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{tool.description}</p><span className="mt-5 inline-block text-sm font-bold text-[var(--lt-primary)]">Open tool &rarr;</span></Link>)}
+        </div>
+        <h2 className="lt-heading-2 mt-10">Business documents</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Link href="/tools/invoice-generator" className="block border border-[var(--lt-primary)] bg-[var(--surface-soft)] p-6 transition-colors hover:border-[var(--lt-accent)]"><h3 className="text-lg font-bold text-[var(--text-primary)]">Invoice Generator</h3><p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">Create, review and print a professional invoice in INR.</p><span className="mt-5 inline-block text-sm font-bold text-[var(--lt-primary)]">Open generator &rarr;</span></Link>
         </div>
       </section>
       <section className="mt-14 border-t border-[var(--border)] pt-8">

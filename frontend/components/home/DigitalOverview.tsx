@@ -100,7 +100,7 @@ export default function DigitalOverview() {
           <ul className="grid content-start gap-3 sm:grid-cols-2">
             {UPCOMING_TOOLS.map((tool) => (
               <li key={tool} className="border-l-2 border-[var(--lt-accent)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">
-                {tool === "Profit Margin Calculator" ? <Link href="/tools/profit-margin-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">{tool}</Link> : tool === "Invoice Generator" ? <Link href="/tools/invoice-generator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">{tool}</Link> : tool}
+                {tool === "Profit Margin Calculator" ? <Link href="/tools/profit-margin-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">{tool}</Link> : tool === "Invoice Generator" ? <Link href="/tools/invoice-generator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">{tool}</Link> : tool === "Pricing Calculator" ? <Link href="/tools/pricing-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">{tool}</Link> : tool === "Break-Even Calculator" ? <Link href="/tools/break-even-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">{tool}</Link> : tool === "Expense Calculator" ? <Link href="/tools/expense-calculator" className="text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">{tool}</Link> : tool}
               </li>
             ))}
           </ul>
