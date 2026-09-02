@@ -11,10 +11,13 @@ describe("digital product routes", () => {
     const catalog = source("./page.tsx");
     const detail = source("./[slug]/page.tsx");
     const purchase = source("../../components/digital-products/DigitalProductPurchase.tsx");
+    const callout = source("../../components/digital-products/DigitalProductCallout.tsx");
     expect(catalog).toContain("DigitalProductCard");
     expect(catalog).toContain("getPublishedDigitalProducts");
     expect(detail).toContain("DigitalProductPurchase");
     expect(purchase).toContain("purchase.status.toLowerCase() === \"verified\"");
+    expect(callout).toContain('interaction: "view_product"');
+    expect(callout).toContain("source_tool");
     expect(detail).toContain("generateStaticParams");
     expect(detail).not.toContain("createOrder");
     expect(detail).not.toContain("Printful");

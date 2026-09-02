@@ -29,7 +29,7 @@ const SAFE_PARAMETER_KEYS: Record<SafeAnalyticsEvent, readonly string[]> = {
 	tool_complete: ["tool_name"],
 	digital_products_view: ["page"],
 	digital_product_view: ["product_name", "product_slug"],
-	digital_product_cta_clicked: ["product_name", "product_slug", "interaction"],
+	digital_product_cta_clicked: ["product_name", "product_slug", "interaction", "source_tool"],
 	digital_product_checkout_started: ["product_name", "product_slug"],
 	digital_product_auth_required: ["product_name", "product_slug"],
 	digital_product_payment_initiated: ["product_name", "product_slug"],

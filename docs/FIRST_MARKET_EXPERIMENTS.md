@@ -8,7 +8,7 @@ Use the existing tools, digital products, and services to learn which audience a
 
 - Measure consented events only; analytics must remain optional and privacy-safe.
 - Compare experiments by the same time window, traffic source where available, tool views, tool completions, product clicks, product views, authentication starts, checkout starts, verified purchases, downloads, and service enquiries.
-- Use product slugs and tool names as identifiers. Do not collect email addresses, payment IDs, form contents, or secrets in analytics.
+- Use product slugs and tool names as identifiers; tool-result product CTAs record the originating tool as `source_tool`. Do not collect email addresses, payment IDs, form contents, or secrets in analytics.
 - A purchase counts only after backend payment verification and entitlement creation. A service enquiry is a lead, not a purchase.
 - Record the observation period, traffic source, event counts, and notable qualitative feedback before making a decision.
 
