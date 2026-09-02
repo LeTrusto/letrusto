@@ -17,6 +17,9 @@ export default function robots(): MetadataRoute.Robots {
           "/cancellation-policy",
           "/privacy-policy",
           "/terms-of-use",
+          "/tools",
+          "/digital-products",
+          "/services",
         ],
         disallow: [
           "/dashboard",

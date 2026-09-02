@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
+import { trackSafeEvent } from "@/lib/analytics";
 import { calculateBreakEven, validateBreakEvenInputs, type BreakEvenCalculation } from "@/lib/breakEvenCalculator";
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
@@ -18,6 +19,13 @@ export default function BreakEvenCalculator() {
   const sellingPrice = Number(sellingInput);
   const error = fixedInput.trim() === "" ? "Fixed costs are required." : variableInput.trim() === "" ? "Variable cost is required." : sellingInput.trim() === "" ? "Selling price is required." : validateBreakEvenInputs(fixedCosts, variableCost, sellingPrice);
   const calculation = useMemo<BreakEvenCalculation | null>(() => { if (error) return null; try { return calculateBreakEven(fixedCosts, variableCost, sellingPrice); } catch { return null; } }, [error, fixedCosts, sellingPrice, variableCost]);
+  const completionTracked = useRef(false);
+  useEffect(() => {
+    if (calculation && !completionTracked.current) {
+      trackSafeEvent("tool_complete", { tool_name: "break-even-calculator" });
+      completionTracked.current = true;
+    }
+  }, [calculation]);
   function reset() { setFixedInput(""); setVariableInput(""); setSellingInput(""); }
 
   return <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.85fr)]"><form className="lt-card" onSubmit={(event) => event.preventDefault()} noValidate><div className="flex items-start justify-between gap-4"><div><p className="lt-eyebrow">Inputs</p><h2 className="lt-heading-2 mt-2">Enter your costs</h2></div><button type="button" onClick={reset} className="lt-btn lt-btn-sm lt-btn-ghost shrink-0" aria-label="Reset break-even calculator"><RotateCcw size={15} /> Reset</button></div><div className="mt-8 space-y-6"><MoneyField label="Fixed costs" id="fixed-costs" value={fixedInput} onChange={setFixedInput} help="Costs that do not change with each unit sold." /><MoneyField label="Variable cost per unit" id="variable-cost" value={variableInput} onChange={setVariableInput} help="The cost to produce or deliver one unit." /><MoneyField label="Selling price per unit" id="break-even-selling-price" value={sellingInput} onChange={setSellingInput} help="The price your customer pays for one unit." /></div>{error && <p className="mt-5 text-xs font-semibold text-[var(--lt-accent-dark)]" role="alert">{error}</p>}</form><section className="lt-card" aria-live="polite" aria-label="Break-even calculator results"><p className="lt-eyebrow">Your result</p>{calculation ? <Results calculation={calculation} /> : <div className="flex min-h-64 items-center justify-center py-10 text-center"><p className="max-w-xs text-sm leading-relaxed text-[var(--text-secondary)]">Enter fixed costs, variable cost, and selling price to find your break-even point.</p></div>}</section></div>;

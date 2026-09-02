@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
+import { trackSafeEvent } from "@/lib/analytics";
 import { calculateProfitMargin, validateAmount, type ProfitMarginCalculation } from "@/lib/profitMarginCalculator";
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
@@ -25,6 +26,13 @@ export default function ProfitMarginCalculator() {
     if (costError || sellingPriceError || costInput.trim() === "" || sellingPriceInput.trim() === "") return null;
     return calculateProfitMargin(Number(costInput), Number(sellingPriceInput));
   }, [costError, sellingPriceError, costInput, sellingPriceInput]);
+  const completionTracked = useRef(false);
+  useEffect(() => {
+    if (calculation && !completionTracked.current) {
+      trackSafeEvent("tool_complete", { tool_name: "profit-margin-calculator" });
+      completionTracked.current = true;
+    }
+  }, [calculation]);
 
   function reset() {
     setCostInput("");

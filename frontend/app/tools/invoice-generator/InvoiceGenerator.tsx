@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Plus, Printer, RotateCcw, Trash2 } from "lucide-react";
+import { trackSafeEvent } from "@/lib/analytics";
 import { calculateInvoice, validateInvoiceItem, validateInvoiceItems, type DiscountType, type InvoiceCalculation, type InvoiceItem } from "@/lib/invoiceCalculator";
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
@@ -37,6 +38,7 @@ type PartyDetails = {
 const emptyParty: PartyDetails = { name: "", address: "", phone: "", email: "", gstin: "" };
 
 export default function InvoiceGenerator() {
+  const completionTracked = useRef(false);
   const [seller, setSeller] = useState<PartyDetails>({ ...emptyParty });
   const [customer, setCustomer] = useState<PartyDetails>({ ...emptyParty });
   const [invoiceNumber, setInvoiceNumber] = useState(defaultInvoiceNumber);
@@ -90,7 +92,13 @@ export default function InvoiceGenerator() {
   }
 
   function printInvoice() {
-    if (calculation) window.print();
+    if (calculation) {
+      if (!completionTracked.current) {
+        trackSafeEvent("tool_complete", { tool_name: "invoice-generator" });
+        completionTracked.current = true;
+      }
+      window.print();
+    }
   }
 
   return (

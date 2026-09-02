@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
+import { trackSafeEvent } from "@/lib/analytics";
 import { calculateExpenses, validateExpense, type ExpenseCalculation, type ExpenseEntry } from "@/lib/expenseCalculator";
 
 const CATEGORIES = ["Rent", "Salaries", "Marketing", "Software", "Utilities", "Travel", "Shipping", "Office", "Other"];
@@ -13,6 +14,13 @@ export default function ExpenseCalculator() {
   const [entries, setEntries] = useState<ExpenseEntry[]>([newExpense()]);
   const errors = entries.map(validateExpense).filter(Boolean) as string[];
   const calculation = useMemo<ExpenseCalculation | null>(() => { if (errors.length > 0) return null; try { return calculateExpenses(entries); } catch { return null; } }, [entries, errors.length]);
+  const completionTracked = useRef(false);
+  useEffect(() => {
+    if (calculation && !completionTracked.current) {
+      trackSafeEvent("tool_complete", { tool_name: "expense-calculator" });
+      completionTracked.current = true;
+    }
+  }, [calculation]);
   function updateEntry(id: string, field: keyof ExpenseEntry, value: string) { setEntries((current) => current.map((entry) => entry.id === id ? { ...entry, [field]: field === "amount" ? Number(value) : value } : entry)); }
   function reset() { setEntries([newExpense()]); }
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
+import { trackSafeEvent } from "@/lib/analytics";
 import { calculatePricing, validatePricingInputs, type PricingCalculation } from "@/lib/pricingCalculator";
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
@@ -20,6 +21,13 @@ export default function PricingCalculator() {
     if (error) return null;
     try { return calculatePricing(cost, margin); } catch { return null; }
   }, [cost, error, margin]);
+  const completionTracked = useRef(false);
+  useEffect(() => {
+    if (calculation && !completionTracked.current) {
+      trackSafeEvent("tool_complete", { tool_name: "pricing-calculator" });
+      completionTracked.current = true;
+    }
+  }, [calculation]);
 
   function reset() { setCostInput(""); setMarginInput(""); }
 

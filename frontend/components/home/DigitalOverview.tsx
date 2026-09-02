@@ -112,7 +112,7 @@ export default function DigitalOverview() {
           <div>
             <p className="lt-eyebrow">Digital products</p>
             <h2 className="lt-heading-2 mt-3">Resources that help you move faster</h2>
-            <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">A future library of practical downloads is being shaped around these categories. No products or prices are being presented until they are ready.</p>
+            <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">Browse practical downloads for clearer pricing, finance and business planning. The library will grow as more resources are ready to publish.</p>
             <Link href="/digital-products" className="lt-btn lt-btn-md lt-btn-secondary mt-7 inline-flex">Browse digital products <ArrowRight size={16} /></Link>
           </div>
           <ul className="grid content-start gap-3 sm:grid-cols-2">

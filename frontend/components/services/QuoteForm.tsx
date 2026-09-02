@@ -3,6 +3,7 @@
 import { Loader2, Send } from "lucide-react";
 import { useState } from "react";
 import { buildApiUrl, IS_API_CONFIGURED } from "@/services/api";
+import { trackSafeEvent } from "@/lib/analytics";
 import type { Service } from "@/types/services";
 
 type QuoteFormProps = { services: Service[]; initialServiceSlug?: string };
@@ -16,6 +17,11 @@ export default function QuoteForm({ services, initialServiceSlug }: QuoteFormPro
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
+  function trackFormStart() {
+    const service = services.find((item) => item.slug === form.serviceSlug);
+    trackSafeEvent("quote_form_started", { service_name: service?.name ?? form.serviceSlug, service_slug: form.serviceSlug });
+  }
+
   function update(field: keyof FormState, value: string) { setForm((current) => ({ ...current, [field]: value })); }
   function validate() {
     if (!form.name.trim() || form.name.trim().length < 2) return "Enter your name.";
@@ -28,9 +34,14 @@ export default function QuoteForm({ services, initialServiceSlug }: QuoteFormPro
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    trackFormStart();
     const validationError = validate();
     setError(validationError);
-    if (validationError || !IS_API_CONFIGURED) return;
+    if (validationError) {
+      trackSafeEvent("service_enquiry_failed", { service_name: form.serviceSlug, service_slug: form.serviceSlug, failure_type: "validation" });
+      return;
+    }
+    if (!IS_API_CONFIGURED) return;
     setSubmitting(true);
     try {
       const service = services.find((item) => item.slug === form.serviceSlug);
@@ -38,8 +49,9 @@ export default function QuoteForm({ services, initialServiceSlug }: QuoteFormPro
       const response = await fetch(buildApiUrl("/support/tickets"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: form.email.trim(), category: "service_enquiry", subject: `Service enquiry: ${service?.name ?? form.serviceSlug}`, body: details, service_slug: form.serviceSlug, customer_name: form.name.trim(), phone: form.phone.trim() || null, current_website: form.website.trim() || null, timeline: form.timeline || null, budget_range: form.budget || null }) });
       const payload = (await response.json().catch(() => ({}))) as { detail?: string; message?: string };
       if (!response.ok) throw new Error(payload.detail ?? "We could not submit your enquiry right now.");
+      trackSafeEvent("service_enquiry_submitted", { service_name: service?.name ?? form.serviceSlug, service_slug: form.serviceSlug });
       setSubmitted(true);
-    } catch (submissionError) { setError(submissionError instanceof Error ? submissionError.message : "We could not submit your enquiry right now."); } finally { setSubmitting(false); }
+    } catch (submissionError) { trackSafeEvent("service_enquiry_failed", { service_name: services.find((item) => item.slug === form.serviceSlug)?.name ?? form.serviceSlug, service_slug: form.serviceSlug, failure_type: "request" }); setError(submissionError instanceof Error ? submissionError.message : "We could not submit your enquiry right now."); } finally { setSubmitting(false); }
   }
 
   if (submitted) return <div className="lt-card border-[var(--lt-success)]" role="status"><p className="lt-eyebrow">Enquiry received</p><h2 className="lt-heading-2 mt-3">Thanks, {form.name.trim()}.</h2><p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">Your enquiry about {services.find((service) => service.slug === form.serviceSlug)?.name ?? "this service"} has been sent to LeTrusto. We will review the details and follow up using {form.email}.</p><button type="button" className="lt-btn lt-btn-sm lt-btn-secondary mt-6" onClick={() => { setSubmitted(false); setForm(emptyForm(form.serviceSlug)); }}>Send another enquiry</button></div>;

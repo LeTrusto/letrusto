@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CONSENT_STORAGE_KEY, getConsent, saveConsent } from "@/lib/consent";
-import { trackEvent } from "@/lib/analytics";
+import { trackEvent, trackSafeEvent } from "@/lib/analytics";
 
 function installBrowserStorage() {
   const values = new Map<string, string>();
@@ -50,5 +50,19 @@ describe("cookie consent", () => {
     saveConsent(true, false);
     trackEvent("checkout_started", { value: 1 });
     expect(window.gtag).toHaveBeenCalledWith("event", "checkout_started", { value: 1 });
+  });
+
+  it("filters safe events to their allowlisted metadata", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    saveConsent(true, false);
+    trackSafeEvent("tool_complete", { tool_name: "invoice-generator", amount: "1000", description: "private" } as Record<string, string>);
+    expect(window.gtag).toHaveBeenCalledWith("event", "tool_complete", { tool_name: "invoice-generator" });
+  });
+
+  it("does not throw when the analytics client is unavailable", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    saveConsent(true, false);
+    window.gtag = undefined;
+    expect(() => trackSafeEvent("services_view", { page: "services" })).not.toThrow();
   });
 });

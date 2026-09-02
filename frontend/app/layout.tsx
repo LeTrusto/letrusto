@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 
 import CommerceShell from "@/components/layout/CommerceShell";
+import FunnelAnalytics from "@/components/FunnelAnalytics";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import SchemaOrg from "@/components/SchemaOrg";
 import { AuthProvider } from "@/lib/authContext";
@@ -129,6 +130,7 @@ export default function RootLayout({
           </AuthProvider>
           <CookieConsent />
           <GoogleAnalytics />
+          <FunnelAnalytics />
         </ConsentProvider>
       </body>
     </html>
