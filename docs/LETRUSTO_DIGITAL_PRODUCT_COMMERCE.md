@@ -20,3 +20,7 @@ The implementation uses additive `digital_payment_attempts` and `digital_entitle
 - Avoid shipping addresses, physical inventory, and Printful calls.
 - Make repeated verification and download requests idempotent and auditable.
 - Preserve the existing physical Razorpay and Printful order behavior.
+
+## Conversion measurement
+
+The consent-aware frontend records an allowlisted event sequence for the digital funnel: `digital_product_view`, `digital_product_auth_required`, `digital_product_checkout_started`, `digital_product_payment_initiated`, `digital_product_payment_failed`, `digital_product_payment_verified`, `digital_product_entitlement_created`, `digital_product_purchase_completed`, `digital_product_download_initiated`, and `digital_product_download_completed`. Product name and slug are the only product parameters; payment IDs, amounts, email addresses, and form contents are not sent to analytics. Purchase and entitlement events occur only after the backend verification response confirms an active entitlement.

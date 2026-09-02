@@ -6,6 +6,15 @@ export type SafeAnalyticsEvent =
 	| "digital_products_view"
 	| "digital_product_view"
 	| "digital_product_cta_clicked"
+	| "digital_product_checkout_started"
+	| "digital_product_auth_required"
+	| "digital_product_payment_initiated"
+	| "digital_product_payment_failed"
+	| "digital_product_payment_verified"
+	| "digital_product_entitlement_created"
+	| "digital_product_purchase_completed"
+	| "digital_product_download_initiated"
+	| "digital_product_download_completed"
 	| "services_view"
 	| "service_detail_view"
 	| "get_quote_clicked"
@@ -21,6 +30,15 @@ const SAFE_PARAMETER_KEYS: Record<SafeAnalyticsEvent, readonly string[]> = {
 	digital_products_view: ["page"],
 	digital_product_view: ["product_name", "product_slug"],
 	digital_product_cta_clicked: ["product_name", "product_slug", "interaction"],
+	digital_product_checkout_started: ["product_name", "product_slug"],
+	digital_product_auth_required: ["product_name", "product_slug"],
+	digital_product_payment_initiated: ["product_name", "product_slug"],
+	digital_product_payment_failed: ["product_name", "product_slug", "failure_type"],
+	digital_product_payment_verified: ["product_name", "product_slug"],
+	digital_product_entitlement_created: ["product_name", "product_slug"],
+	digital_product_purchase_completed: ["product_name", "product_slug"],
+	digital_product_download_initiated: ["product_name", "product_slug"],
+	digital_product_download_completed: ["product_name", "product_slug"],
 	services_view: ["page"],
 	service_detail_view: ["service_name", "service_slug"],
 	get_quote_clicked: ["service_name", "service_slug", "location"],
