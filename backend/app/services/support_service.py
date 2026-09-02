@@ -19,8 +19,21 @@ PRIORITY_BY_CATEGORY: dict[str, str] = {
     "feedback": "Low",
     "report_wrong": "High",
     "report_broken": "High",
+    "service_enquiry": "Normal",
     "other": "Normal",
 }
+
+SERVICE_SLUGS = frozenset({
+    "website-setup",
+    "landing-page",
+    "business-website",
+    "website-redesign",
+    "ecommerce-setup",
+    "whatsapp-business-integrations",
+    "automation",
+    "dashboards",
+    "custom-business-tools",
+})
 
 _FAQ_ITEMS: list[FaqItemDTO] = [
     FaqItemDTO(
@@ -95,6 +108,10 @@ class SupportService:
         customer_name: str | None = None,
         request: Request | None = None,
     ) -> SupportTicketResponse:
+        if req.category == "service_enquiry" and req.service_slug not in SERVICE_SLUGS:
+            raise HTTPException(status_code=422, detail="Choose a valid service before submitting an enquiry.")
+        if req.category != "service_enquiry" and req.service_slug is not None:
+            raise HTTPException(status_code=422, detail="Service details are only valid for service enquiries.")
         try:
             ticket = SupportTicket(
                 user_id=user_id,
@@ -179,7 +196,7 @@ class SupportService:
             created = created.replace(tzinfo=UTC)
 
         browser, platform, ip = self._extract_request_metadata(request)
-        resolved_name = customer_name or self._derive_customer_name(req.email)
+        resolved_name = customer_name or req.customer_name or self._derive_customer_name(req.email)
 
         return {
             "ticket_id": ticket.id,

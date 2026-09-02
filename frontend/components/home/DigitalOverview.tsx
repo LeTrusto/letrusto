@@ -126,8 +126,8 @@ export default function DigitalOverview() {
           <div>
             <p className="lt-eyebrow">Digital services</p>
             <h2 className="lt-heading-2 mt-3">Practical help for your next project</h2>
-            <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">Bring a website, ecommerce, automation or dashboard requirement. Service scope and pricing will be discussed based on the actual work involved.</p>
-            <Link href="/services" className="lt-btn lt-btn-md lt-btn-primary mt-7 inline-flex">Explore services <ArrowRight size={16} /></Link>
+            <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">Bring a website, ecommerce, automation or dashboard requirement. Start with a clear service scope, then discuss the work involved.</p>
+            <div className="mt-7 flex flex-wrap gap-4"><Link href="/services" className="lt-btn lt-btn-md lt-btn-primary inline-flex">Explore services <ArrowRight size={16} /></Link><Link href="/services/quote" className="lt-btn lt-btn-md lt-btn-secondary inline-flex">Get a quote <ArrowRight size={16} /></Link></div>
           </div>
           <ul className="grid content-start gap-3 sm:grid-cols-2">
             {SERVICE_CATEGORIES.map((category) => <li key={category} className="border-l-2 border-[var(--lt-primary)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">{category}</li>)}

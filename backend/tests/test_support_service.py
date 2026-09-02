@@ -146,3 +146,41 @@ def test_create_ticket_raises_if_database_write_fails(session):
                 body="The support form does not submit on mobile Safari.",
             )
         )
+
+
+def test_service_enquiry_requires_a_known_service(session):
+    service = SupportService(session, email_service=FakeEmailService())
+
+    with pytest.raises(HTTPException) as error:
+        service.create_ticket(
+            SupportTicketRequest(
+                email="customer@example.com",
+                category="service_enquiry",
+                subject="Website project enquiry",
+                body="I need help with a new business website.",
+                service_slug="not-a-service",
+            )
+        )
+
+    assert error.value.status_code == 422
+
+
+def test_service_enquiry_is_stored_with_service_context(session):
+    email_service = FakeEmailService()
+    service = SupportService(session, email_service=email_service)
+
+    service.create_ticket(
+        SupportTicketRequest(
+            email="customer@example.com",
+            category="service_enquiry",
+            subject="Website project enquiry",
+            body="I need help with a new business website.",
+            service_slug="website-setup",
+            customer_name="Customer One",
+            timeline="This quarter",
+        )
+    )
+
+    ticket = session.query(SupportTicket).one()
+    assert ticket.category == "service_enquiry"
+    assert email_service.calls[0].context["customer_name"] == "Customer One"

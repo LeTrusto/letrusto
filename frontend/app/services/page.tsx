@@ -1,38 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SchemaOrg from "@/components/SchemaOrg";
+import ServiceCard from "@/components/services/ServiceCard";
+import { getPublishedServices } from "@/lib/services";
 
-export const metadata: Metadata = {
-  title: "Digital Services",
-  description: "Affordable digital help for websites, ecommerce, automation, integrations, dashboards and custom business tools.",
-};
-
-const SERVICES = [
-  "Website setup",
-  "Landing pages",
-  "Business websites",
-  "Ecommerce setup",
-  "Website redesign",
-  "WhatsApp and business integrations",
-  "Automation",
-  "Dashboards",
-  "Custom business tools",
-];
+export const metadata: Metadata = { title: "Digital Services", description: "Practical website, ecommerce, automation, integration, dashboard and custom business tool services from LeTrusto.", alternates: { canonical: "/services" }, openGraph: { title: "Digital Services | LeTrusto", description: "Practical digital services for businesses, freelancers, creators and professionals.", url: "/services", siteName: "LeTrusto", type: "website" } };
 
 export default function ServicesPage() {
-  return (
-    <main className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
-      <div className="max-w-2xl">
-        <p className="lt-eyebrow">LeTrusto Services</p>
-        <h1 className="lt-heading-1 mt-3">Digital help with clear scope</h1>
-        <p className="mt-5 text-lg leading-relaxed text-[var(--text-secondary)]">Tell us what you are trying to build or improve. We will understand the requirement first, then discuss a practical scope, timeline and price for the work involved.</p>
-        <Link href="/support?tab=contact&category=contact" className="lt-btn lt-btn-md lt-btn-primary mt-8 inline-flex">Discuss a project</Link>
-      </div>
-      <section className="mt-14 border-t border-[var(--border)] pt-8">
-        <h2 className="lt-heading-2">Areas we are preparing to support</h2>
-        <ul className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((service) => <li key={service} className="border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-4 text-sm font-semibold text-[var(--text-primary)]">{service}</li>)}
-        </ul>
-      </section>
-    </main>
-  );
+  const services = getPublishedServices();
+  return <main className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-20"><SchemaOrg type="WebPage" data={{ name: "Digital Services", url: "/services", description: metadata.description }} /><section className="grid gap-10 border-b border-[var(--border)] pb-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-end"><div><p className="lt-eyebrow">LeTrusto Services</p><h1 className="lt-heading-1 mt-3">Practical digital services for your business</h1><p className="mt-5 max-w-2xl text-lg leading-8 text-[var(--text-secondary)]">Websites, landing pages, ecommerce, automation, integrations, dashboards and custom digital solutions with a clear scope before work begins.</p><div className="mt-8 flex flex-wrap gap-4"><Link href="/services/quote" className="lt-btn lt-btn-lg lt-btn-primary">Get a quote</Link><a href="#services" className="lt-btn lt-btn-lg lt-btn-secondary">View services</a></div></div><div className="border-l-2 border-[var(--lt-accent)] bg-[var(--surface-soft)] p-6"><p className="text-sm font-bold text-[var(--text-primary)]">A useful first conversation</p><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Tell us what you are trying to improve. We will clarify the requirement, boundaries and next step before discussing a custom quote.</p></div></section><section id="services" className="scroll-mt-8 pt-14"><div className="max-w-2xl"><p className="lt-eyebrow">Initial service catalog</p><h2 className="lt-heading-2 mt-2">Choose a starting point</h2><p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">These are focused service areas, not fixed packages. The catalog can evolve as project needs become clearer.</p></div><div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{services.map((service) => <ServiceCard key={service.id} service={service} />)}</div></section><section className="mt-16 border-t border-[var(--border)] pt-10"><h2 className="lt-heading-2">Not sure which service fits?</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">Describe the outcome you need, even if it does not match one card exactly. The quote form helps us understand the project without requiring an account.</p><Link href="/services/quote" className="lt-btn lt-btn-md lt-btn-primary mt-6">Get a quote</Link></section></main>;
 }

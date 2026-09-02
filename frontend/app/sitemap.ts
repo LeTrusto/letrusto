@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { SITE_URL } from "@/config/site";
+import { getPublishedServices } from "@/lib/services";
 
 const BASE_URL = SITE_URL;
 
@@ -26,6 +27,6 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  return STATIC_ROUTES;
+  return [...STATIC_ROUTES, ...getPublishedServices().map((service) => ({ url: `${BASE_URL}/services/${service.slug}`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.7 }))];
 }
 

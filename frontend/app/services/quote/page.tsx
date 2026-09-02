@@ -1,0 +1,7 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import QuoteForm from "@/components/services/QuoteForm";
+import { getPublishedServices } from "@/lib/services";
+
+export const metadata: Metadata = { title: "Get a Quote", description: "Tell LeTrusto about your website, ecommerce, automation, integration, dashboard or custom tool project.", alternates: { canonical: "/services/quote" }, robots: { index: false, follow: true } };
+export default async function QuotePage({ searchParams }: { searchParams: Promise<{ service?: string }> }) { const services = getPublishedServices(); const { service } = await searchParams; return <main className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-20"><Link href="/services" className="text-sm font-semibold text-[var(--lt-primary)] hover:text-[var(--lt-accent)]">&larr; All services</Link><div className="mt-10 mb-8"><p className="lt-eyebrow">Project enquiry</p><h1 className="lt-heading-1 mt-3">Get a quote</h1><p className="mt-5 text-lg leading-7 text-[var(--text-secondary)]">Share the shape of your project and we will review the requirement before discussing scope, timeline and price.</p></div><QuoteForm services={services} initialServiceSlug={service} /></main>; }
