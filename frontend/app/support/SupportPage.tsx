@@ -165,7 +165,7 @@ export default function SupportPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-2 rounded-2xl bg-gray-100 p-1.5">
+      <div className="mb-6 flex gap-2 rounded-2xl bg-gray-100 p-1.5" role="tablist" aria-label="Support views">
         {[
           { key: "faq", label: "FAQ" },
           { key: "contact", label: "Contact & Report" },
@@ -173,6 +173,8 @@ export default function SupportPage() {
           <button
             key={key}
             onClick={() => setActiveTab(key as "faq" | "contact")}
+            role="tab"
+            aria-selected={activeTab === key}
             className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition ${
               activeTab === key
                 ? "bg-white text-purple-700 shadow-sm"
