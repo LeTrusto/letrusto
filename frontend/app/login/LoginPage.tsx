@@ -34,8 +34,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-[var(--background)] px-4 py-12 sm:py-16">
-      <section className="w-full max-w-[460px] rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_8px_28px_rgba(107,33,168,0.08)] sm:p-9">
+    <main className="relative flex flex-1 items-center justify-center overflow-hidden bg-[#26113c] px-4 py-12 sm:py-16"><div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.4),transparent_30%),radial-gradient(circle_at_85%_80%,rgba(236,72,153,0.3),transparent_28%)]" />
+      <section className="relative w-full max-w-[460px] rounded-[1.5rem] border border-white/20 bg-[var(--surface)] p-6 shadow-2xl sm:p-9">
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandMark />
           <h1 className="mt-7 text-3xl font-black text-[var(--text-primary)]">Welcome back</h1>

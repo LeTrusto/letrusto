@@ -6,8 +6,16 @@ import { openCookiePreferences } from "@/components/CookieConsent";
 
 const COMPANY_LINKS = [
   { label: "About", href: "/about" },
+  { label: "Minku & Dinku", href: "/minku-dinku" },
   { label: "Contact Us", href: "/support?tab=contact&category=contact" },
   { label: "Support", href: "/support" },
+];
+
+const EXPLORE_LINKS = [
+  { label: "Tools", href: "/tools" },
+  { label: "Digital Products", href: "/digital-products" },
+  { label: "Services", href: "/services" },
+  { label: "Account", href: "/account" },
 ];
 
 const POLICY_LINKS = [
@@ -35,8 +43,7 @@ export default function CommerceFooter() {
           <div>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Explore</h3>
             <ul className="space-y-2.5">
-              <li><Link href="/about" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--lt-accent)]">About LeTrusto</Link></li>
-              <li><Link href="/support" className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--lt-accent)]">Support</Link></li>
+              {EXPLORE_LINKS.map((link) => <li key={link.href}><Link href={link.href} className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--lt-accent)]">{link.label}</Link></li>)}
               <li><button type="button" onClick={openCookiePreferences} className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--lt-accent)]">Cookie Preferences</button></li>
             </ul>
           </div>

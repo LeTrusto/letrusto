@@ -160,8 +160,8 @@ export default function SupportPage() {
       )}
 
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-slate-900">Support Centre</h1>
-        <p className="mt-2 text-gray-500">Find answers or get in touch with our team</p>
+        <h1 className="text-3xl font-black text-slate-900">Contact LeTrusto</h1>
+        <p className="mt-2 max-w-xl text-gray-500">Tell us what you need help with, report an issue, or ask a question about your account, tools or digital products.</p>
       </div>
 
       {/* Tabs */}

@@ -45,17 +45,17 @@ export default function AccountPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 md:py-12">
-      <div className="flex items-start justify-between gap-4">
+    <main className="mx-auto max-w-4xl px-4 py-10 md:px-6 md:py-16">
+      <div className="rounded-2xl bg-[#26113c] p-6 text-white shadow-xl sm:p-8"><div className="flex items-start justify-between gap-4">
         <div><p className="lt-label">Customer account</p><h1 className="lt-heading-1 mt-2">{account?.full_name || "Your account"}</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">{account?.email}</p></div>
-        <button onClick={() => void logout("/")} className="lt-btn lt-btn-sm lt-btn-ghost"><LogOut size={15} /> Log out</button>
-      </div>
+        <button onClick={() => void logout("/")} className="lt-btn lt-btn-sm border border-white/20 text-white hover:bg-white/10"><LogOut size={15} /> Log out</button>
+      </div></div>
 
       {error && <p role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <Link href="/account/orders" className="lt-card lt-card-hover flex items-center gap-4"><Package className="text-[var(--lt-accent-dark)]" /><div><h2 className="font-bold">My orders</h2><p className="mt-1 text-sm text-[var(--text-secondary)]">View order history and tracking</p></div></Link>
-        <div className="lt-card"><p className="lt-label">Member since</p><p className="mt-2 text-sm font-semibold">{account ? new Date(account.created_at).toLocaleDateString("en-IN") : "—"}</p></div>
+        <div className="lt-card"><p className="lt-label">Member since</p><p className="mt-2 text-sm font-semibold">{account ? new Date(account.created_at).toLocaleDateString("en-IN") : "—"}</p><Link href="/digital-products" className="mt-4 inline-flex items-center text-sm font-bold text-[var(--lt-primary)]">Browse digital products</Link></div>
       </div>
 
       <form onSubmit={saveProfile} className="lt-card mt-8">
