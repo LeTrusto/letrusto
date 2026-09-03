@@ -5,13 +5,13 @@ import SchemaOrg from "@/components/SchemaOrg";
 
 export const metadata: Metadata = {
   title: "About LeTrusto",
-  description: "Discover LeTrusto's made-to-order designs, current India launch, and customer-first approach.",
+  description: "Discover LeTrusto's practical digital tools, products, services and Minku & Dinku sub-brand.",
   alternates: {
     canonical: "/about",
   },
   openGraph: {
     title: "About LeTrusto",
-    description: "Discover LeTrusto's made-to-order designs, current India launch, and customer-first approach.",
+    description: "Discover LeTrusto's practical digital tools, products, services and Minku & Dinku sub-brand.",
     url: "/about",
     siteName: "LeTrusto",
     type: "website",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "About LeTrusto",
-    description: "Discover LeTrusto's made-to-order designs, current India launch, and customer-first approach.",
+    description: "Discover LeTrusto's practical digital tools, products, services and Minku & Dinku sub-brand.",
     images: ["/images/og-default.svg"],
   },
 };
@@ -29,19 +29,19 @@ export default function AboutPage() {
   const faqItems = [
     {
       q: "What does LeTrusto sell?",
-      a: "LeTrusto offers original designs on made-to-order apparel, wall art, accessories, home goods, and stationery.",
+      a: "LeTrusto offers practical digital tools, ready-to-use digital products, scoped digital services, and the separate Minku & Dinku sub-brand.",
     },
     {
-      q: "Why are products made to order?",
-      a: "Making products after an order helps us avoid unnecessary stock and bring fresh designs to the store without overproducing.",
+      q: "What are digital products?",
+      a: "They are editable workbooks and practical resources designed to help with pricing, finance and client-work decisions.",
     },
     {
-      q: "Where do you deliver?",
-      a: "India is the current purchasing destination. International visitors may browse products, but international checkout is not available yet.",
+      q: "Who is LeTrusto for?",
+      a: "LeTrusto is for Indian businesses, freelancers and creators who need useful tools or focused digital help.",
     },
     {
-      q: "Can I return a made-to-order item?",
-      a: "Made-to-order items are not returnable for change of mind, but we will review items that arrive damaged, defective, or incorrectly fulfilled.",
+      q: "How do I get support?",
+      a: "Use the Support Centre to send a question, report incorrect information or report a broken link.",
     },
     {
       q: "How do you handle order issues?",
@@ -60,7 +60,7 @@ export default function AboutPage() {
         data={{
           name: "About LeTrusto",
           url: "https://letrusto.com/about",
-          description: "Discover LeTrusto's made-to-order designs, current India launch, and customer-first approach.",
+          description: "Discover LeTrusto's practical digital tools, products, services and Minku & Dinku sub-brand.",
         }}
       />
       <SchemaOrg
@@ -79,17 +79,17 @@ export default function AboutPage() {
       <section className="mx-auto max-w-6xl px-6 py-14 md:py-18">
         <div className="max-w-4xl">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">About LeTrusto</p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-6xl">Original designs, made when you order</h1>
+          <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-6xl">Useful digital work for your next move</h1>
           <p className="mt-5 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
-            LeTrusto is a print-on-demand storefront for expressive designs made for everyday life. India checkout is available for the current launch, and international visitors may browse while purchasing remains disabled.
+            LeTrusto brings together practical free tools, ready-to-use digital products and focused digital services for businesses, freelancers and creators. Minku &amp; Dinku is a separate sub-brand within the wider LeTrusto platform.
           </p>
         </div>
 
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           {[
-            { title: "Made to order", copy: "Your product is created after checkout, helping us keep collections fresh and reduce unnecessary inventory." },
-            { title: "Designed to last", copy: "We choose practical products and clear product details so you can order with confidence." },
-            { title: "India launch", copy: "Current checkout supports India delivery, with server-calculated shipping shown before payment." },
+            { title: "Practical tools", copy: "Focused calculators and utilities help you make everyday business and client-work decisions." },
+            { title: "Ready-to-use resources", copy: "Editable workbooks turn recurring pricing, finance and delivery work into a clearer routine." },
+            { title: "Thoughtful services", copy: "Websites, ecommerce, automation and dashboards are scoped around the next useful outcome." },
           ].map((item) => (
             <article key={item.title} className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-xl font-bold text-slate-950">{item.title}</h2>
@@ -100,7 +100,7 @@ export default function AboutPage() {
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">How your order works</h2>
+            <h2 className="text-2xl font-black tracking-tight text-slate-950">How LeTrusto helps</h2>
             <div className="mt-6 space-y-5 text-sm leading-7 text-slate-600">
               <p><strong className="text-slate-950">1. Choose a design:</strong> Browse our current collections and select the product and variant you want.</p>
               <p><strong className="text-slate-950">2. We produce it:</strong> Your order is sent to production after payment is confirmed.</p>
@@ -122,7 +122,7 @@ export default function AboutPage() {
 
         <section className="mt-12 grid gap-6 lg:grid-cols-2">
           <article className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">Product quality</h2>
+            <h2 className="text-2xl font-black tracking-tight text-slate-950">Clear scope and quality</h2>
             <div className="mt-5 space-y-4 text-sm leading-7 text-slate-600">
               <p>Every order is produced after checkout through fulfillment partners selected for product range, production quality, and delivery coverage.</p>
               <p>Colors and placement can vary slightly from on-screen previews because products are printed on different materials and viewed on different displays.</p>
@@ -159,7 +159,7 @@ export default function AboutPage() {
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/support" className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100">Open support centre</Link>
-            <Link href="/shop" className="rounded-2xl border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">Browse designs</Link>
+            <Link href="/digital-products" className="rounded-2xl border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">Browse digital products</Link>
           </div>
         </section>
       </section>

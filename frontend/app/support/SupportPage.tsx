@@ -68,7 +68,7 @@ function FaqAccordion({ items }: { items: FaqItem[] }) {
 
 export default function SupportPage() {
   const searchParams = useSearchParams();
-  const initialTab: "faq" | "contact" = searchParams.get("tab") === "contact" ? "contact" : "faq";
+  const initialTab: "faq" | "contact" = searchParams.get("tab") === "faq" ? "faq" : "contact";
   const initialCategory = resolveInitialCategory(searchParams.get("category"));
   const [faq, setFaq] = useState<FaqItem[]>([]);
   const [form, setForm] = useState<SupportFormState>({ ...DEFAULT_FORM, category: initialCategory });

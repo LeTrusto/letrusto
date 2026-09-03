@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 
 import Hero from "@/components/home/Hero";
-import DigitalOverview from "@/components/home/DigitalOverview";
-import TrustSection from "@/components/home/TrustSection";
 import NewsletterSignup from "@/components/home/NewsletterSignup";
 import SchemaOrg from "@/components/SchemaOrg";
 import { SITE_URL } from "@/config/site";
@@ -26,8 +24,6 @@ export default async function Home() {
     <main className="bg-[var(--background)]">
       <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Digital tools and services", url: SITE_URL, description: "Practical digital tools, templates and services for Indian businesses." }} />
       <Hero />
-      <DigitalOverview />
-      <TrustSection />
       <NewsletterSignup />
     </main>
   );

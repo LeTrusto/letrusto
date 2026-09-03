@@ -56,11 +56,10 @@ export default function ProfitMarginCalculator() {
         <div className="mt-8 space-y-6">
           <div>
             <label htmlFor="cost-price" className="lt-label mb-2 block">Cost price</label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[var(--text-muted)]" aria-hidden="true">₹</span>
-              <input
+              <div className="flex h-[46px] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] focus-within:border-[var(--ring)] focus-within:ring-2 focus-within:ring-[var(--ring)]/20">
+              <span className="flex w-11 shrink-0 items-center justify-center border-r border-[var(--border)] text-sm font-semibold text-[var(--text-muted)]" aria-hidden="true">₹</span><input
                 id="cost-price"
-                className="lt-input pl-8"
+                className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-[var(--text-primary)] outline-none"
                 type="text"
                 inputMode="decimal"
                 value={costInput}
@@ -69,18 +68,17 @@ export default function ProfitMarginCalculator() {
                 aria-invalid={Boolean(costError)}
                 aria-describedby={costError ? "cost-price-error" : "cost-price-help"}
               />
-            </div>
+              </div>
             <p id="cost-price-help" className="mt-1.5 text-xs text-[var(--text-muted)]">What you spend or make the product or service for.</p>
             {costError && <p id="cost-price-error" className="mt-1.5 text-xs font-semibold text-[var(--lt-accent-dark)]" role="alert">{costError}</p>}
           </div>
 
           <div>
             <label htmlFor="selling-price" className="lt-label mb-2 block">Selling price</label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[var(--text-muted)]" aria-hidden="true">₹</span>
-              <input
+              <div className="flex h-[46px] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] focus-within:border-[var(--ring)] focus-within:ring-2 focus-within:ring-[var(--ring)]/20">
+              <span className="flex w-11 shrink-0 items-center justify-center border-r border-[var(--border)] text-sm font-semibold text-[var(--text-muted)]" aria-hidden="true">₹</span><input
                 id="selling-price"
-                className="lt-input pl-8"
+                className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-[var(--text-primary)] outline-none"
                 type="text"
                 inputMode="decimal"
                 value={sellingPriceInput}
