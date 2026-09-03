@@ -18,6 +18,16 @@ export type DigitalPurchase = {
   currency: string;
 };
 
+export type DigitalEntitlement = {
+  product_slug: string;
+  product_name: string;
+  status: string;
+  amount: string;
+  currency: string;
+  download_url: string;
+  purchased_at: string;
+};
+
 export function createDigitalPaymentOrder(token: string, slug: string) {
   return authenticatedApiRequest<DigitalPaymentOrder>(token, `/digital-products/${slug}/payment-order`, { method: "POST" });
 }
@@ -30,4 +40,8 @@ export async function downloadDigitalProduct(token: string, slug: string) {
   const response = await fetch(buildApiUrl(`/digital-products/${slug}/download`), { headers: { Authorization: `Bearer ${token}` } });
   if (!response.ok) throw new Error("The download could not be prepared.");
   return response.blob();
+}
+
+export function getDigitalPurchases(token: string) {
+  return authenticatedApiRequest<DigitalEntitlement[]>(token, "/account/digital-purchases");
 }

@@ -26,3 +26,13 @@ class DigitalPurchaseDTO(BaseModel):
     download_url: str | None = None
     amount: Decimal
     currency: str
+
+
+class DigitalEntitlementDTO(BaseModel):
+    product_slug: str
+    product_name: str
+    status: str
+    amount: Decimal
+    currency: str
+    download_url: str
+    purchased_at: str

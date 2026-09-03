@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user, get_order_service, get_user_service
+from app.api.deps import get_current_user, get_digital_product_service, get_order_service, get_user_service
 from app.models.entities import User
 from app.schemas.account import CustomerAccountDTO, CustomerOrdersResponse, CustomerProfileUpdateRequest
 from app.schemas.orders import ShippingAddress
 from app.schemas.user import UserProfileUpdateRequest
 from app.services.order_service import OrderService
 from app.services.user_service import UserService
+from app.services.digital_product_service import DigitalProductService
+from app.schemas.digital_products import DigitalEntitlementDTO
 from app.services.otp_auth_service import normalize_indian_mobile
 
 router = APIRouter(prefix="/account", tags=["account"])
@@ -40,6 +42,11 @@ def get_account_orders(
     service: OrderService = Depends(get_order_service),
 ) -> CustomerOrdersResponse:
     return service.list_orders(current_user, page, page_size)
+
+
+@router.get("/digital-purchases", response_model=list[DigitalEntitlementDTO])
+def get_digital_purchases(current_user: User = Depends(get_current_user), service: DigitalProductService = Depends(get_digital_product_service)) -> list[DigitalEntitlementDTO]:
+    return service.list_entitlements(current_user)
 
 
 @router.patch("/profile", response_model=CustomerAccountDTO)

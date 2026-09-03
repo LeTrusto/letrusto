@@ -302,6 +302,36 @@ def _order_confirmation_template(context: Mapping[str, Any]) -> RenderedEmail:
     return RenderedEmail(subject=f"Order confirmed: {order_number}", html=html, text=_text_block(text_lines))
 
 
+def _digital_purchase_template(context: Mapping[str, Any]) -> RenderedEmail:
+    product_name = str(context["product_name"])
+    amount = str(context["amount"])
+    reference = str(context["reference"])
+    purchased_at = str(context["purchased_at"])
+    download_url = str(context["download_url"])
+    purchases_url = str(context["purchases_url"])
+    support_url = str(context["support_url"])
+    html = _html_document(
+        "Payment successful | LeTrusto",
+        (
+            '<h1 style="margin:0 0 10px 0;font-size:27px;line-height:1.2;color:#0f172a;">Payment successful</h1>'
+            '<p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#475569;">Your LeTrusto toolkit is ready.</p>'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:1px solid #e2e8f0;">'
+            '<tr><td style="padding:18px 20px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">'
+            f"{_render_label_value('Product', product_name)}{_render_label_value('Amount paid', f'INR {amount}')}{_render_label_value('Reference', reference)}{_render_label_value('Date', purchased_at)}"
+            '</table></td></tr></table>'
+            f'<div style="margin-top:24px;"><a href="{escape(download_url)}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 18px;border-radius:8px;">Download toolkit</a></div>'
+            f'<p style="margin:20px 0 0 0;font-size:14px;line-height:1.7;color:#475569;"><a href="{escape(purchases_url)}" style="color:#1d4ed8;">My Purchases</a> · <a href="{escape(support_url)}" style="color:#1d4ed8;">Contact Support</a></p>'
+        ),
+        logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
+        website_url=str(context.get("website_url", "https://letrusto.com")),
+    )
+    return RenderedEmail(subject=f"Payment successful: {product_name}", html=html, text=_text_block([
+        "Payment successful", "Your LeTrusto toolkit is ready.", f"Product: {product_name}",
+        f"Amount paid: INR {amount}", f"Reference: {reference}", f"Date: {purchased_at}",
+        f"Download toolkit: {download_url}", f"My Purchases: {purchases_url}", f"Contact Support: {support_url}",
+    ]))
+
+
 def _shipment_template(context: Mapping[str, Any]) -> RenderedEmail:
     status = str(context["status"])
     order_number = str(context["order_number"])
@@ -412,6 +442,7 @@ class EmailService:
         registry.register("email_verification", _email_verification_template)
         registry.register("password_reset", _password_reset_template)
         registry.register("order_confirmation", _order_confirmation_template)
+        registry.register("digital_purchase_confirmation", _digital_purchase_template)
         registry.register("order_shipped", _shipped_template)
         registry.register("order_delivered", _delivered_template)
         registry.register("operational_alert", _operational_alert_template)

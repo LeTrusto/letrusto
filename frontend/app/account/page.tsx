@@ -7,6 +7,7 @@ import { LogOut, Package, UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getAccount, updateAccountProfile } from "@/services/account.service";
 import type { CustomerAccount } from "@/types/account";
+import DigitalPurchases from "@/components/account/DigitalPurchases";
 
 export default function AccountPage() {
   const { accessToken, isLoading, isAuthenticated, logout } = useAuth();
@@ -57,6 +58,8 @@ export default function AccountPage() {
         <Link href="/account/orders" className="lt-card lt-card-hover flex items-center gap-4"><Package className="text-[var(--lt-accent-dark)]" /><div><h2 className="font-bold">My orders</h2><p className="mt-1 text-sm text-[var(--text-secondary)]">View order history and tracking</p></div></Link>
         <div className="lt-card"><p className="lt-label">Member since</p><p className="mt-2 text-sm font-semibold">{account ? new Date(account.created_at).toLocaleDateString("en-IN") : "—"}</p><Link href="/digital-products" className="mt-4 inline-flex items-center text-sm font-bold text-[var(--lt-primary)]">Browse digital products</Link></div>
       </div>
+
+      <DigitalPurchases />
 
       <form onSubmit={saveProfile} className="lt-card mt-8">
         <h2 className="text-lg font-bold">Profile</h2>

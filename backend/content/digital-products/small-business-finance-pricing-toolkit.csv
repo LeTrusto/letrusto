@@ -1,13 +1,27 @@
-Small Business Finance & Pricing Toolkit - editable workbook source
-Instructions,Enter your own figures in the input columns. Duplicate this file for each month.
-
-Pricing decision worksheet
-Offer,Unit cost (INR),Target margin (%),Suggested price (INR),Notes
-Example service,100,40,=B5/(1-C5/100),Replace this example with your offer
-
-Monthly summary
-Metric,Value (INR),Notes
-Revenue,,Enter monthly revenue
-Variable costs,,Enter monthly variable costs
-Fixed costs,,Enter monthly fixed costs
-Operating profit,=B10-B11-B12,Revenue minus variable and fixed costs
+Section,Item,Input,Calculation or example,Notes
+START HERE,Workbook purpose,,Turn everyday costs into clearer pricing and monthly decisions,Planning support only; not accounting or tax advice
+START HERE,Quick start,,1) Replace DEMO values 2) Enter figures in Input 3) Review calculated cells,Duplicate this file for each month or keep one rolling copy
+START HERE,Input key,,INPUT = your figures; CALCULATED = formula; DEMO = example,Do not overwrite calculated cells
+PRICING,Offer name,DEMO - Example service,,Replace with your offer or service
+PRICING,Unit cost (INR),100,,Enter the direct cost for one unit
+PRICING,Target margin (%),40,,Enter the target gross margin percentage
+PRICING,Suggested price (INR),,=C6/(1-C7/100),Unit cost divided by one minus target margin
+PRICING,Price decision,,Review the suggested price against market context and scope,Use judgment before publishing a price
+EXPENSE TRACKER,Software and tools,1200,,Enter monthly recurring software costs
+EXPENSE TRACKER,Contractors and delivery,0,,Enter monthly delivery or contractor costs
+EXPENSE TRACKER,Marketing and sales,0,,Enter monthly marketing costs
+EXPENSE TRACKER,Operations and admin,0,,Enter monthly operating costs
+EXPENSE TRACKER,Workspace and utilities,0,,Enter monthly workspace costs
+EXPENSE TRACKER,Other costs,0,,Enter other monthly business costs
+EXPENSE TRACKER,Total monthly expenses,,=SUM(C10:C15),Calculated total of the expense categories above
+BREAK-EVEN,Fixed costs (INR),25000,,Enter monthly costs that do not change with sales volume
+BREAK-EVEN,Selling price per unit (INR),1000,,Use the price you want to test
+BREAK-EVEN,Variable cost per unit (INR),400,,Enter the cost that increases with each unit
+BREAK-EVEN,Break-even units,,=IF(C18<=C19,0,C17/(C18-C19)),Fixed costs divided by contribution per unit; 0 means the inputs need review
+BREAK-EVEN,Break-even revenue (INR),,=C20*C18,Units multiplied by selling price
+MONTHLY DASHBOARD,Revenue (INR),120000,,Enter monthly revenue
+MONTHLY DASHBOARD,Variable costs (INR),,=C16,Use the expense total as a starting point and adjust if needed
+MONTHLY DASHBOARD,Fixed costs (INR),,=C17,Link to the break-even fixed-cost assumption or replace it
+MONTHLY DASHBOARD,Operating profit (INR),,=C22-D23-D24,Revenue minus variable and fixed costs
+MONTHLY DASHBOARD,Operating margin (%),,=IF(C22=0,0,D25/C22*100),Operating profit divided by revenue
+MONTHLY DASHBOARD,Monthly decision,,Review pricing, expenses and break-even position,Write the next action before closing the month
