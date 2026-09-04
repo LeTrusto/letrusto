@@ -58,9 +58,12 @@ def test_fulfillment_test_download_returns_a_protected_zip():
     assert response.headers["content-disposition"].endswith('filename="letrusto-fulfillment-test-toolkit.zip"')
     with zipfile.ZipFile(ASSET_ROOT / "letrusto-fulfillment-test-toolkit.zip") as package:
         assert package.testzip() is None
-        entry = package.getinfo("letrusto-fulfillment-test-toolkit.csv")
-        assert entry.file_size > 0
-        assert package.read(entry).startswith(b"LeTrusto Fulfillment Test Toolkit")
+        names = package.namelist()
+        entries = [package.getinfo(name) for name in names]
+        assert sum(entry.file_size for entry in entries) > 1_000_000
+        assert any(name.startswith("WORKBOOKS/") and name.endswith(".xlsx") for name in names)
+        assert any(name.startswith("GUIDES/") and name.endswith(".pdf") for name in names)
+        assert any(name.startswith("TEMPLATES/") and name.endswith(".docx") for name in names)
 
 
 def test_fulfillment_test_download_remains_protected_for_non_admin_without_entitlement():
