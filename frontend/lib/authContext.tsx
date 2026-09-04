@@ -8,11 +8,16 @@ import React, {
   useState,
 } from "react";
 
-import { loginUser, logoutUser, refreshAccessToken, registerUser } from "@/services/auth.service";
+import { loginUser, logoutUser, registerUser } from "@/services/auth.service";
 import type { AuthResponse, AuthState, AuthUser, LoginPayload, RegisterPayload } from "@/types/auth";
-
-const ACCESS_TOKEN_KEY = "lt_access_token";
-const REFRESH_TOKEN_KEY = "lt_refresh_token";
+import {
+  ACCESS_TOKEN_KEY,
+  publishAuthSession,
+  publishLogout,
+  refreshSessionAcrossTabs,
+  REFRESH_TOKEN_KEY,
+  subscribeToAuthEvents,
+} from "@/lib/authSession";
 
 type AuthContextValue = AuthState & {
   register: (payload: RegisterPayload) => Promise<void>;
@@ -51,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
       return;
     }
-    refreshAccessToken(refresh)
+    refreshSessionAcrossTabs(refresh)
       .then((r) => {
         localStorage.setItem(ACCESS_TOKEN_KEY, r.access_token);
         localStorage.setItem(REFRESH_TOKEN_KEY, r.refresh_token);
@@ -67,11 +72,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         setState({ user: null, accessToken: null, refreshToken: null, isLoading: false });
       });
+    return subscribeToAuthEvents(
+      (r) => {
+        localStorage.setItem(ACCESS_TOKEN_KEY, r.access_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, r.refresh_token);
+        setState({ user: userFromResponse(r), accessToken: r.access_token, refreshToken: r.refresh_token, isLoading: false });
+      },
+      () => {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+        setState({ user: null, accessToken: null, refreshToken: null, isLoading: false });
+      },
+    );
   }, []);
 
   const applyAuth = useCallback((r: AuthResponse) => {
     localStorage.setItem(ACCESS_TOKEN_KEY, r.access_token);
     localStorage.setItem(REFRESH_TOKEN_KEY, r.refresh_token);
+    publishAuthSession(r);
     setState({
       user: userFromResponse(r),
       accessToken: r.access_token,
@@ -101,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (refresh) await logoutUser(refresh);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    publishLogout();
     setState({ user: null, accessToken: null, refreshToken: null, isLoading: false });
   }, []);
 
