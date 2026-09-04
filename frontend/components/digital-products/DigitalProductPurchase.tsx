@@ -36,7 +36,7 @@ export default function DigitalProductPurchase({ product }: { product: DigitalPr
 
   async function download() {
     if (!accessToken) return;
-    try { trackSafeEvent("digital_product_download_initiated", { product_name: product.name, product_slug: product.slug }); const blob = await downloadDigitalProduct(accessToken, product.slug); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${product.slug}.zip`; anchor.click(); URL.revokeObjectURL(url); trackSafeEvent("digital_product_download_completed", { product_name: product.name, product_slug: product.slug }); }
+    try { trackSafeEvent("digital_product_download_initiated", { product_name: product.name, product_slug: product.slug }); const blob = await downloadDigitalProduct(accessToken, product.slug); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${product.slug}.zip`; document.body.appendChild(anchor); anchor.click(); window.setTimeout(() => { URL.revokeObjectURL(url); anchor.remove(); }, 1000); trackSafeEvent("digital_product_download_completed", { product_name: product.name, product_slug: product.slug }); }
     catch (error) { setState("error"); setMessage(error instanceof Error ? error.message : "Download failed."); }
   }
 

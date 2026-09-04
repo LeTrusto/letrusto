@@ -16,6 +16,8 @@ describe("digital product routes", () => {
     expect(catalog).toContain("getPublishedDigitalProducts");
     expect(detail).toContain("DigitalProductPurchase");
     expect(purchase).toContain("purchase.status.toLowerCase() === \"verified\"");
+    expect(purchase).toContain("window.setTimeout(() => { URL.revokeObjectURL(url); anchor.remove(); }, 1000)");
+    expect(source("../../components/account/DigitalPurchases.tsx")).toContain("window.setTimeout(() => { URL.revokeObjectURL(url); anchor.remove(); }, 1000)");
     expect(callout).toContain('interaction: "view_product"');
     expect(callout).toContain("source_tool");
     expect(detail).toContain("generateStaticParams");
