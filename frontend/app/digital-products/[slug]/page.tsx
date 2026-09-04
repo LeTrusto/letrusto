@@ -48,7 +48,7 @@ export default async function DigitalProductPage({ params }: ProductPageProps) {
           <ol className="mt-5 space-y-4 text-sm leading-6 text-[var(--text-secondary)]">
             <li><strong className="text-[var(--text-primary)]">1. Verify payment.</strong> Razorpay payment details are checked by the backend before access is granted.</li>
             <li><strong className="text-[var(--text-primary)]">2. Open your account access.</strong> A verified purchase creates an entitlement on your LeTrusto account.</li>
-            <li><strong className="text-[var(--text-primary)]">3. Download the file.</strong> Download the editable `.csv` spreadsheet from the protected product page.</li>
+            <li><strong className="text-[var(--text-primary)]">3. Download the toolkit.</strong> Download the protected ZIP containing the editable `.xlsx` workbook and supporting resources.</li>
           </ol>
           <p className="mt-5 inline-flex items-start gap-2 text-xs leading-5 text-[var(--text-muted)]"><LifeBuoy size={15} className="mt-0.5 shrink-0" />Need help with access or the file? Contact the <Link href="/support" className="font-semibold text-[var(--lt-primary)]">LeTrusto support team</Link>.</p>
         </div>

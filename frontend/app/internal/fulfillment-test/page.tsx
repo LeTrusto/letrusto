@@ -8,7 +8,7 @@ import type { DigitalProduct } from "@/types/digital-products";
 const testProduct: DigitalProduct = {
   id: "internal-fulfillment-test-toolkit", name: "LeTrusto Fulfillment Test Toolkit", slug: "letrusto-fulfillment-test-toolkit",
   description: "Internal production checkout and protected delivery verification.", valueProposition: "A real ₹1 transaction for validating the full digital delivery path.",
-  category: { slug: "internal", name: "Internal test", description: "" }, format: "Editable CSV", price: 1, currency: "INR", previewLabel: "Internal test asset",
+  category: { slug: "internal", name: "Internal test", description: "" }, format: "Protected ZIP", price: 1, currency: "INR", previewLabel: "Internal test asset",
   included: ["Protected download", "Account entitlement", "Purchase email"], audience: ["LeTrusto owner"], usage: ["Production fulfillment verification"], status: "draft", delivery: "protected-download", assetVersion: "1.0", faq: [],
 };
 

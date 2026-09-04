@@ -34,6 +34,7 @@ export default function robots(): MetadataRoute.Robots {
           "/register",
           "/search",
           "/api",
+          "/internal",
         ],
       },
     ],

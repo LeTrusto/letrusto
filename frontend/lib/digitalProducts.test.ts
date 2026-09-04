@@ -8,12 +8,12 @@ describe("digital product catalog", () => {
   });
 
   it("resolves a published product by slug and rejects missing products", () => {
-    expect(getDigitalProductBySlug("small-business-finance-pricing-toolkit")?.name).toBe("Small Business Finance & Pricing Toolkit");
+    expect(getDigitalProductBySlug("small-business-finance-pricing-toolkit")?.name).toBe("Small Business Finance & Pricing Kit");
     expect(getDigitalProductBySlug("does-not-exist")).toBeUndefined();
   });
 
   it("keeps categories reusable and prices configurable", () => {
     expect(DIGITAL_PRODUCT_CATEGORIES.map((category) => category.slug)).toContain("business");
-    expect(formatDigitalProductPrice({ price: 499, currency: "INR" })).toBe("₹499");
+    expect(formatDigitalProductPrice({ price: 199, currency: "INR" })).toBe("₹199");
   });
 });

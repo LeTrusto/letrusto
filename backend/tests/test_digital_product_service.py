@@ -1,4 +1,4 @@
-import csv
+import zipfile
 from types import SimpleNamespace
 from decimal import Decimal
 from uuid import uuid4
@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.models.entities import User
 from app.schemas.digital_products import DigitalPaymentVerification
 from app.services.digital_product_service import ASSET_ROOT, PRODUCTS, DigitalProductService
+from app.api.v1.endpoints.digital_products import download_product
 
 
 class ScalarDB:
@@ -19,6 +20,9 @@ class ScalarDB:
 
     def scalar(self, _statement):
         return self.value
+
+    def commit(self):
+        pass
 
 
 def service(db) -> DigitalProductService:
@@ -44,12 +48,32 @@ def test_download_requires_an_entitlement():
     assert "filesystem" not in str(error.value.detail).lower()
 
 
+def test_fulfillment_test_download_returns_a_protected_zip():
+    user = User(id=uuid4(), role="admin")
+    entitlement = SimpleNamespace(download_count=0, last_downloaded_at=None)
+    response = download_product("letrusto-fulfillment-test-toolkit", user, ScalarDB(entitlement))
+
+    assert response.status_code == 200
+    assert response.media_type == "application/zip"
+    assert response.headers["content-disposition"].endswith('filename="letrusto-fulfillment-test-toolkit.zip"')
+    with zipfile.ZipFile(ASSET_ROOT / "letrusto-fulfillment-test-toolkit.zip") as package:
+        assert package.testzip() is None
+        assert "letrusto-fulfillment-test-toolkit.csv" in package.namelist()
+
+
+def test_fulfillment_test_download_remains_protected_for_non_admin_without_entitlement():
+    with pytest.raises(HTTPException) as error:
+        download_product("letrusto-fulfillment-test-toolkit", User(id=uuid4(), role="customer"), ScalarDB(None))
+
+    assert error.value.status_code == 404
+
+
 def test_freelancer_toolkit_is_an_allowlisted_product():
     product_service = service(ScalarDB(None))
 
     product = product_service._product("freelancer-rate-project-pricing-toolkit")
 
-    assert product == {"amount": Decimal("399.00"), "currency": "INR", "filename": "freelancer-rate-project-pricing-toolkit.csv"}
+    assert product == {"amount": Decimal("99.00"), "currency": "INR", "filename": "LETRUSTO-FREELANCER-KIT-INR99.zip"}
 
 
 def test_client_work_workbook_is_an_allowlisted_product():
@@ -57,21 +81,16 @@ def test_client_work_workbook_is_an_allowlisted_product():
 
     product = product_service._product("freelancer-agency-client-work-workbook")
 
-    assert product == {"amount": Decimal("599.00"), "currency": "INR", "filename": "freelancer-agency-client-work-workbook.csv"}
+    assert product == {"amount": Decimal("299.00"), "currency": "INR", "filename": "LETRUSTO-CLIENT-KIT-INR299.zip"}
 
 
-def test_client_work_workbook_contains_linked_quote_and_profitability_formulas():
-    with (ASSET_ROOT / "freelancer-agency-client-work-workbook.csv").open(newline="", encoding="utf-8") as handle:
-        parsed_rows = list(csv.DictReader(handle))
+def test_client_work_bundle_contains_customer_package_structure():
+    with zipfile.ZipFile(ASSET_ROOT / "LETRUSTO-CLIENT-KIT-INR299.zip") as package:
+        names = package.namelist()
 
-    assert parsed_rows
-    assert all(None not in row for row in parsed_rows)
-    rows = {row["Field"]: row["Input / Example"] for row in parsed_rows}
-
-    assert rows["Base quote"] == "=C22*C23"
-    assert rows["Recommended quote"] == "=C25+C26"
-    assert rows["Total project cost"] == "=C53*C54+C55"
-    assert rows["Profit margin %"] == "=IF(C52=0,0,C57/C52*100)"
+    assert "WORKBOOKS/freelancer-agency-client-work-workbook.xlsx" in names
+    assert any(name.startswith("GUIDES/") and name.endswith(".pdf") for name in names)
+    assert sum(name.startswith("TEMPLATES/") and name.endswith(".docx") for name in names) >= 20
 
 
 def test_all_allowlisted_assets_exist_outside_public_assets():

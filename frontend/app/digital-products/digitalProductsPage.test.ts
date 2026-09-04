@@ -22,4 +22,17 @@ describe("digital product routes", () => {
     expect(detail).not.toContain("createOrder");
     expect(detail).not.toContain("Printful");
   });
+
+  it("keeps the internal fulfillment test out of public discovery", () => {
+    const products = source("../../lib/digitalProducts.ts");
+    const sitemap = source("../sitemap.ts");
+    const robots = source("../robots.ts");
+    const internalPage = source("../internal/fulfillment-test/page.tsx");
+
+    expect(products).not.toContain("letrusto-fulfillment-test-toolkit");
+    expect(sitemap).not.toContain("fulfillment-test");
+    expect(robots).toContain('"/internal"');
+    expect(internalPage).toContain("isAdmin");
+    expect(internalPage).toContain("Protected ZIP");
+  });
 });

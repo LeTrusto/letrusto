@@ -42,4 +42,4 @@ def download_product(
     db: Session = Depends(get_db),
 ) -> FileResponse:
     path, _ = DigitalProductService(db).download_path(current_user, product_slug)
-    return FileResponse(path, media_type="text/csv", filename=path.name)
+    return FileResponse(path, media_type="application/zip", filename=path.name)

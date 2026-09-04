@@ -16,10 +16,10 @@ from app.schemas.digital_products import DigitalEntitlementDTO, DigitalPaymentOr
 from app.services.email_service import EmailDeliveryError, EmailService
 
 PRODUCTS = {
-    "small-business-finance-pricing-toolkit": {"amount": Decimal("499.00"), "currency": "INR", "filename": "small-business-finance-pricing-toolkit.csv"},
-    "freelancer-rate-project-pricing-toolkit": {"amount": Decimal("399.00"), "currency": "INR", "filename": "freelancer-rate-project-pricing-toolkit.csv"},
-    "freelancer-agency-client-work-workbook": {"amount": Decimal("599.00"), "currency": "INR", "filename": "freelancer-agency-client-work-workbook.csv"},
-    "letrusto-fulfillment-test-toolkit": {"amount": Decimal("1.00"), "currency": "INR", "filename": "letrusto-fulfillment-test-toolkit.csv"},
+    "small-business-finance-pricing-toolkit": {"amount": Decimal("199.00"), "currency": "INR", "filename": "LETRUSTO-BUSINESS-KIT-INR199.zip"},
+    "freelancer-rate-project-pricing-toolkit": {"amount": Decimal("99.00"), "currency": "INR", "filename": "LETRUSTO-FREELANCER-KIT-INR99.zip"},
+    "freelancer-agency-client-work-workbook": {"amount": Decimal("299.00"), "currency": "INR", "filename": "LETRUSTO-CLIENT-KIT-INR299.zip"},
+    "letrusto-fulfillment-test-toolkit": {"amount": Decimal("1.00"), "currency": "INR", "filename": "letrusto-fulfillment-test-toolkit.zip"},
 }
 PRODUCT_NAMES = {
     "small-business-finance-pricing-toolkit": "Small Business Finance & Pricing Toolkit",
