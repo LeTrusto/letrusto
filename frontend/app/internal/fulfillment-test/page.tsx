@@ -15,6 +15,6 @@ const testProduct: DigitalProduct = {
 export default function FulfillmentTestPage() {
   const { isAdmin, isLoading, isAuthenticated } = useAuth();
   if (isLoading) return <main className="mx-auto max-w-3xl px-4 py-16">Loading...</main>;
-  if (!isAuthenticated || !isAdmin) return <main className="mx-auto max-w-3xl px-4 py-16"><h1 className="lt-heading-2">Internal access required</h1><p className="lt-body mt-3">This fulfillment test is available only to an authenticated LeTrusto admin.</p><Link href="/login?next=/internal/fulfillment-test" className="lt-btn-primary lt-btn-md mt-6 inline-flex">Sign in</Link></main>;
+  if (!isAuthenticated || !isAdmin) return <main className="mx-auto max-w-3xl px-4 py-16"><h1 className="lt-heading-2">Internal access required</h1><p className="lt-body mt-3">This fulfillment test is available only to an authenticated LeTrusto admin.</p><Link href="/login?redirect=/internal/fulfillment-test" className="lt-btn-primary lt-btn-md mt-6 inline-flex">Sign in</Link></main>;
   return <main className="mx-auto max-w-3xl px-4 py-12"><p className="lt-eyebrow">Internal fulfillment test</p><h1 className="lt-heading-1 mt-3">{testProduct.name}</h1><p className="lt-body mt-4">This private page uses the production Razorpay, verification, entitlement, email, and protected download pipeline.</p><div className="mt-8 max-w-md"><DigitalProductPurchase product={testProduct} /></div></main>;
 }
