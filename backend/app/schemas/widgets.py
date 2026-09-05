@@ -49,6 +49,8 @@ class WidgetDTO(WidgetCreate):
 
 
 class PublicWidgetEventDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     customer_name: str
     customer_location: str | None

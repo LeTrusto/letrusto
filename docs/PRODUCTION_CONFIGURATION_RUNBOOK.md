@@ -28,12 +28,40 @@ The GA4 measurement ID is currently configured in the frontend analytics module.
 | `RAZORPAY_KEY_ID` | Yes for digital checkout | No | Razorpay public identifier returned to the authenticated checkout client. Use the matching environment. |
 | `RAZORPAY_KEY_SECRET` | Yes for digital checkout | Yes | Server-only secret used for order/payment verification. Never expose it client-side. |
 | `RAZORPAY_WEBHOOK_SECRET` | Yes when Razorpay credentials are configured | Yes | Secret used for Razorpay webhook verification. |
+| `RAZORPAY_STARTER_PLAN_ID` | Yes for paid SaaS subscriptions | No | Razorpay monthly plan ID for the Starter plan at ₹999; keep the value in Railway variables. |
+| `RAZORPAY_PRO_PLAN_ID` | Yes for paid SaaS subscriptions | No | Razorpay monthly plan ID for the Pro plan at ₹2,499; keep the value in Railway variables. |
+| `PHYSICAL_COMMERCE_ENABLED` | Yes | No | Keep `false`; physical catalog, checkout, supplier, and fulfillment routers remain archived. |
+| `SUPPLIER_INTEGRATIONS_ENABLED` | Yes | No | Keep `false`; SaaS production must not construct supplier integrations. |
+
+For the Phase 4 SaaS deployment, the relevant Railway values are:
+
+```env
+APP_ENV=production
+CORS_ORIGINS=https://letrusto.com,https://www.letrusto.com,https://letrusto.vercel.app
+PHYSICAL_COMMERCE_ENABLED=false
+SUPPLIER_INTEGRATIONS_ENABLED=false
+RAZORPAY_ENV=production
+RAZORPAY_KEY_ID=rzp_live_...
+RAZORPAY_KEY_SECRET=...
+RAZORPAY_STARTER_PLAN_ID=plan_...
+RAZORPAY_PRO_PLAN_ID=plan_...
+RAZORPAY_WEBHOOK_SECRET=...
+```
+
+Keep the Razorpay secret, plan IDs, and webhook secret in Railway only. Vercel needs only the public API configuration:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=https://YOUR_RAILWAY_BACKEND_HOST
+NEXT_PUBLIC_APP_URL=https://letrusto.com
+```
+
+The public embed endpoint is intentionally separate from application CORS. `GET /api/v1/public/embed/{widget_id}` returns `Access-Control-Allow-Origin: *` for external customer sites, while the global middleware continues to allow only the configured HTTPS application origins for authenticated traffic. `/widget.js` is served with `Cache-Control: public, max-age=3600, s-maxage=86400`.
 
 Cashfree, Stripe, supplier, OAuth, SMS, and AI variables remain required only when their corresponding existing flows are enabled. Do not enable a provider by partially configuring its credentials.
 
 ## Database and startup
 
-Railway startup runs `alembic upgrade head`, initializes the production catalog, and then starts FastAPI. Current migration head is `20260902_39`, which adds isolated digital payment-attempt and entitlement tables. Verify the migration completes online against the Railway database before launch; the older offline-generation issue is intentionally unchanged.
+Railway startup runs `alembic upgrade head`, initializes the production catalog, and then starts FastAPI. Current migration head is `20260905_41`, which adds the B2B social-proof widget and event tables. Verify the migration completes online against the Railway database before launch; the older offline-generation issue is intentionally unchanged.
 
 ## Payment verification
 
@@ -65,7 +93,7 @@ Complete this checklist against the production providers; keep values in provide
 ### Code verified
 
 - FastAPI startup runs database migrations, catalog initialization, and Uvicorn in that order.
-- Current Alembic head is `20260902_39`; the deployed migration remains additive and must not be rewritten for offline generation.
+- Current Alembic head is `20260905_41`; the deployed migration remains additive and must not be rewritten for offline generation.
 - Production validation rejects localhost databases, placeholder JWT secrets, non-HTTPS public URLs, invalid CORS origins, mismatched payment environments, and incomplete configured Razorpay webhook settings.
 - Digital payments verify the allowlisted product, provider order, amount, currency, captured status, signature, user ownership, and replay state before creating an entitlement.
 - Digital downloads require an entitlement, increment download audit fields, and serve files from outside `frontend/public/`.
@@ -77,7 +105,7 @@ Complete this checklist against the production providers; keep values in provide
 
 - Railway: set and verify production `DATABASE_URL`, `JWT_SECRET_KEY`, `CORS_ORIGINS`, `PUBLIC_APP_URL`, Resend values, and matching Razorpay production values in the provider secret store.
 - Vercel: set `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_APP_URL`; keep backend secrets out of Vercel client-visible configuration.
-- Database: confirm PostgreSQL connectivity and run `alembic upgrade head` online, verifying migration `20260902_39` before traffic is enabled.
+- Database: confirm PostgreSQL connectivity and run `alembic upgrade head` online, verifying migration `20260905_41` before traffic is enabled.
 - Razorpay: verify the production account, webhook secret, webhook endpoint, and one approved sandbox transaction before live payments. Do not fabricate payment results.
 - Resend: verify the sender domain/DNS and test verification, password reset, support, and service enquiry delivery without sending unnecessary customer data.
 - GA4: verify the measurement ID, consent banner, and a consented event in the production property.
@@ -85,9 +113,10 @@ Complete this checklist against the production providers; keep values in provide
 
 - [ ] Railway: set `APP_ENV=production`, the Railway `DATABASE_URL`, a rotated 32+ character `JWT_SECRET_KEY`, `JWT_ALGORITHM=HS256`, exact HTTPS `CORS_ORIGINS`, and `PUBLIC_APP_URL`.
 - [ ] Railway: set `RESEND_API_KEY`, verified-domain `FROM_EMAIL`, and `SUPPORT_EMAIL`; confirm the sender domain and DNS are verified in Resend.
-- [ ] Railway: set matching production Razorpay `RAZORPAY_ENV`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`; keep the secret values server-side.
+- [ ] Railway: set matching production Razorpay `RAZORPAY_ENV`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_STARTER_PLAN_ID`, `RAZORPAY_PRO_PLAN_ID`, and `RAZORPAY_WEBHOOK_SECRET`; keep all values server-side.
+- [ ] Railway: explicitly set `PHYSICAL_COMMERCE_ENABLED=false` and `SUPPLIER_INTEGRATIONS_ENABLED=false`.
 - [ ] Vercel: set `NEXT_PUBLIC_API_BASE_URL` to the HTTPS Railway origin and `NEXT_PUBLIC_APP_URL` to the canonical HTTPS site origin; do not add backend secrets.
-- [ ] Database: confirm PostgreSQL connectivity, run `alembic upgrade head`, and verify migration `20260902_39` completes before application traffic is enabled.
+- [ ] Database: confirm PostgreSQL connectivity, run `alembic upgrade head`, and verify migration `20260905_41` completes before application traffic is enabled.
 - [ ] URLs and CORS: verify the deployed app calls the deployed API, the API allows only intended HTTPS frontend origins, and no wildcard or localhost origin is present.
 - [ ] GA4: confirm measurement ID configuration, production consent banner behavior, and a consented test event without collecting payment IDs, emails, secrets, or form contents.
 - [ ] Email: test verification, password reset, support, and service enquiry messages using `PUBLIC_APP_URL`; inspect provider logs without exposing tokens or message contents.

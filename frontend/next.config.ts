@@ -4,6 +4,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/widget.js",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=3600, s-maxage=86400" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        ],
+      },
+      {
         source: "/(.*)",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
