@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 
-import { loginUser, logoutUser, registerUser } from "@/services/auth.service";
+import { introspectAccessToken, loginUser, logoutUser, registerUser } from "@/services/auth.service";
 import type { AuthResponse, AuthState, AuthUser, LoginPayload, RegisterPayload } from "@/types/auth";
 import {
   ACCESS_TOKEN_KEY,
@@ -57,7 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     refreshSessionAcrossTabs(refresh)
-      .then((r) => {
+      .then(async (r) => {
+        const session = await introspectAccessToken(r.access_token);
+        if (session.subject !== r.user_id) throw new Error("Session user mismatch");
         localStorage.setItem(ACCESS_TOKEN_KEY, r.access_token);
         localStorage.setItem(REFRESH_TOKEN_KEY, r.refresh_token);
         setState({
@@ -67,11 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isLoading: false,
         });
       })
-      .catch(() => {
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
-        setState({ user: null, accessToken: null, refreshToken: null, isLoading: false });
-      });
+      .catch(() => clearStoredSession());
     return subscribeToAuthEvents(
       (r) => {
         localStorage.setItem(ACCESS_TOKEN_KEY, r.access_token);
@@ -85,6 +83,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     );
   }, []);
+
+  function clearStoredSession() {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem("token");
+    publishLogout();
+    setState({ user: null, accessToken: null, refreshToken: null, isLoading: false });
+  }
 
   const applyAuth = useCallback((r: AuthResponse) => {
     localStorage.setItem(ACCESS_TOKEN_KEY, r.access_token);
@@ -117,10 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (refresh) await logoutUser(refresh);
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    publishLogout();
-    setState({ user: null, accessToken: null, refreshToken: null, isLoading: false });
+    clearStoredSession();
   }, []);
 
   return (

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "@/services/api";
-import type { AuthResponse, LoginPayload, RegisterPayload } from "@/types/auth";
+import type { AuthResponse, LoginPayload, RegisterPayload, TokenIntrospection } from "@/types/auth";
 
 const AUTH_BASE = `${API_BASE_URL}/api/v1/auth`;
 
@@ -80,6 +80,14 @@ export async function refreshAccessToken(refreshToken: string): Promise<AuthResp
   });
   if (!res.ok) throw new Error("Session expired");
   return (await res.json()) as AuthResponse;
+}
+
+export async function introspectAccessToken(accessToken: string): Promise<TokenIntrospection> {
+  const res = await fetch(`${AUTH_BASE}/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error("Session expired");
+  return (await res.json()) as TokenIntrospection;
 }
 
 export async function logoutUser(refreshToken: string): Promise<void> {

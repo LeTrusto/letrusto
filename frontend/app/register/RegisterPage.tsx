@@ -2,21 +2,31 @@
 
 import { Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import BrandMark from "@/components/layout/BrandMark";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function RegisterPage() {
-  const { register, isAuthenticated, isLoading } = useAuth();
+  const { register, isAuthenticated, isLoading, logout } = useAuth();
+  const router = useRouter();
   const [form, setForm] = useState({ full_name: "", email: "", password: "", confirm: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [redirectTimedOut, setRedirectTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const timer = window.setTimeout(() => setRedirectTimedOut(true), 2000);
+    router.replace("/dashboard");
+    return () => window.clearTimeout(timer);
+  }, [isAuthenticated, router]);
 
   if (isLoading) return <AuthLoading />;
-  if (isAuthenticated) return <AuthLoading message="You are already signed in. Redirecting..." />;
+  if (isAuthenticated) return <AuthRedirectFallback timedOut={redirectTimedOut} onSignOut={() => void logout("/login")} />;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -57,6 +67,10 @@ export default function RegisterPage() {
 
 function AuthLoading({ message = "Loading..." }: { message?: string }) {
   return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-sm text-slate-300">{message}</main>;
+}
+
+function AuthRedirectFallback({ timedOut, onSignOut }: { timedOut: boolean; onSignOut: () => void }) {
+  return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-center text-slate-300"><div><p>{timedOut ? "Redirect is taking longer than expected." : "You are already signed in. Redirecting..."}</p>{timedOut && <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center"><Link href="/dashboard" className="rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-bold text-white">Click here to go to Dashboard</Link><button type="button" onClick={onSignOut} className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-300 hover:border-slate-500 hover:text-white">Sign Out &amp; Switch Account</button></div>}</div></main>;
 }
 
 function PasswordField({ id, label, value, visible, onChange, onToggle, autoComplete, placeholder }: { id: string; label: string; value: string; visible: boolean; onChange: (value: string) => void; onToggle: () => void; autoComplete: string; placeholder: string }) {

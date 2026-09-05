@@ -27,6 +27,11 @@ export type AuthResponse = {
   avatar_url: string | null;
 };
 
+export type TokenIntrospection = {
+  subject: string;
+  expiresAt: number;
+};
+
 export type RegisterPayload = {
   email: string;
   password: string;
