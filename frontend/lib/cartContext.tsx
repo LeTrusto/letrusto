@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import type { CartItem } from "@/types/commerce";
 import { addCartItem, cartItemsEqual, cartSubtotal, normalizeCartItems, updateCartItemQuantity } from "@/lib/cartRules";
 import { getPublicProducts, toCommerceProduct } from "@/services/product.service";
@@ -30,6 +31,8 @@ function saveCart(items: CartItem[]) {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const shouldLoadCatalog = ["/cart", "/checkout", "/product", "/products", "/shop"].some((route) => pathname === route || pathname.startsWith(`${route}/`));
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [products, setProducts] = useState<Record<string, ReturnType<typeof toCommerceProduct>>>({});
@@ -47,6 +50,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!shouldLoadCatalog) return;
     void getPublicProducts().then((catalog) => {
       const nextProducts = Object.fromEntries(catalog.map((product) => {
         const commerceProduct = toCommerceProduct(product);
@@ -60,7 +64,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCatalogReady(false);
       setCatalogError("Unable to load current product details. Please refresh and try again.");
     });
-  }, []);
+  }, [shouldLoadCatalog]);
 
   useEffect(() => {
     if (!hydrated) return;

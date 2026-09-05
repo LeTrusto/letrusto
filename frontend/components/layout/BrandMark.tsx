@@ -5,9 +5,10 @@ type Props = {
   compact?: boolean;
   footer?: boolean;
   tone?: "light" | "dark";
+  priority?: boolean;
 };
 
-export default function BrandMark({ compact = false, footer = false, tone = "dark" }: Props) {
+export default function BrandMark({ compact = false, footer = false, tone = "dark", priority = !compact && !footer }: Props) {
   const isLight = tone === "light" || footer;
   const logoSource = compact ? "/favicon-192x192.png" : isLight ? "/logo-dark.png" : "/logo.png";
 
@@ -22,7 +23,7 @@ export default function BrandMark({ compact = false, footer = false, tone = "dar
         alt="LeTrusto"
         width={compact ? 192 : 2020}
         height={compact ? 192 : 778}
-        priority={!compact}
+        priority={priority}
         className={compact ? "h-9 w-9 object-contain" : "h-auto w-[150px] object-contain sm:w-[178px]"}
       />
     </Link>
