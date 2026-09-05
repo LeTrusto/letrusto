@@ -75,14 +75,13 @@ class SubscriptionService:
                 },
             })
         except Exception as exc:
-            if self.settings.APP_ENV == "development":
-                logger.exception(
-                    "Razorpay subscription creation failed: plan_name=%s plan_id=%s error_type=%s provider_error=%s",
-                    plan_name,
-                    locals().get("plan_id", "unresolved"),
-                    type(exc).__name__,
-                    _provider_error_summary(exc),
-                )
+            logger.exception(
+                "Razorpay subscription creation failed: plan_name=%s plan_id=%s error_type=%s provider_error=%s",
+                plan_name,
+                locals().get("plan_id", "unresolved"),
+                type(exc).__name__,
+                _provider_error_summary(exc),
+            )
             raise BadRequestError("Razorpay subscription could not be created") from exc
 
         provider_id = str(provider_subscription.get("id") or "")
