@@ -2,6 +2,8 @@
 
 import hashlib
 import hmac
+import json
+import logging
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -14,6 +16,9 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import BadRequestError
 from app.models.entities import Subscription, User
 from app.schemas.subscriptions import SubscriptionCreateResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 class SubscriptionService:
@@ -59,8 +64,9 @@ class SubscriptionService:
             )
 
         try:
+            plan_id = self._plan_id(plan_name)
             provider_subscription = self._client().subscription.create({
-                "plan_id": self._plan_id(plan_name),
+                "plan_id": plan_id,
                 "total_count": 120,
                 "customer_notify": 1,
                 "notes": {
@@ -69,6 +75,14 @@ class SubscriptionService:
                 },
             })
         except Exception as exc:
+            if self.settings.APP_ENV == "development":
+                logger.exception(
+                    "Razorpay subscription creation failed: plan_name=%s plan_id=%s error_type=%s provider_error=%s",
+                    plan_name,
+                    locals().get("plan_id", "unresolved"),
+                    type(exc).__name__,
+                    _provider_error_summary(exc),
+                )
             raise BadRequestError("Razorpay subscription could not be created") from exc
 
         provider_id = str(provider_subscription.get("id") or "")
@@ -136,3 +150,23 @@ def _epoch_to_datetime(value: Any) -> datetime | None:
         return datetime.fromtimestamp(int(value), tz=timezone.utc)
     except (TypeError, ValueError, OverflowError):
         return None
+
+
+def _provider_error_summary(exc: Exception) -> str:
+    raw_message = str(exc)
+    try:
+        payload = json.loads(raw_message)
+    except (TypeError, ValueError):
+        return raw_message[:500]
+
+    if not isinstance(payload, dict):
+        return raw_message[:500]
+    error = payload.get("error")
+    if isinstance(error, dict):
+        summary = {
+            key: error.get(key)
+            for key in ("code", "description", "field", "source", "reason")
+            if error.get(key) is not None
+        }
+        return json.dumps(summary, separators=(",", ":"))[:500]
+    return json.dumps(payload, separators=(",", ":"))[:500]
