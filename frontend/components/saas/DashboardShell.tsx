@@ -27,7 +27,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     <div className="min-h-[calc(100vh-80px)] bg-[#f3f7f5] text-[#17382e]">
       <div className="mx-auto flex max-w-[1440px] flex-col lg:flex-row">
         <aside className="border-b border-[#d9e5df] bg-[#eef5f1] px-5 py-5 lg:min-h-[calc(100vh-80px)] lg:w-64 lg:border-b-0 lg:border-r lg:px-6 lg:py-8">
-          <div className="flex items-center justify-between lg:block"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e11d48]">LeTrusto / studio</p><h1 className="mt-2 text-xl font-black tracking-tight">Trust, in public.</h1></div><button type="button" onClick={() => void logout("/")} className="rounded-full p-2 text-[#71877f] hover:bg-white lg:mt-8" aria-label="Sign out"><LogOut className="h-4 w-4" /></button></div>
+          <div className="flex items-center justify-between lg:block"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e11d48]">LeTrusto / studio</p><h1 className="mt-2 text-xl font-black tracking-tight">Trust, in public.</h1></div><button type="button" onClick={() => void logout()} className="rounded-full p-2 text-[#71877f] hover:bg-white lg:mt-8" aria-label="Sign out"><LogOut className="h-4 w-4" /></button></div>
           <nav className="mt-7 flex gap-2 lg:flex-col" aria-label="Workspace navigation">
             {navItems.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className={`flex items-center gap-3 px-3 py-2.5 text-sm font-bold transition ${pathname.startsWith(href) ? "bg-[#17382e] text-white" : "text-[#587268] hover:bg-white hover:text-[#17382e]"}`}><Icon className="h-4 w-4" />{label}</Link>)}
           </nav>

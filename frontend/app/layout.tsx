@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     siteName: "LeTrusto",
     title: "LeTrusto — Digital tools and services",
     description: "Practical digital tools, templates and services for Indian businesses.",
-    images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
+    images: [{ url: "/og-card.png", width: 1254, height: 1254 }],
   },
   twitter: {
     card: "summary_large_image",
@@ -58,16 +58,19 @@ export const metadata: Metadata = {
     creator: "@letrusto",
     title: "LeTrusto — Digital tools and services",
     description: "Practical digital tools, templates and services for Indian businesses.",
-    images: ["/images/og-default.svg"],
+    images: ["/og-card.png"],
   },
   authors: [{ name: "LeTrusto", url: SITE_URL }],
   creator: "LeTrusto",
   publisher: "LeTrusto",
   manifest: "/site.webmanifest",
   icons: {
-    icon: "/letrusto-icon.svg",
-    shortcut: "/letrusto-icon.svg",
-    apple: "/letrusto-icon.svg",
+    icon: [
+      { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/favicon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
