@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import CartPageView from "./CartPageView";
+import PhysicalCommercePaused from "@/components/commerce/PhysicalCommercePaused";
 
 export const metadata: Metadata = {
   title: "Cart",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function CartPage() {
-  return <CartPageView />;
+  return <PhysicalCommercePaused area="The cart" />;
 }

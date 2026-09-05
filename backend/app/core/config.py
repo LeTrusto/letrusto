@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     APP_NAME: str = "LeTrusto Backend"
     APP_ENV: str = "development"
     API_V1_PREFIX: str = "/api/v1"
+    PHYSICAL_COMMERCE_ENABLED: bool = False
+    SUPPLIER_INTEGRATIONS_ENABLED: bool = False
 
     DATABASE_URL: str = "postgresql+pg8000://postgres:postgres@localhost:5432/letrusto"
 

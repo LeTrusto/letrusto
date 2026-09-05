@@ -36,6 +36,15 @@ class ScheduledJobRunner:
         started_at = datetime.now(timezone.utc)
         started_clock = monotonic()
         job_name = "inventory_and_order_reconciliation"
+        if not get_settings().PHYSICAL_COMMERCE_ENABLED:
+            logger.info("Scheduled job skipped because physical commerce is disabled", extra={"job_name": job_name})
+            return {
+                "job_name": job_name,
+                "status": "SKIPPED_PHYSICAL_COMMERCE_DISABLED",
+                "started_at": started_at.isoformat(),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "duration_seconds": round(monotonic() - started_clock, 3),
+            }
         logger.info("Scheduled job started", extra={"job_name": job_name, "started_at": started_at.isoformat()})
 
         with self.db_engine.connect() as connection:

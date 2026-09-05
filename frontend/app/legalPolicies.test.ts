@@ -45,13 +45,10 @@ describe("legal and policy route coverage", () => {
     expect(cookieConsent).toContain("letrusto:open-cookie-preferences");
   });
 
-  it("links all available legal policies from checkout before payment", () => {
-    for (const href of ["/privacy-policy", "/terms-of-use", "/shipping-policy", "/returns-policy", "/cancellation-policy"]) {
-      expect(checkout).toContain(href);
-    }
-    expect(checkout).toContain("Razorpay in INR");
-    expect(checkout).not.toContain("INR_PER_USD");
-    expect(checkout).not.toContain("NEXT_PUBLIC_PRICING_FX_RATE");
+  it("does not present a physical checkout while the B2B SaaS transition is active", () => {
+    expect(checkout).toContain("PhysicalCommercePaused");
+    expect(checkout).toContain("Checkout");
+    expect(checkout).not.toContain("Razorpay");
   });
 
   it("links product return copy to the returns policy", () => {
@@ -97,8 +94,7 @@ describe("legal and policy route coverage", () => {
       checkout,
     ].join("\n");
     expect(publicSources).not.toMatch(/GSTIN|GST registered|Stripe checkout|international checkout is available/i);
-    expect(publicSources).toContain("International checkout is not available yet");
-    expect(publicSources).toContain("Razorpay");
+    expect(publicSources).not.toContain("International checkout is available");
   });
 
   it("explains digital delivery and separate service enquiry states", () => {

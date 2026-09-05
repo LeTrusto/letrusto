@@ -1,5 +1,5 @@
-import AdminProductsView from "./AdminProductsView";
+import PhysicalCommercePaused from "@/components/commerce/PhysicalCommercePaused";
 
 export default function AdminProductsPage() {
-  return <AdminProductsView />;
+  return <PhysicalCommercePaused area="Physical product administration" />;
 }

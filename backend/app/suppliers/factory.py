@@ -11,6 +11,8 @@ from app.suppliers.adapters.printful_adapter import PrintfulAdapter
 def build_supplier_adapter(provider: str | None = None) -> SupplierAdapter:
     """Return an adapter for the active provider or an explicit legacy provider."""
     settings = get_settings()
+    if not settings.SUPPLIER_INTEGRATIONS_ENABLED:
+        raise RuntimeError("Supplier integrations are disabled for the B2B SaaS platform")
     name = (provider or getattr(settings, "SUPPLIER_PROVIDER", "printful")).lower()
 
     if name == "cj":

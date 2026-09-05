@@ -9,10 +9,10 @@ const cardSource = readFileSync(fileURLToPath(new URL("../../components/products
 const checkoutSource = readFileSync(fileURLToPath(new URL("../checkout/page.tsx", import.meta.url)), "utf8");
 
 describe("product and cart production contracts", () => {
-  it("defaults product shipping to India and keeps checkout quote server-authoritative", () => {
-    expect(productSource).toContain('useState("IN")');
-    expect(checkoutSource).toContain("getOrderQuote");
-    expect(checkoutSource).toContain("money(quote!.total)");
+  it("keeps physical checkout paused during the B2B SaaS transition", () => {
+    expect(checkoutSource).toContain("PhysicalCommercePaused");
+    expect(checkoutSource).toContain("Checkout");
+    expect(checkoutSource).not.toContain("getOrderQuote");
   });
 
   it("handles product shipping loading and network error states", () => {
@@ -44,6 +44,6 @@ describe("product and cart production contracts", () => {
     expect(checkoutSource).not.toContain("NEXT_PUBLIC_PRICING_FX_RATE");
     expect(checkoutSource).not.toContain("INR_PER_USD");
     expect(checkoutSource).not.toContain("Stripe");
-    expect(checkoutSource).toContain("Razorpay");
+    expect(checkoutSource).not.toContain("Razorpay");
   });
 });

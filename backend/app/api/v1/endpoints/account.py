@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.deps import get_current_user, get_digital_product_service, get_order_service, get_user_service
 from app.models.entities import User
@@ -10,6 +10,7 @@ from app.services.user_service import UserService
 from app.services.digital_product_service import DigitalProductService
 from app.schemas.digital_products import DigitalEntitlementDTO
 from app.services.otp_auth_service import normalize_indian_mobile
+from app.core.config import get_settings
 
 router = APIRouter(prefix="/account", tags=["account"])
 
@@ -41,6 +42,8 @@ def get_account_orders(
     current_user: User = Depends(get_current_user),
     service: OrderService = Depends(get_order_service),
 ) -> CustomerOrdersResponse:
+    if not get_settings().PHYSICAL_COMMERCE_ENABLED:
+        raise HTTPException(status_code=410, detail="Physical commerce is currently unavailable")
     return service.list_orders(current_user, page, page_size)
 
 

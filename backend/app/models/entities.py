@@ -639,6 +639,8 @@ class User(Base):
     support_tickets: Mapped[list["SupportTicket"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     cart: Mapped["Cart | None"] = relationship(back_populates="user", cascade="all, delete-orphan", uselist=False)
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
+    widgets: Mapped[list["Widget"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class PasswordResetToken(Base):
@@ -870,6 +872,54 @@ class DigitalEntitlement(Base):
 
     user: Mapped[User] = relationship()
     payment_attempt: Mapped[DigitalPaymentAttempt] = relationship(back_populates="entitlement")
+
+
+class Widget(Base):
+    __tablename__ = "widgets"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    domain_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    theme_color: Mapped[str] = mapped_column(String(20), nullable=False, default="#2563eb")
+    position: Mapped[str] = mapped_column(String(40), nullable=False, default="bottom-left")
+    display_delay: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user: Mapped[User] = relationship(back_populates="widgets")
+    events: Mapped[list["WidgetEvent"]] = relationship(back_populates="widget", cascade="all, delete-orphan")
+
+
+class WidgetEvent(Base):
+    __tablename__ = "widget_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    widget_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("widgets.id", ondelete="CASCADE"), index=True)
+    customer_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    customer_location: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    action_text: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    review_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    widget: Mapped[Widget] = relationship(back_populates="events")
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    razorpay_subscription_id: Mapped[str | None] = mapped_column(String(160), nullable=True, unique=True)
+    plan_name: Mapped[str] = mapped_column(String(30), nullable=False, default="free")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
+    current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user: Mapped[User] = relationship(back_populates="subscriptions")
 
 
 class RefundRequest(Base):
