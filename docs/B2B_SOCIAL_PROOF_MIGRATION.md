@@ -84,7 +84,48 @@ The `User` model now exposes `widgets` and `subscriptions` relationships. The en
 7. Confirm `/cart`, `/checkout`, `/orders/{id}`, and `/account/orders` show the paused state.
 8. Confirm physical API paths are not registered while the feature flag is false.
 9. Confirm authentication, registration, login, refresh, password reset, email verification, and Resend flows remain available.
-10. Build the next SaaS slice: widget CRUD API, event ingestion/approval API, subscription checkout/webhooks, embeddable JavaScript widget, and the customer dashboard.
+10. Verify the Phase 2 widget slice below.
+
+## Phase 2 Widget API and Embed Testing
+
+Authenticated widget management uses the existing JWT bearer authentication:
+
+- `POST /api/v1/widgets` creates a widget.
+- `GET /api/v1/widgets` and `GET /api/v1/widgets/{id}` list/read only the current user's widgets.
+- `PUT /api/v1/widgets/{id}` updates an owned widget.
+- `DELETE /api/v1/widgets/{id}` deactivates an owned widget without deleting data.
+- `POST /api/v1/widgets/{id}/events` creates an event.
+- `GET /api/v1/widgets/{id}/events` lists events for an owned widget.
+- `DELETE /api/v1/events/{id}` hides an owned event by setting `is_approved=false`.
+
+The unauthenticated public response is:
+
+```text
+GET /api/v1/public/embed/{widget_id}
+```
+
+It returns only active widgets and approved events from the last 30 days, and includes `Access-Control-Allow-Origin: *`. The browser asset is served at `/widget.js`:
+
+```html
+<script src="https://letrusto.com/widget.js" data-id="WIDGET_UUID"></script>
+```
+
+For local testing, override the API base without rebuilding the frontend:
+
+```html
+<script src="http://localhost:3000/widget.js" data-id="WIDGET_UUID" data-api-base="http://localhost:8000"></script>
+```
+
+Focused local checks:
+
+```powershell
+cd C:\Users\BasavannaS\Repos\letrusto\backend
+python -m compileall -q app/schemas/widgets.py app/api/v1/endpoints/widgets.py app/api/v1/endpoints/widget_events.py app/api/v1/endpoints/public_embed.py app/api/v1/api.py
+cd ..
+node --check frontend/public/widget.js
+```
+
+The script intentionally renders server content through DOM text nodes, rotates events after `display_delay`, and silently does nothing for empty, failed, or non-OK public responses.
 
 ## Validation Completed
 

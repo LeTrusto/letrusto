@@ -26,6 +26,9 @@ from app.api.v1.endpoints import (
     support,
     trust,
     users,
+    widget_events,
+    widgets,
+    public_embed,
 )
 
 api_router = APIRouter()
@@ -45,7 +48,9 @@ api_router.include_router(analytics.router)
 api_router.include_router(account.router)
 api_router.include_router(affiliate.router)
 api_router.include_router(articles.router)
-
+api_router.include_router(widgets.router)
+api_router.include_router(widget_events.router)
+api_router.include_router(public_embed.router)
 if settings.PHYSICAL_COMMERCE_ENABLED:
     api_router.include_router(compare.router)
     api_router.include_router(recommendations.router)
@@ -57,4 +62,3 @@ if settings.PHYSICAL_COMMERCE_ENABLED:
     api_router.include_router(supplier_discovery.router)
     api_router.include_router(supplier_validation.router)
 
-api_router.include_router(account.router)
