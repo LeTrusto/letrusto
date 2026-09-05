@@ -127,6 +127,53 @@ node --check frontend/public/widget.js
 
 The script intentionally renders server content through DOM text nodes, rotates events after `display_delay`, and silently does nothing for empty, failed, or non-OK public responses.
 
+## Phase 3 SaaS UI and Subscription Testing
+
+The SaaS UI is available at:
+
+- `/` for the landing page, live popup demo, features, pricing, and FAQ.
+- `/dashboard/widgets` for widget settings, live preview, and embed code.
+- `/dashboard/events` for manual event creation and event hiding.
+
+Configure Razorpay recurring plans in the backend environment. These values remain server-side except for the public Razorpay key returned when an authenticated checkout is created:
+
+```env
+RAZORPAY_ENV=sandbox
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
+RAZORPAY_WEBHOOK_SECRET=...
+RAZORPAY_STARTER_PLAN_ID=plan_...
+RAZORPAY_PRO_PLAN_ID=plan_...
+```
+
+Create matching monthly plans in the Razorpay test dashboard at ₹999 and ₹2,499. Set the webhook URL to:
+
+```text
+https://YOUR_BACKEND_HOST/api/v1/subscriptions/webhook
+```
+
+Subscribe to `subscription.charged` and `subscription.cancelled`, and use the same webhook secret in `RAZORPAY_WEBHOOK_SECRET`. The backend verifies `x-razorpay-signature`, stores the subscription ID against the authenticated user, and updates the status and current period end from signed webhook payloads.
+
+To test locally:
+
+1. Start the backend and frontend with the Razorpay sandbox variables configured.
+2. Register or sign in, open `/dashboard/widgets`, create a widget, and confirm the embed snippet contains its UUID.
+3. Add an event at `/dashboard/events`; verify it appears in the event stream and can be hidden.
+4. Open **Upgrade plan**, choose Starter or Pro, and confirm the checkout modal receives the server-created Razorpay subscription ID.
+5. Complete the sandbox checkout, then forward Razorpay webhooks to the local backend with a tunnel such as `ngrok http 8000` or the Razorpay Dashboard webhook test action.
+6. Confirm `subscription.charged` changes the subscription record to `active` and `subscription.cancelled` changes it to `cancelled`.
+
+Focused checks from the repository root:
+
+```powershell
+cd frontend
+npm run lint
+npm test -- --run
+npm run build
+cd ..\backend
+python -m compileall -q app/schemas/subscriptions.py app/services/subscription_service.py app/api/v1/endpoints/subscriptions.py app/api/v1/api.py
+```
+
 ## Validation Completed
 
 - New models import successfully.

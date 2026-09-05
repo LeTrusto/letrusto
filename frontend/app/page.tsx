@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
 
-import Hero from "@/components/home/Hero";
-import NewsletterSignup from "@/components/home/NewsletterSignup";
-import SchemaOrg from "@/components/SchemaOrg";
-import { SITE_URL } from "@/config/site";
+import SaaSLanding from "@/components/saas/SaasLanding";
 
 export const metadata: Metadata = {
-  title: "Tools, Templates & Digital Services",
-  description: "Practical free tools, ready-to-use digital products and affordable digital services for Indian businesses, freelancers and creators.",
+  title: "Social Proof Widgets for Growing Businesses",
+  description: "Make customer trust visible with lightweight social proof and review widgets from LeTrusto.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "LeTrusto — Tools, Templates & Digital Services",
-    description: "Practical free tools, ready-to-use digital products and affordable digital services for Indian businesses, freelancers and creators.",
+    title: "LeTrusto — Social proof, made visible",
+    description: "Lightweight sales popups, Wall of Love grids, and review collection for ambitious businesses.",
     url: "/",
     siteName: "LeTrusto",
     type: "website",
@@ -20,11 +17,5 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  return (
-    <main className="bg-[var(--background)]">
-      <SchemaOrg type="WebPage" data={{ name: "LeTrusto — Digital tools and services", url: SITE_URL, description: "Practical digital tools, templates and services for Indian businesses." }} />
-      <Hero />
-      <NewsletterSignup />
-    </main>
-  );
+  return <SaaSLanding />;
 }

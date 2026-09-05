@@ -23,6 +23,7 @@ from app.api.v1.endpoints import (
     search,
     supplier_discovery,
     supplier_validation,
+    subscriptions,
     support,
     trust,
     users,
@@ -51,6 +52,7 @@ api_router.include_router(articles.router)
 api_router.include_router(widgets.router)
 api_router.include_router(widget_events.router)
 api_router.include_router(public_embed.router)
+api_router.include_router(subscriptions.router)
 if settings.PHYSICAL_COMMERCE_ENABLED:
     api_router.include_router(compare.router)
     api_router.include_router(recommendations.router)

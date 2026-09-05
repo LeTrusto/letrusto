@@ -94,6 +94,8 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
+    RAZORPAY_STARTER_PLAN_ID: str = ""
+    RAZORPAY_PRO_PLAN_ID: str = ""
 
     # Stripe Checkout for non-India orders. Keep credentials server-side only.
     STRIPE_SECRET_KEY: str = ""
