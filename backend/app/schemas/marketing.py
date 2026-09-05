@@ -46,3 +46,19 @@ class AttributionDTO(AttributionCreate):
     id: UUID
     status: str
     created_at: str
+
+
+class MarketingLeadCreate(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    full_name: str | None = Field(default=None, max_length=200)
+    business_type: str = Field(min_length=1, max_length=60)
+    primary_goal: str = Field(min_length=1, max_length=60)
+    monthly_visitors: str = Field(min_length=1, max_length=40)
+    recommended_widget: str = Field(min_length=1, max_length=60)
+    source: str = Field(default="widget_quiz", min_length=1, max_length=80)
+    consented_to_updates: bool = False
+
+
+class MarketingLeadResponse(BaseModel):
+    message: str
+    recommended_widget: str

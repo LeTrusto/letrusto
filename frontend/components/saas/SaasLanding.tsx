@@ -10,6 +10,7 @@ import {
   MessageCircleHeart,
   Play,
   ShieldCheck,
+  Sparkles,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -44,6 +45,7 @@ export default function SaaSLanding() {
             <p className="mt-6 max-w-xl text-base leading-7 text-[#c5d7cf] sm:text-lg">LeTrusto helps ambitious businesses show the right customer story at the right moment, without slowing down their site.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/register" className="flex items-center gap-2 bg-[#2563eb] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-blue-500">Start Free Trial <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/quiz" className="flex items-center gap-2 border border-[#638378] px-5 py-3.5 text-sm font-bold text-white hover:border-[#60a5fa]">Find your best widget <Sparkles className="h-4 w-4" /></Link>
               <a href="#demo" className="flex items-center gap-2 border border-[#638378] px-5 py-3.5 text-sm font-bold text-white hover:border-[#60a5fa]"><Play className="h-4 w-4 fill-current" /> Live Demo</a>
             </div>
             <p className="mt-5 text-xs text-[#9bb4a8]">No credit card required. Install in minutes.</p>

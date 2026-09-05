@@ -922,6 +922,22 @@ class Subscription(Base):
     user: Mapped[User] = relationship(back_populates="subscriptions")
 
 
+class MarketingLead(Base):
+    __tablename__ = "marketing_leads"
+    __table_args__ = (UniqueConstraint("email", "source", name="uq_marketing_leads_email_source"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    business_type: Mapped[str] = mapped_column(String(60), nullable=False)
+    primary_goal: Mapped[str] = mapped_column(String(60), nullable=False)
+    monthly_visitors: Mapped[str] = mapped_column(String(40), nullable=False)
+    recommended_widget: Mapped[str] = mapped_column(String(60), nullable=False)
+    source: Mapped[str] = mapped_column(String(80), nullable=False, default="widget_quiz")
+    consented_to_updates: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class RefundRequest(Base):
     __tablename__ = "refund_requests"
     __table_args__ = (UniqueConstraint("idempotency_key", name="uq_refund_requests_idempotency_key"),)
