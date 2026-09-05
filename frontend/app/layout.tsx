@@ -24,6 +24,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_DESCRIPTION = "LeTrusto helps growing businesses collect, manage, and display customer reviews and social proof with lightweight widgets.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: "LeTrusto",
@@ -31,16 +33,15 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   title: {
-    default: "LeTrusto",
+    default: "LeTrusto - Social Proof Widgets for Growing Businesses",
     template: "%s | LeTrusto",
   },
-  description:
-    "Practical digital tools, templates and services for Indian businesses. LeTrusto is building the next chapter of useful digital commerce.",
+  description: SITE_DESCRIPTION,
   keywords: [
-    "digital tools",
-    "business templates",
-    "business services India",
-    "digital products India",
+    "social proof widgets",
+    "customer reviews",
+    "review widgets",
+    "customer testimonials",
     "LeTrusto",
   ],
   openGraph: {
@@ -48,8 +49,8 @@ export const metadata: Metadata = {
     locale: "en",
     url: SITE_URL,
     siteName: "LeTrusto",
-    title: "LeTrusto — Digital tools and services",
-    description: "Practical digital tools, templates and services for Indian businesses.",
+    title: "LeTrusto",
+    description: SITE_DESCRIPTION,
     images: [{ url: "/og-card.png", width: 1254, height: 1254 }],
   },
   twitter: {
@@ -67,6 +68,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
       { url: "/favicon-192x192.png", sizes: "192x192", type: "image/png" },
     ],
     shortcut: "/favicon.ico",
@@ -101,7 +103,7 @@ export default function RootLayout({
             "@id": `${SITE_URL}/#website`,
             name: "LeTrusto",
             url: SITE_URL,
-            description: "Practical digital tools, templates and services for Indian businesses.",
+            description: SITE_DESCRIPTION,
             potentialAction: {
               "@type": "SearchAction",
               target: `${SITE_URL}/search?q={search_term_string}`,
@@ -117,11 +119,11 @@ export default function RootLayout({
             url: SITE_URL,
             logo: {
               "@type": "ImageObject",
-              url: `${SITE_URL}/LeTrusto%20Brand%20Logo.png`,
-              width: 1774,
-              height: 887,
+              url: `${SITE_URL}/logo.png`,
+              width: 2008,
+              height: 783,
             },
-            description: "Practical digital tools, templates and services for Indian businesses.",
+            description: SITE_DESCRIPTION,
             sameAs: ["https://x.com/letrusto", "https://instagram.com/letrusto"],
           }}
         />

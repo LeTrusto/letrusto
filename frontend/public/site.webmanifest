@@ -1,7 +1,7 @@
 {
   "name": "LeTrusto",
   "short_name": "LeTrusto",
-  "description": "Original designs printed on demand and shipped worldwide.",
+  "description": "LeTrusto helps growing businesses collect, manage, and display customer reviews and social proof with lightweight widgets.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

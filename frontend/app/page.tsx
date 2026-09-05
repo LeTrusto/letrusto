@@ -3,16 +3,16 @@ import type { Metadata } from "next";
 import SaaSLanding from "@/components/saas/SaasLanding";
 
 export const metadata: Metadata = {
-  title: "Social Proof Widgets for Growing Businesses",
-  description: "Make customer trust visible with lightweight social proof and review widgets from LeTrusto.",
+  title: { absolute: "LeTrusto - Social Proof Widgets for Growing Businesses" },
+  description: "LeTrusto helps growing businesses collect, manage, and display customer reviews and social proof with lightweight widgets.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "LeTrusto — Social proof, made visible",
-    description: "Lightweight sales popups, Wall of Love grids, and review collection for ambitious businesses.",
+    title: "LeTrusto",
+    description: "LeTrusto helps growing businesses collect, manage, and display customer reviews and social proof with lightweight widgets.",
     url: "/",
     siteName: "LeTrusto",
     type: "website",
-    images: [{ url: "/images/og-default.svg", width: 1200, height: 630 }],
+    images: [{ url: "/og-card.png", width: 1254, height: 1254 }],
   },
 };
 
