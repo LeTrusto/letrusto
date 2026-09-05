@@ -32,12 +32,11 @@ describe("legal and policy route coverage", () => {
     }
   });
 
-  it("links all available legal policies from the footer", () => {
-    for (const href of ["/privacy-policy", "/terms-of-use", "/shipping-policy", "/returns-policy", "/cancellation-policy"]) {
+  it("links the SaaS legal and support destinations from the footer", () => {
+    for (const href of ["/#features", "/#pricing", "/#demo", "/dashboard", "/privacy-policy", "/terms-of-use", "/support"]) {
       expect(footer).toContain(href);
     }
     expect(footer).toContain("Cookie Preferences");
-    expect(footer).toContain("/support?tab=contact&category=contact");
   });
 
   it("keeps cookie preferences reopenable after consent is saved", () => {

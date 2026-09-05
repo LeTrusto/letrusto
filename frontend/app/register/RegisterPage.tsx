@@ -8,14 +8,15 @@ import BrandMark from "@/components/layout/BrandMark";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function RegisterPage() {
-  const { register, isAuthenticated } = useAuth();
+  const { register, isAuthenticated, isLoading } = useAuth();
   const [form, setForm] = useState({ full_name: "", email: "", password: "", confirm: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  if (isAuthenticated) return null;
+  if (isLoading) return <AuthLoading />;
+  if (isAuthenticated) return <AuthLoading message="You are already signed in. Redirecting..." />;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -33,7 +34,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="relative flex flex-1 items-center justify-center overflow-hidden bg-[#26113c] px-4 py-12 sm:py-16"><div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.4),transparent_30%),radial-gradient(circle_at_85%_80%,rgba(236,72,153,0.3),transparent_28%)]" />
+    <main className="relative flex flex-1 items-center justify-center overflow-hidden bg-slate-950 px-4 py-12 sm:py-16"><div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(37,99,235,0.28),transparent_30%),radial-gradient(circle_at_85%_80%,rgba(20,184,166,0.18),transparent_28%)]" />
       <section className="relative w-full max-w-[460px] rounded-[1.5rem] border border-white/20 bg-[var(--surface)] p-6 shadow-2xl sm:p-9">
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandMark />
@@ -52,6 +53,10 @@ export default function RegisterPage() {
       </section>
     </main>
   );
+}
+
+function AuthLoading({ message = "Loading..." }: { message?: string }) {
+  return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-sm text-slate-300">{message}</main>;
 }
 
 function PasswordField({ id, label, value, visible, onChange, onToggle, autoComplete, placeholder }: { id: string; label: string; value: string; visible: boolean; onChange: (value: string) => void; onToggle: () => void; autoComplete: string; placeholder: string }) {

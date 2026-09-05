@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { Suspense } from "react";
-import { BriefcaseBusiness, FileText, Home, LayoutGrid, Menu, Sparkles, User, Wrench } from "lucide-react";
+import { ArrowRight, LayoutDashboard, Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import BrandMark from "./BrandMark";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function CommerceNavbar() {
   return (
@@ -16,33 +17,24 @@ export default function CommerceNavbar() {
 
 function CommerceNavbarContent() {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
   const links = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/tools", label: "Tools", icon: Wrench },
-    { href: "/digital-products", label: "Digital Products", icon: FileText },
-    { href: "/services", label: "Services", icon: BriefcaseBusiness },
-    { href: "/minku-dinku", label: "Minku & Dinku", icon: Sparkles },
-    { href: "/about", label: "About", icon: LayoutGrid },
+    { href: "/#features", label: "Features" },
+    { href: "/#pricing", label: "Pricing" },
+    { href: "/#faq", label: "FAQ" },
   ];
   return (
-    <header className="sticky top-0 z-50 bg-[var(--background)] shadow-[0_4px_18px_rgba(60,35,100,0.06)]">
-      <div className="flex min-h-[76px] items-center justify-between gap-3 px-4 lg:hidden">
-        <BrandMark compact />
-      </div>
-      <div className="mx-auto hidden min-h-[92px] max-w-[1280px] items-center justify-between px-6 lg:flex">
-        <div className="flex min-w-0 items-center gap-8">
-          <BrandMark />
-          <nav className="flex items-center gap-1 text-sm font-semibold" aria-label="Primary navigation">
-            {links.map(({ href, label, icon: Icon }) => {
-              const active = href === "/" ? pathname === href : pathname.startsWith(href);
-              return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 transition-colors ${active ? "bg-[var(--lt-primary)]/10 text-[var(--lt-primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--lt-purple)]/10 hover:text-[var(--text-primary)]"}`}><Icon size={15} strokeWidth={2} />{label}</Link>;
-            })}
-          </nav>
-        </div>
+    <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/95 text-white shadow-lg backdrop-blur-md">
+      <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between gap-4 px-5 sm:px-8 lg:px-12">
+        <BrandMark compact={false} />
+        <nav className="hidden items-center gap-1 text-sm font-semibold md:flex" aria-label="Primary navigation">
+          {links.map(({ href, label }) => <Link key={href} href={href} className="rounded-lg px-3 py-2 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white">{label}</Link>)}
+          {isAuthenticated && <Link href="/dashboard" className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 transition-colors ${pathname.startsWith("/dashboard") ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}><LayoutDashboard size={15} />Dashboard</Link>}
+        </nav>
         <div className="flex items-center gap-2">
-          <Link href="/account" className="inline-flex h-11 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--text-primary)] transition-colors hover:border-[var(--lt-accent)] hover:text-[var(--lt-primary)]" aria-label="Account">
-            <User size={18} strokeWidth={2} /> <span>Account</span>
-          </Link>
+          <Link href="/login" className="hidden px-3 py-2 text-sm font-bold text-slate-300 transition-colors hover:text-white sm:inline">Sign In</Link>
+          <Link href="/register" className="inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.25)] transition-colors hover:bg-blue-500">Start Free <ArrowRight size={15} /></Link>
+          <span className="md:hidden" aria-hidden="true"><Menu size={20} className="text-slate-400" /></span>
         </div>
       </div>
     </header>
@@ -51,9 +43,8 @@ function CommerceNavbarContent() {
 
 function NavbarFallback() {
   return (
-    <header className="sticky top-0 z-50 bg-[var(--background)] shadow-[0_4px_18px_rgba(60,35,100,0.06)]">
-      <div className="flex min-h-[76px] items-center justify-between px-4 lg:hidden"><BrandMark compact /><Menu className="text-[var(--lt-primary)]" aria-hidden="true" /></div>
-      <div className="mx-auto hidden min-h-[92px] max-w-[1280px] items-center px-6 lg:flex"><BrandMark /></div>
+    <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/95 backdrop-blur-md">
+      <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12"><BrandMark /><Menu className="text-slate-400" aria-hidden="true" /></div>
     </header>
   );
 }

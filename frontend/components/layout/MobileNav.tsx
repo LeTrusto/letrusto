@@ -2,24 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Wrench, BriefcaseBusiness, Package, UserCircle } from "lucide-react";
+import { Home, LayoutDashboard, Sparkles, Tag } from "lucide-react";
 import clsx from "clsx";
+import { useAuth } from "@/hooks/useAuth";
 
 const TABS = [
   { label: "Home", href: "/", icon: Home },
-  { label: "Tools", href: "/tools", icon: Wrench },
-  { label: "Services", href: "/services", icon: BriefcaseBusiness },
-  { label: "Orders", href: "/account/orders", icon: Package },
-  { label: "Account", href: "/account", icon: UserCircle },
+  { label: "Features", href: "/#features", icon: Sparkles },
+  { label: "Pricing", href: "/#pricing", icon: Tag },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
 ] as const;
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
+  const visibleTabs = isAuthenticated ? TABS : TABS.slice(0, 3);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--surface)] safe-area-pb lg:hidden" aria-label="Mobile navigation">
       <div className="flex h-[68px] items-center justify-around px-1">
-        {TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           const isActive = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href.split("?")[0]);
           const Icon = tab.icon;
           return (
