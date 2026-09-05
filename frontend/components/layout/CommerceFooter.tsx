@@ -23,7 +23,7 @@ export default function CommerceFooter() {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-12">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <BrandMark footer />
+            <BrandMark footer tone="light" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">Social Proof, Made Visible.</p>
             <p className="mt-6 text-xs text-slate-500">© 2026 LeTrusto. All rights reserved.</p>
           </div>

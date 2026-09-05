@@ -76,19 +76,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(REFRESH_TOKEN_KEY, r.refresh_token);
         setState({ user: userFromResponse(r), accessToken: r.access_token, refreshToken: r.refresh_token, isLoading: false });
       },
-      () => {
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
-        setState({ user: null, accessToken: null, refreshToken: null, isLoading: false });
-      },
+      () => clearStoredSession(false),
     );
   }, []);
 
-  function clearStoredSession() {
+  function clearStoredSession(broadcast = true) {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem("token");
-    publishLogout();
+    [ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, "token", "access_token", "refresh_token"].forEach((key) => {
+      sessionStorage.removeItem(key);
+    });
+    document.cookie.split(";").forEach((cookie) => {
+      const name = cookie.split("=")[0]?.trim();
+      if (name) document.cookie = `${name}=; Max-Age=0; path=/`;
+    });
+    if (broadcast) publishLogout();
     setState({ user: null, accessToken: null, refreshToken: null, isLoading: false });
   }
 

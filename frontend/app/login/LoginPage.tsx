@@ -28,7 +28,7 @@ export default function LoginPage() {
   }, [isAuthenticated, redirectTo, router]);
 
   if (isLoading) return <AuthLoading />;
-  if (isAuthenticated) return <AuthRedirectFallback timedOut={redirectTimedOut} onSignOut={() => void logout("/login")} />;
+  if (isAuthenticated) return <AuthRedirectFallback timedOut={redirectTimedOut} onSignOut={() => void logout()} />;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();

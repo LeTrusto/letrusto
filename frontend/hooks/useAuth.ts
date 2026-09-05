@@ -26,13 +26,10 @@ export function useAuth() {
     [ctx, router]
   );
 
-  const logoutAndRedirect = useCallback(
-    async (redirectTo = "/") => {
-      await ctx.logout();
-      router.push(redirectTo);
-    },
-    [ctx, router]
-  );
+  const logoutAndRedirect = useCallback(async () => {
+    await ctx.logout();
+    router.push("/");
+  }, [ctx, router]);
 
   return {
     user: ctx.user,
