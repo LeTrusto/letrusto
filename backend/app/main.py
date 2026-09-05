@@ -30,6 +30,8 @@ def _build_cors_origins(raw_origins: str, app_env: str) -> list[str]:
             "http://127.0.0.1:3000",
             "http://localhost:3100",
             "http://127.0.0.1:3100",
+            "http://localhost:3101",
+            "http://127.0.0.1:3101",
         ])
 
     origins = [*configured, *defaults]
