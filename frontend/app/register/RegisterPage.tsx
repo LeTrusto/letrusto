@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 
 import BrandMark from "@/components/layout/BrandMark";
 import { useAuth } from "@/hooks/useAuth";
+import { trackSafeEvent } from "@/lib/analytics";
+import { recordMarketingEvent } from "@/services/marketing.service";
 
 export default function RegisterPage() {
   const { register, isAuthenticated, isLoading, logout } = useAuth();
@@ -31,11 +33,14 @@ export default function RegisterPage() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+    trackSafeEvent("signup_started", { source: "register_page" });
     if (form.password.length < 8) return setError("Password must be at least 8 characters");
     if (form.password !== form.confirm) return setError("Passwords do not match");
     setLoading(true);
     try {
       await register({ email: form.email, password: form.password, full_name: form.full_name });
+      trackSafeEvent("account_created", { source: "register_page" });
+      void recordMarketingEvent("account_created", { source: "register_page" }).catch(() => undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {

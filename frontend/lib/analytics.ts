@@ -23,7 +23,13 @@ export type SafeAnalyticsEvent =
 	| "service_enquiry_failed"
 	| "widget_quiz_started"
 	| "widget_quiz_completed"
-	| "widget_quiz_lead_captured";
+	| "widget_quiz_lead_captured"
+	| "signup_started"
+	| "account_created"
+	| "widget_created"
+	| "first_event_added"
+	| "embed_code_viewed"
+	| "trial_started";
 
 export type SafeAnalyticsParams = Record<string, string>;
 
@@ -51,6 +57,12 @@ const SAFE_PARAMETER_KEYS: Record<SafeAnalyticsEvent, readonly string[]> = {
 	widget_quiz_started: ["source"],
 	widget_quiz_completed: ["recommended_widget", "recommended_plan"],
 	widget_quiz_lead_captured: ["recommended_widget", "recommended_plan"],
+	signup_started: ["source"],
+	account_created: ["source"],
+	widget_created: ["source"],
+	first_event_added: ["source"],
+	embed_code_viewed: ["source"],
+	trial_started: ["source"],
 };
 
 declare global {

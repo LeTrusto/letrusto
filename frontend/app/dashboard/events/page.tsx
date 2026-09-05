@@ -4,7 +4,9 @@ import { Loader2, Plus, ShieldOff, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
+import { trackSafeEvent } from "@/lib/analytics";
 import { createWidgetEvent, getWidgetEvents, getWidgets, hideWidgetEvent, type Widget, type WidgetEvent } from "@/services/saas.service";
+import { recordMarketingEvent } from "@/services/marketing.service";
 
 const initialEvent = { customer_name: "", customer_location: "", action_text: "purchased your product", rating: 5, review_text: "", is_approved: true };
 
@@ -23,7 +25,7 @@ export default function EventsPage() {
   function showError(reason: unknown) { setError(reason instanceof Error ? reason.message : "Something went wrong."); }
   function setField(field: keyof typeof initialEvent, value: string | number | boolean) { setForm((current) => ({ ...current, [field]: value })); }
 
-  async function addEvent(event: React.FormEvent) { event.preventDefault(); if (!accessToken || !widgetId) return; setAdding(true); setError(""); try { const created = await createWidgetEvent(accessToken, widgetId, form); setEvents((current) => [created, ...current]); setForm(initialEvent); } catch (reason) { showError(reason); } finally { setAdding(false); } }
+  async function addEvent(event: React.FormEvent) { event.preventDefault(); if (!accessToken || !widgetId) return; setAdding(true); setError(""); try { const created = await createWidgetEvent(accessToken, widgetId, form); setEvents((current) => [created, ...current]); setForm(initialEvent); trackSafeEvent("first_event_added", { source: "events_dashboard" }); void recordMarketingEvent("first_event_added", { source: "events_dashboard" }).catch(() => undefined); } catch (reason) { showError(reason); } finally { setAdding(false); } }
   async function hideEvent(id: string) { if (!accessToken) return; try { await hideWidgetEvent(accessToken, id); setEvents((current) => current.map((item) => item.id === id ? { ...item, is_approved: false } : item)); } catch (reason) { showError(reason); } }
 
   if (loading) return <div className="flex min-h-[50vh] items-center justify-center text-sm text-[#587268]"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading events</div>;

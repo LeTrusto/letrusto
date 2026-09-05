@@ -51,6 +51,7 @@ from app.schemas.reservations import AdminInventoryReservationDTO
 from app.schemas.payments import AdminFulfillmentHistoryResponse, AdminFulfillmentOrderDTO, AdminSupplierPaymentDTO, FulfillmentDTO, SupplierPaymentRequest
 from app.schemas.admin_analytics import AnalyticsPeriod, AnalyticsSummary, InventoryAnalyticsDTO, OrderProfitabilityDTO, ProductPerformanceDTO, SalesTrendPoint, VariantPerformanceDTO
 from app.services.admin_analytics_service import AdminAnalyticsService
+from app.services.analytics_service import AnalyticsService
 from app.schemas.marketing import AttributionCreate, AttributionDTO, MarketingCACResponse, MarketingSpendCreate, MarketingSpendDTO
 from app.services.marketing_service import MarketingService
 from app.schemas.trust import (
@@ -180,6 +181,11 @@ def analytics_summary(
     _: User = Depends(get_current_admin), db=Depends(get_db),
 ) -> AnalyticsSummary:
     return AdminAnalyticsService(db).summary(_analytics_period(period, start_date, end_date))
+
+
+@router.get("/analytics/activation")
+def analytics_activation(_: User = Depends(get_current_admin), db=Depends(get_db)) -> dict:
+    return AnalyticsService(db).get_activation_stats()
 
 
 @router.get("/analytics/products", response_model=list[ProductPerformanceDTO])

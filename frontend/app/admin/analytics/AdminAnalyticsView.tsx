@@ -36,6 +36,7 @@ type Summary = {
 type Product = { product_name: string; orders: number; units_sold: number; refunds: number; net_sales: number; contribution_before_cac: Metric; actual_cac: Metric; contribution_after_cac: Metric; cac_status: string };
 type Inventory = { product_name: string; variant_name: string; cj_inventory: number | null; factory_inventory: number | null; active_reservations: number; available_customer_inventory: number; sellable_inventory_status: string };
 type Trend = { date: string; orders: number; paid_orders: number; gross_sales: number; refunds: number; net_sales: number; marketing_spend: number; attributed_orders: number; actual_cac: number | null; contribution_after_cac: number | null; cac_status: string };
+type Activation = { days: number; counts: Record<string, number>; conversion_rates: Record<string, number | null> };
 
 function money(value: number | null) { return value == null ? "—" : `₹${value.toLocaleString("en-IN")}`; }
 function actual(metric: Metric) { if (metric.value != null) return money(metric.value); return metric.status === "NOT_ATTRIBUTED" ? "Not attributed" : metric.status === "NOT_CONFIGURED" ? "Not configured" : "Insufficient data"; }
@@ -47,6 +48,7 @@ export default function AdminAnalyticsView() {
   const [products, setProducts] = useState<Product[]>([]);
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [trend, setTrend] = useState<Trend[]>([]);
+  const [activation, setActivation] = useState<Activation | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -60,12 +62,14 @@ export default function AdminAnalyticsView() {
           fetch(`${API_BASE_URL}/api/v1/admin/analytics/products${query}`, { headers }),
           fetch(`${API_BASE_URL}/api/v1/admin/analytics/inventory`, { headers }),
           fetch(`${API_BASE_URL}/api/v1/admin/analytics/sales-trend${query}`, { headers }),
+          fetch(`${API_BASE_URL}/api/v1/admin/analytics/activation`, { headers }),
         ]);
         if (responses.some((response) => !response.ok)) throw new Error("Analytics request failed");
         setSummary((await responses[0].json()) as Summary);
         setProducts((await responses[1].json()) as Product[]);
         setInventory((await responses[2].json()) as Inventory[]);
         setTrend((await responses[3].json()) as Trend[]);
+        setActivation((await responses[4].json()) as Activation);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load analytics");
       }
@@ -97,6 +101,7 @@ export default function AdminAnalyticsView() {
       {!summary && !error && <div className="lt-card mt-8 flex items-center gap-3 py-12 text-sm text-[var(--text-secondary)]"><RefreshCw size={16} className="animate-spin" /> Loading analytics...</div>}
       {summary && <>
         <section className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4"><Kpi label="Gross order value" value={money(summary.gross_order_value)} /><Kpi label="Paid sales" value={money(summary.paid_sales)} /><Kpi label="Refunded" value={money(summary.refunded_amount)} /><Kpi label="Net sales" value={money(summary.net_sales)} /></section>
+        {activation && <section className="lt-card mt-8"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="lt-label">SaaS activation funnel</p><h2 className="mt-2 text-lg font-bold">Signup to first install</h2></div><p className="text-xs text-[var(--text-muted)]">Last {activation.days} days</p></div><div className="mt-5 grid gap-3 sm:grid-cols-5">{[["Signups", "signup_started"], ["Accounts", "account_created"], ["Widgets", "widget_created"], ["Events", "first_event_added"], ["Embed copies", "embed_code_viewed"]].map(([label, key]) => <div key={key} className="border border-[var(--border)] p-3"><p className="lt-label">{label}</p><p className="mt-2 text-xl font-bold">{activation.counts[key]}</p></div>)}</div><div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[var(--text-secondary)]">{Object.entries(activation.conversion_rates).map(([key, value]) => <span key={key}>{key.replaceAll("_", " ")}: <strong>{value == null ? "—" : `${value}%`}</strong></span>)}</div></section>}
         <section className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4"><Kpi label="Orders" value={String(summary.order_count)} /><Kpi label="Paid orders" value={String(summary.paid_order_count)} /><Kpi label="Pending payment" value={String(summary.pending_payment_count)} /><Kpi label="Average paid order" value={summary.paid_order_count ? money(summary.paid_sales / summary.paid_order_count) : "Not available"} /></section>
         <section className="mt-8 grid gap-4 md:grid-cols-4"><MetricCard label="Payment fees" metric={summary.payment_fees} /><MetricCard label="Landed cost" metric={summary.landed_cost} /><MetricCard label="Shipping cost" metric={summary.shipping_cost} /><MetricCard label="Contribution Before CAC" metric={summary.contribution_before_cac} /></section>
         <section className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4"><Kpi label="Marketing Spend" value={money(summary.marketing_spend)} /><MetricCard label="ACTUAL CAC" metric={summary.attributed_cac} /><MetricCard label="BLENDED CAC" metric={summary.blended_cac} /><Kpi label="TARGET CAC" value={money(summary.policy_assumptions.target_cac_inr)} /></section>
