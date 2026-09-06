@@ -1,11 +1,12 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.services.entitlement_service import get_entitlement
 from app.models.entities import User, Widget
 from app.schemas.widgets import WidgetCreate, WidgetDTO, WidgetUpdate
 
@@ -25,6 +26,13 @@ def create_widget(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Widget:
+    entitlement = get_entitlement(db, current_user)
+    if entitlement.max_widgets is not None:
+        widget_count = db.scalar(
+            select(func.count()).select_from(Widget).where(Widget.user_id == current_user.id, Widget.is_active.is_(True))
+        ) or 0
+        if widget_count >= entitlement.max_widgets:
+            raise HTTPException(status_code=403, detail=f"Your {entitlement.plan} plan allows {entitlement.max_widgets} active widget(s).")
     widget = Widget(user_id=current_user.id, **payload.model_dump())
     db.add(widget)
     db.commit()

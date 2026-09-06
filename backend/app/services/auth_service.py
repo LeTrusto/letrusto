@@ -59,6 +59,9 @@ class AuthService:
             raise BadRequestError("Email already registered")
         hashed = hash_password(password)
         user = self.user_repo.create(email=email, full_name=full_name, password_hash=hashed)
+        now = datetime.now(timezone.utc)
+        user.trial_started_at = now
+        user.trial_ends_at = now + timedelta(days=14)
         self.db.commit()
         self.db.refresh(user)
         return self._build_auth_response(user)

@@ -43,6 +43,20 @@ export type SubscriptionCheckout = {
   status: string;
 };
 
+export type Entitlement = {
+  plan: "free" | "starter" | "pro";
+  status: string;
+  active: boolean;
+  is_trial: boolean;
+  trial_ends_at: string | null;
+  max_widgets: number | null;
+  monthly_view_limit: number | null;
+  features: string[];
+  subscription_id: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+};
+
 export async function getWidgets(token: string) {
   return authenticatedApiRequest<Widget[]>(token, "/widgets");
 }
@@ -85,4 +99,12 @@ export async function createSubscription(token: string, planName: "starter" | "p
     method: "POST",
     body: JSON.stringify({ plan_name: planName }),
   });
+}
+
+export async function getSubscriptionStatus(token: string) {
+  return authenticatedApiRequest<Entitlement>(token, "/subscriptions/status");
+}
+
+export async function cancelSubscription(token: string) {
+  return authenticatedApiRequest<{ status: string; access_until: string | null }>(token, "/subscriptions/cancel", { method: "POST" });
 }

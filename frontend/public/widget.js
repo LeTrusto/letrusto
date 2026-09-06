@@ -10,7 +10,11 @@
   var widgetId = script && script.getAttribute("data-id");
   if (!widgetId) return;
 
-  var configuredBase = (script && script.getAttribute("data-api-base")) || window.NEXT_PUBLIC_API_BASE_URL || "https://letrusto.com";
+  var scriptOrigin = "https://letrusto.com";
+  if (script && script.src) {
+    try { scriptOrigin = new URL(script.src, window.location.href).origin; } catch { /* Use the production default. */ }
+  }
+  var configuredBase = (script && script.getAttribute("data-api-base")) || window.NEXT_PUBLIC_API_BASE_URL || scriptOrigin;
   var apiBase = configuredBase.replace(/\/$/, "");
   if (!/\/api\/v1$/.test(apiBase)) apiBase += "/api/v1";
 

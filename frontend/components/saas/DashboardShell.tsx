@@ -3,11 +3,12 @@
 import { CreditCard, LogOut, MessageSquareQuote, PanelTop, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import BrandMark from "@/components/layout/BrandMark";
 import UpgradePlanModal from "@/components/saas/UpgradePlanModal";
+import { cancelSubscription, getSubscriptionStatus, type Entitlement } from "@/services/saas.service";
 
 const navItems = [
   { href: "/dashboard/widgets", label: "Widgets", icon: PanelTop },
@@ -16,8 +17,15 @@ const navItems = [
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const { user, accessToken, isLoading, isAuthenticated, logout } = useAuth();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
+  const [billingMessage, setBillingMessage] = useState("");
+
+  useEffect(() => {
+    if (!accessToken) return;
+    getSubscriptionStatus(accessToken).then(setEntitlement).catch(() => setBillingMessage("Billing status is temporarily unavailable."));
+  }, [accessToken]);
 
   if (isLoading) return <div className="flex min-h-[70vh] items-center justify-center bg-[#f3f7f5] text-sm text-[#587268]">Loading workspace...</div>;
   if (!isAuthenticated) {
@@ -33,7 +41,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           <nav className="mt-7 flex gap-2 lg:flex-col" aria-label="Workspace navigation">
             {navItems.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className={`flex items-center gap-3 px-3 py-2.5 text-sm font-bold transition ${pathname.startsWith(href) ? "bg-[#17382e] text-white" : "text-[#587268] hover:bg-white hover:text-[#17382e]"}`}><Icon className="h-4 w-4" />{label}</Link>)}
           </nav>
-          <div className="mt-8 hidden border-t border-[#d9e5df] pt-6 lg:block"><p className="text-xs text-[#71877f]">Signed in as</p><p className="mt-1 truncate text-sm font-bold">{user?.full_name || user?.email}</p><button type="button" onClick={() => setUpgradeOpen(true)} className="mt-5 flex w-full items-center justify-center gap-2 bg-[#e11d48] px-3 py-2.5 text-xs font-bold text-white hover:bg-[#be123c]"><CreditCard className="h-4 w-4" /> Upgrade plan</button></div>
+          <div className="mt-8 hidden border-t border-[#d9e5df] pt-6 lg:block"><p className="text-xs text-[#71877f]">Signed in as</p><p className="mt-1 truncate text-sm font-bold">{user?.full_name || user?.email}</p>{entitlement && <div className="mt-5 border border-[#d9e5df] bg-white p-3"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#71877f]">Current access</p><p className="mt-1 text-sm font-black capitalize">{entitlement.plan}{entitlement.is_trial ? " trial" : ""}</p><p className="mt-1 text-xs leading-5 text-[#587268]">{entitlement.is_trial && entitlement.trial_ends_at ? `Trial ends ${new Date(entitlement.trial_ends_at).toLocaleDateString()}` : entitlement.cancel_at_period_end && entitlement.current_period_end ? `Access until ${new Date(entitlement.current_period_end).toLocaleDateString()}` : entitlement.status}</p>{entitlement.plan !== "free" && !entitlement.cancel_at_period_end && <button type="button" onClick={() => { if (!accessToken || !window.confirm("Cancel at the end of the current billing period?")) return; void cancelSubscription(accessToken).then((result) => setBillingMessage(`Cancellation scheduled. Access remains until ${result.access_until ? new Date(result.access_until).toLocaleDateString() : "the current period ends"}.`)).catch(() => setBillingMessage("We could not schedule cancellation.")); }} className="mt-3 text-xs font-bold text-[#a31835]">Cancel subscription</button>}</div>}{billingMessage && <p className="mt-2 text-xs leading-5 text-[#a31835]">{billingMessage}</p>}<button type="button" onClick={() => setUpgradeOpen(true)} className="mt-5 flex w-full items-center justify-center gap-2 bg-[#e11d48] px-3 py-2.5 text-xs font-bold text-white hover:bg-[#be123c]"><CreditCard className="h-4 w-4" /> Upgrade plan</button></div>
         </aside>
         <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-12 lg:py-10">{children}</main>
       </div>

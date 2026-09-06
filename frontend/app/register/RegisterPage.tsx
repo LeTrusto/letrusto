@@ -19,6 +19,12 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [redirectTimedOut, setRedirectTimedOut] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<"free" | "starter" | "pro">("starter");
+
+  useEffect(() => {
+    const plan = new URLSearchParams(window.location.search).get("plan");
+    if (plan === "free" || plan === "starter" || plan === "pro") window.setTimeout(() => setSelectedPlan(plan), 0);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -54,7 +60,8 @@ export default function RegisterPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandMark />
           <h1 className="mt-7 text-3xl font-black text-[var(--text-primary)]">Create your LeTrusto account</h1>
-          <p className="mt-2 text-[var(--text-secondary)]">Save your work and access your digital purchases.</p>
+          <p className="mt-2 text-[var(--text-secondary)]">Start your LeTrusto workspace with a 14-day Starter trial.</p>
+          <p className="mt-2 text-xs font-semibold text-[var(--lt-primary)]">Selected: {selectedPlan === "free" ? "Free" : selectedPlan === "starter" ? "Starter" : "Pro"}</p>
         </div>
         {error && <p role="alert" className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
         <form onSubmit={(event) => { void handleSubmit(event); }} className="space-y-4">

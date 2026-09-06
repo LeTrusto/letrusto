@@ -14,8 +14,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import BadRequestError
-from app.models.entities import Subscription, User
-from app.schemas.subscriptions import SubscriptionCreateResponse
+from app.models.entities import Subscription, SubscriptionWebhookEvent, User
+from app.schemas.subscriptions import SubscriptionCancelResponse, SubscriptionCreateResponse
 
 
 logger = logging.getLogger(__name__)
@@ -102,6 +102,26 @@ class SubscriptionService:
             status=record.status,
         )
 
+    def cancel_subscription(self, user: User) -> SubscriptionCancelResponse:
+        record = self.db.scalar(
+            select(Subscription)
+            .where(Subscription.user_id == user.id, Subscription.razorpay_subscription_id.is_not(None))
+            .order_by(Subscription.created_at.desc())
+        )
+        if record is None or not record.razorpay_subscription_id:
+            raise BadRequestError("No active paid subscription was found")
+        if record.status in {"cancelled", "expired"}:
+            return SubscriptionCancelResponse(status=record.status, access_until=record.current_period_end)
+        try:
+            self._client().subscription.cancel(record.razorpay_subscription_id, {"cancel_at_cycle_end": 1})
+        except Exception as exc:
+            logger.exception("Razorpay subscription cancellation failed: error_type=%s", type(exc).__name__)
+            raise BadRequestError("Razorpay subscription could not be cancelled") from exc
+        record.status = "cancellation_pending"
+        record.cancel_at_period_end = True
+        self.db.commit()
+        return SubscriptionCancelResponse(status=record.status, access_until=record.current_period_end)
+
     def process_webhook(self, body: bytes, signature: str | None) -> None:
         if not self.settings.RAZORPAY_WEBHOOK_SECRET or not signature:
             raise BadRequestError("Invalid Razorpay subscription webhook")
@@ -112,13 +132,20 @@ class SubscriptionService:
             raise BadRequestError("Invalid Razorpay subscription webhook signature")
 
         try:
-            payload = __import__("json").loads(body)
+            payload = json.loads(body)
             event_name = str(payload.get("event") or "")
             entity: dict[str, Any] = payload["payload"]["subscription"]["entity"]
         except (ValueError, KeyError, TypeError) as exc:
             raise BadRequestError("Invalid Razorpay subscription webhook payload") from exc
 
-        if event_name not in {"subscription.charged", "subscription.cancelled"}:
+        event_id = str(payload.get("id") or hashlib.sha256(body).hexdigest())
+        if self.db.scalar(select(SubscriptionWebhookEvent).where(SubscriptionWebhookEvent.provider_event_id == event_id)):
+            return
+        self.db.add(SubscriptionWebhookEvent(provider_event_id=event_id, event_name=event_name))
+        self.db.flush()
+
+        if event_name not in {"subscription.charged", "subscription.cancelled", "subscription.halted", "subscription.completed", "subscription.pending"}:
+            self.db.commit()
             return
 
         provider_id = str(entity.get("id") or "")
@@ -137,7 +164,18 @@ class SubscriptionService:
             raise BadRequestError("Subscription record not found")
 
         record.razorpay_subscription_id = provider_id
-        record.status = "active" if event_name == "subscription.charged" else "cancelled"
+        record.status = {
+            "subscription.charged": "active",
+            "subscription.cancelled": "cancelled",
+            "subscription.halted": "failed",
+            "subscription.completed": "expired",
+            "subscription.pending": "pending",
+        }[event_name]
+        if event_name == "subscription.cancelled":
+            record.cancelled_at = datetime.now(timezone.utc)
+        if event_name == "subscription.halted":
+            record.failed_at = datetime.now(timezone.utc)
+            record.failure_reason = str(entity.get("error_description") or "Razorpay subscription payment failed")[:500]
         record.current_period_end = _epoch_to_datetime(entity.get("current_end"))
         self.db.commit()
 
