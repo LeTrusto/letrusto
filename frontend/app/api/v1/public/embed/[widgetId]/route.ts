@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const backendBase = (
+  process.env.BACKEND_API_BASE_URL?.trim() ||
   process.env.API_BASE_URL?.trim() ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
   "https://letrusto-production.up.railway.app"
 ).replace(/\/api\/v1\/?$/i, "").replace(/\/$/, "");
 
