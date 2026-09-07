@@ -6,62 +6,32 @@ The repository is authoritative. Inspect current code, migrations, tests, and co
 
 ## Current Product Direction
 
-LeTrusto is an Indian ecommerce platform whose active production flow is Printful POD.
-CJ is retained only for historical Phase 2 validation and legacy compatibility.
+LeTrusto is currently a B2B SaaS product for customer social-proof widgets and embeddable experiences.
 
-Business progression:
+Active product areas are:
 
-Discover -> Curate -> Distribute -> Optimize -> Negotiate -> Exclusivity -> Private Label -> LeTrusto Brand
+- Account registration, authentication, and onboarding
+- Widget creation and management
+- Customer event management
+- Public embed delivery and domain protection
+- Plan entitlements and usage limits
+- Admin analytics and operational visibility
 
-Roadmap:
+Subscription and card-payment work is paused. Do not retry payment providers, change billing configuration, or modify billing code unless the user explicitly reopens that work.
 
-- Phase 0: business validation, complete
-- Phase 1: brand, complete
-- Phase 2: supplier/product economics validation, complete
-- Phase 3: production commerce backend, current
-- Phase 4: admin/operations, later
-- Phase 5: launch, later
-
-The old mobile/affiliate catalog has been removed. Do not recreate or reseed it. New catalog products must come from Printful.
-
-## Phase 2 Legacy Invariants
-
-The existing Phase 2 supplier validation flow must remain intact. It supports real CJ search, product details, India shipping validation, economics, contribution, inventory distinction, scoring, and review classification.
-
-Use the existing `backend/app/suppliers/adapters/cj_adapter.py` and existing normalization logic. Do not create a second CJ client or authentication flow.
-
-Inventory semantics are fixed:
-
-- `cjInventoryNum` is sellable inventory and the normal scoring input.
-- `factoryInventoryNum` is factory supply, not normal sellable inventory.
-- Never merge factory inventory into sellable inventory.
-
-Do not change Phase 2 scoring thresholds, scoring weights, RTO/margin logic, supplier reliability rules, CJ authentication, or inventory mapping without explicit approval.
-
-## Phase 3.1 Catalog
-
-Current admin catalog APIs:
-
-- `POST /api/v1/admin/products/import`
-- `GET /api/v1/admin/products`
-- `GET /api/v1/admin/products/{id}`
-- `PATCH /api/v1/admin/products/{id}`
-
-All admin catalog operations use the existing `get_current_admin` dependency. Imported Printful products start as `DRAFT`; supported statuses are `DRAFT`, `ACTIVE`, and `PAUSED`.
-
-Preserve supplier traceability: supplier, supplier product ID, CJ variant IDs, supplier SKUs, source image URLs, supplier cost, shipping cost, total/CJ/factory inventory, verification status, and sync timestamps. Duplicate imports are identified by `supplier + supplier_product_id`.
+Historical non-SaaS product work is out of scope. Do not propose, prioritize, restore, or mention it as active work unless the user explicitly asks for historical context.
 
 ## Architecture
 
 Reuse existing implementations before creating new models, services, repositories, endpoints, utilities, adapters, API clients, hooks, or components. Follow the existing FastAPI, SQLAlchemy 2, Alembic, Next.js App Router, React, TypeScript, API-client, authentication, and test patterns.
 
-Keep customer-facing mock/catalog migration scoped to the task. Do not redesign unrelated frontend surfaces or create competing catalog architectures.
+Keep customer-facing SaaS work scoped to the task. Do not redesign unrelated frontend surfaces or create competing architectures.
 
 ## Database And Deployment Safety
 
 - Never modify an existing Alembic migration; create a new additive migration for schema changes.
 - Inspect foreign keys and cascade behavior before data deletion.
-- Never delete users, admins, authentication records, CJ credentials, or unrelated application data during catalog work.
+- Never delete users, admins, authentication records, or unrelated application data.
 - Do not run destructive seed/reset scripts against the current database.
 - Do not re-enable `seed_products.py`, `seed_smartphones.py`, `seed_hosting_saas.py`, or `sync_verified_apple_iphones.py` during normal startup.
 - Do not modify Railway or Vercel configuration unless explicitly requested.
@@ -69,7 +39,7 @@ Keep customer-facing mock/catalog migration scoped to the task. Do not redesign 
 
 ## Security
 
-CJ communication remains backend-only. Never expose or log CJ API keys, access tokens, refresh tokens, passwords, or authorization headers. Never bypass authentication. Do not create real CJ orders, payments, or customer records during development verification.
+Never expose or log API keys, access tokens, refresh tokens, passwords, payment secrets, or authorization headers. Never bypass authentication. Do not create real payment transactions or customer records during development verification.
 
 ## Workflow
 
@@ -87,11 +57,12 @@ Standard commands:
 
 ## Documentation References
 
-- Project state: `docs/LETRUSTO_PROJECT_STATE.md`
 - Backend models: `backend/app/models/entities.py`
 - Backend entry: `backend/app/main.py`
 - Migrations: `backend/alembic/versions/`
-- CJ adapter: `backend/app/suppliers/adapters/cj_adapter.py`
+- Entitlements: `backend/app/services/entitlement_service.py`
+- Widget APIs: `backend/app/api/v1/endpoints/widgets.py`
+- Public embed API: `backend/app/api/v1/endpoints/public_embed.py`
 - Frontend API client: `frontend/services/api.ts`
 - Frontend auth: `frontend/lib/authContext.tsx`
 
