@@ -19,6 +19,7 @@ const CATEGORIES = [
 
 type SupportCategory = (typeof CATEGORIES)[number]["value"];
 type SupportFormState = {
+  customer_name: string;
   email: string;
   category: SupportCategory;
   subject: string;
@@ -26,6 +27,7 @@ type SupportFormState = {
 };
 
 const DEFAULT_FORM: SupportFormState = {
+  customer_name: "",
   email: "",
   category: "contact",
   subject: "",
@@ -161,7 +163,8 @@ export default function SupportPage() {
 
       <div className="mb-8">
         <h1 className="text-3xl font-black text-slate-900">Contact LeTrusto</h1>
-        <p className="mt-2 max-w-xl text-gray-500">Tell us what you need help with, report an issue, or ask a question about your account, tools or digital products.</p>
+        <p className="mt-2 max-w-xl text-gray-500">Tell us what you need help with, report an issue, or ask a question about your LeTrusto workspace.</p>
+        <p className="mt-4 text-sm text-gray-600">Prefer email? Contact <a className="font-semibold text-purple-700 hover:text-amber-500" href="mailto:support@letrusto.com">support@letrusto.com</a>.</p>
       </div>
 
       {/* Tabs */}
@@ -228,6 +231,18 @@ export default function SupportPage() {
                 </div>
               )}
               <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Name</label>
+                  <input
+                    type="text"
+                    required
+                    minLength={2}
+                    value={form.customer_name}
+                    onChange={(e) => setForm((f) => ({ ...f, customer_name: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
+                    placeholder="Your name"
+                  />
+                </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-gray-700">Email</label>
                   <input

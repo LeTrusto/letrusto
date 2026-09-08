@@ -4,19 +4,24 @@ import Link from "next/link";
 import BrandMark from "./BrandMark";
 import { openCookiePreferences } from "@/components/CookieConsent";
 
-const PRODUCT_LINKS = [
+export const footerLinks = {
+  product: [
   { label: "Features", href: "/#features" },
   { label: "Pricing", href: "/#pricing" },
-  { label: "Live Demo", href: "/#demo" },
+  { label: "Live Demo", href: "/demo" },
   { label: "About", href: "/about" },
   { label: "Dashboard", href: "/dashboard" },
-];
-
-const LEGAL_LINKS = [
-  { label: "Privacy Policy", href: "/privacy-policy" },
-  { label: "Terms of Service", href: "/terms-of-use" },
+  ],
+  legal: [
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
   { label: "Contact Support", href: "/support" },
-];
+  { label: "Cookie Preferences", href: "#cookies", onClick: "openCookieModal" },
+  ],
+} as const;
+
+const liveDemoScrollTarget = "/#demo";
+export const legacyPolicyRedirects = ["/privacy-policy", "/terms-of-use"];
 
 export default function CommerceFooter() {
   return (
@@ -31,20 +36,20 @@ export default function CommerceFooter() {
           <div>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Product</h3>
             <ul className="space-y-2.5">
-              {PRODUCT_LINKS.map((link) => <li key={link.href}><Link href={link.href} className="text-sm text-slate-400 transition-colors hover:text-white">{link.label}</Link></li>)}
+              {footerLinks.product.map((link) => <li key={link.href}><Link href={link.href} data-scroll-target={link.label === "Live Demo" ? liveDemoScrollTarget : undefined} className="text-sm text-slate-400 transition-colors duration-200 hover:text-amber-400">{link.label}</Link></li>)}
             </ul>
           </div>
           <div>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Legal & Support</h3>
             <ul className="space-y-2.5">
-              {LEGAL_LINKS.map((link) => (
+              {footerLinks.legal.slice(0, 3).map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-slate-400 transition-colors hover:text-white">
+                  <Link href={link.href} className="text-sm text-slate-400 transition-colors duration-200 hover:text-amber-400">
                     {link.label}
                   </Link>
                 </li>
               ))}
-              <li><button type="button" onClick={openCookiePreferences} className="text-sm text-slate-400 transition-colors hover:text-white">Cookie Preferences</button></li>
+              <li><a href="#cookies" onClick={(event) => { event.preventDefault(); openCookiePreferences(); }} className="text-sm text-slate-400 transition-colors duration-200 hover:text-amber-400">Cookie Preferences</a></li>
             </ul>
           </div>
         </div>

@@ -1,53 +1,54 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Palette, ShoppingCart, Truck, Package } from "lucide-react";
+import { ArrowRight, BarChart3, Code2, Palette, Play } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "How It Works",
-  description: "Learn how LeTrusto print-on-demand works for the current India launch.",
+  description: "See how LeTrusto connects customer events to real-time social proof for growing businesses.",
   alternates: { canonical: "/how-it-works" },
 };
 
 const STEPS = [
   {
+    icon: Code2,
+    title: "Connect Your Events",
+    description: "Integrate your storefront, webhooks, or CRM in minutes using our lightweight script.",
+  },
+  {
     icon: Palette,
-    title: "Browse Designs",
-    description: "Explore our collection of unique, original designs across apparel, wall art, accessories and more.",
+    title: "Curate & Customise",
+    description: "Tailor design, colors, triggers, and display rules to match your brand style natively.",
   },
   {
-    icon: ShoppingCart,
-    title: "Place Your Order",
-    description: "Pick your product, size and colour. Pay securely with Razorpay.",
+    icon: Play,
+    title: "Go Live & Automate",
+    description: "Automatically display real-time sales notifications, reviews, and sign-ups.",
   },
   {
-    icon: Package,
-    title: "Printed Fresh",
-    description: "Your product is printed on demand — no warehouse stock, just your chosen design made fresh for you.",
-  },
-  {
-    icon: Truck,
-    title: "India Checkout",
-    description: "India is the current purchasing destination. Shipping is calculated at checkout before payment.",
+    icon: BarChart3,
+    title: "Analyze & Optimize",
+    description: "Track visitor conversion lift and iterate on high-converting social proof signals.",
   },
 ];
 
 export default function HowItWorksPage() {
   return (
     <main className="bg-[var(--background)]">
-      <section className="max-w-4xl mx-auto px-4 md:px-6 py-14 md:py-20">
-        <h1 className="text-3xl md:text-5xl font-black tracking-tight text-[var(--text-primary)] text-center">
+      <section className="mx-auto max-w-5xl px-5 py-14 md:px-6 md:py-20">
+        <p className="text-center text-xs font-bold uppercase tracking-[0.24em] text-[var(--lt-primary)]">Trust Studio workflow</p>
+        <h1 className="mt-3 text-center text-3xl font-black tracking-tight text-[var(--text-primary)] md:text-5xl">
           How It Works
         </h1>
         <p className="mt-4 text-center text-[var(--text-secondary)] max-w-lg mx-auto">
-          From design to made-to-order production, with India checkout available at launch.
+          Turn customer activity into a polished social proof experience in four practical steps.
         </p>
 
         <div className="mt-12 grid gap-8 md:grid-cols-2">
           {STEPS.map((step, index) => {
             const Icon = step.icon;
             return (
-              <div key={step.title} className="lt-card p-6 flex gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[var(--surface-muted)] flex items-center justify-center">
+              <div key={step.title} className="lt-card flex gap-4 p-6 transition-transform duration-200 hover:-translate-y-1">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)]">
                   <Icon size={22} strokeWidth={1.5} className="text-[var(--lt-purple)]" />
                 </div>
                 <div>
@@ -61,8 +62,8 @@ export default function HowItWorksPage() {
         </div>
 
         <div className="mt-12 text-center">
-          <Link href="/shop" className="lt-btn lt-btn-lg lt-btn-primary">
-            SHOP NOW
+          <Link href="/dashboard" className="lt-btn lt-btn-lg lt-btn-primary">
+            Start Free Trial
             <ArrowRight size={16} />
           </Link>
         </div>
