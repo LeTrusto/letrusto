@@ -1,17 +1,31 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  ArrowRight,
+  Check,
+  Code2,
+  Eye,
+  Gauge,
+  HeartHandshake,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Zap,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import SchemaOrg from "@/components/SchemaOrg";
+import LiveProofPreview from "@/components/saas/LiveProofPreview";
 
 export const metadata: Metadata = {
   title: "About LeTrusto",
-  description: "Discover LeTrusto's practical digital tools, products, services and Minku & Dinku sub-brand.",
+  description: "Learn how LeTrusto helps growing businesses turn customer confidence into visible momentum.",
   alternates: {
     canonical: "/about",
   },
   openGraph: {
     title: "About LeTrusto",
-    description: "Discover LeTrusto's practical digital tools, products, services and Minku & Dinku sub-brand.",
+    description: "Learn how LeTrusto helps growing businesses turn customer confidence into visible momentum.",
     url: "/about",
     siteName: "LeTrusto",
     type: "website",
@@ -20,149 +34,73 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "About LeTrusto",
-    description: "Discover LeTrusto's practical digital tools, products, services and Minku & Dinku sub-brand.",
+    description: "Learn how LeTrusto helps growing businesses turn customer confidence into visible momentum.",
     images: ["/images/og-default.svg"],
   },
 };
 
 export default function AboutPage() {
-  const faqItems = [
-    {
-      q: "What does LeTrusto sell?",
-      a: "LeTrusto offers practical digital tools, ready-to-use digital products, scoped digital services, and the separate Minku & Dinku sub-brand.",
-    },
-    {
-      q: "What are digital products?",
-      a: "They are editable workbooks and practical resources designed to help with pricing, finance and client-work decisions.",
-    },
-    {
-      q: "Who is LeTrusto for?",
-      a: "LeTrusto is for Indian businesses, freelancers and creators who need useful tools or focused digital help.",
-    },
-    {
-      q: "How do I get support?",
-      a: "Use the Support Centre to send a question, report incorrect information or report a broken link.",
-    },
-    {
-      q: "How do you handle order issues?",
-      a: "Contact us with your order number as soon as possible. We review delivery, damage, and fulfillment issues with our production and shipping partners.",
-    },
-    {
-      q: "How can I contact LeTrusto?",
-      a: "Use the Support Centre or email hello@letrusto.com for order, product, and account questions.",
-    },
-  ];
-
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.12),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(251,113,133,0.1),_transparent_22%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
+    <main className="overflow-hidden bg-[var(--background)] text-[var(--text-primary)]">
       <SchemaOrg
         type="WebPage"
         data={{
           name: "About LeTrusto",
           url: "https://letrusto.com/about",
-          description: "Discover LeTrusto's practical digital tools, products, services and Minku & Dinku sub-brand.",
+          description: "Learn how LeTrusto helps growing businesses turn customer confidence into visible momentum.",
         }}
       />
-      <SchemaOrg
-        type="FAQPage"
-        data={{
-          mainEntity: faqItems.map((item) => ({
-            "@type": "Question",
-            name: item.q,
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: item.a,
-            },
-          })),
-        }}
-      />
-      <section className="mx-auto max-w-6xl px-6 py-14 md:py-18">
-        <div className="max-w-4xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">About LeTrusto</p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-6xl">Useful digital work for your next move</h1>
-          <p className="mt-5 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
-            LeTrusto brings together practical free tools, ready-to-use digital products and focused digital services for businesses, freelancers and creators. Minku &amp; Dinku is a separate sub-brand within the wider LeTrusto platform.
-          </p>
-        </div>
-
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {[
-            { title: "Practical tools", copy: "Focused calculators and utilities help you make everyday business and client-work decisions." },
-            { title: "Ready-to-use resources", copy: "Editable workbooks turn recurring pricing, finance and delivery work into a clearer routine." },
-            { title: "Thoughtful services", copy: "Websites, ecommerce, automation and dashboards are scoped around the next useful outcome." },
-          ].map((item) => (
-            <article key={item.title} className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-950">{item.title}</h2>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.copy}</p>
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-12 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">How LeTrusto helps</h2>
-            <div className="mt-6 space-y-5 text-sm leading-7 text-slate-600">
-              <p><strong className="text-slate-950">1. Choose a design:</strong> Browse our current collections and select the product and variant you want.</p>
-              <p><strong className="text-slate-950">2. We produce it:</strong> Your order is sent to production after payment is confirmed.</p>
-              <p><strong className="text-slate-950">3. Quality check:</strong> The finished item is checked and prepared for dispatch.</p>
-              <p><strong className="text-slate-950">4. Track delivery:</strong> We email tracking details when your order leaves production.</p>
+      <section className="relative border-b border-[#d9e5df] bg-[#17382e] text-[#f7faf8]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_84%_18%,rgba(37,99,235,0.32),transparent_28%),radial-gradient(circle_at_10%_80%,rgba(20,184,166,0.2),transparent_30%)]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[1.08fr_0.92fr] lg:gap-20 lg:px-12">
+          <div>
+            <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#60a5fa]"><Sparkles className="h-3.5 w-3.5" /> About LeTrusto</p>
+            <h1 className="mt-5 max-w-3xl text-5xl font-black leading-[0.98] tracking-[-0.04em] sm:text-7xl">Make trust easier to <span className="text-[#60a5fa]">see.</span></h1>
+            <p className="mt-6 max-w-xl text-base leading-7 text-[#c5d7cf] sm:text-lg">LeTrusto helps growing businesses turn real customer activity into clear, timely social proof that gives the next visitor a reason to move.</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/register" className="lt-btn lt-btn-md bg-[#2563eb] text-white hover:bg-blue-500">Start building <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/how-it-works" className="lt-btn lt-btn-md border border-[#638378] text-white hover:border-[#60a5fa]">See how it works</Link>
             </div>
-          </section>
-
-          <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">What we care about</h2>
-            <div className="mt-6 space-y-5 text-sm leading-7 text-slate-600">
-              <p>We keep product details, pricing, and delivery expectations clear before you place an order.</p>
-              <p>We create collections with a focus on useful products, expressive artwork, and reliable everyday appeal.</p>
-              <p>When something goes wrong, we want to hear about it and work toward a fair resolution.</p>
-              <p>We protect customer information and use payment and fulfillment partners that help us operate the store securely.</p>
-            </div>
-          </section>
-        </div>
-
-        <section className="mt-12 grid gap-6 lg:grid-cols-2">
-          <article className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">Clear scope and quality</h2>
-            <div className="mt-5 space-y-4 text-sm leading-7 text-slate-600">
-              <p>Every order is produced after checkout through fulfillment partners selected for product range, production quality, and delivery coverage.</p>
-              <p>Colors and placement can vary slightly from on-screen previews because products are printed on different materials and viewed on different displays.</p>
-              <p>If an order does not arrive as expected, our support team will review the details and help with the next step.</p>
-            </div>
-          </article>
-          <article className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">Why shop LeTrusto</h2>
-            <ul className="mt-5 space-y-3 text-sm leading-7 text-slate-600">
-              <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 rounded-full bg-rose-600" aria-hidden="true" />Fresh designs across useful everyday products.</li>
-              <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 rounded-full bg-rose-600" aria-hidden="true" />Made to order instead of held as excess stock.</li>
-              <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 rounded-full bg-rose-600" aria-hidden="true" />Clear production, shipping, and returns information.</li>
-              <li className="flex gap-3"><span className="mt-2 h-1.5 w-1.5 rounded-full bg-rose-600" aria-hidden="true" />Customer support when an order needs attention.</li>
-            </ul>
-          </article>
-        </section>
-
-        <section className="mt-12 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-          <h2 className="text-2xl font-black tracking-tight text-slate-950">Frequently Asked Questions</h2>
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {faqItems.map((item) => (
-              <article key={item.q} className="rounded-[1.25rem] bg-slate-50 p-5">
-                <h3 className="text-base font-bold text-slate-950">{item.q}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.a}</p>
-              </article>
-            ))}
           </div>
-        </section>
-
-        <section className="mt-12 rounded-[2rem] border border-slate-200 bg-slate-950 p-8 text-white shadow-sm md:p-10">
-          <h2 className="text-3xl font-black tracking-tight">Contact Information</h2>
-          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/80 md:text-base">
-            For questions about products, orders, delivery, or account access, contact hello@letrusto.com or use the support centre.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/support" className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100">Open support centre</Link>
-            <Link href="/digital-products" className="rounded-2xl border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">Browse digital products</Link>
-          </div>
-        </section>
+          <div className="border border-[#638378] bg-[#22483c] p-3 shadow-[0_24px_70px_rgba(0,0,0,0.2)]"><LiveProofPreview color="#2563eb" compact /></div>
+        </div>
       </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
+        <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+          <div><p className="lt-label text-[#2563eb]">Our mission</p><h2 className="lt-heading-2 mt-3 max-w-md">Confidence should be part of the experience.</h2></div>
+          <div className="space-y-5 text-base leading-7 text-[var(--text-secondary)]"><p>People make better decisions when they can see evidence from people like them. Businesses deserve a simple way to make that evidence useful without interrupting the experience they have worked hard to create.</p><p>We are building the trust layer for modern customer journeys: lightweight enough to install quickly, thoughtful enough to feel native, and transparent enough for teams to stay in control.</p></div>
+        </div>
+        <div className="mt-16 grid gap-5 md:grid-cols-3">
+          <ValueCard icon={Users} title="Human signals" text="Bring real activity, reviews, and customer stories into the moments where they matter." />
+          <ValueCard icon={Gauge} title="Useful by default" text="Keep the setup focused, the controls practical, and the signal easy to understand." />
+          <ValueCard icon={Eye} title="Visible impact" text="Give teams a clear view of what is being shown and how their audience responds." />
+        </div>
+      </section>
+
+      <section className="border-y border-[#d9e5df] bg-[#edf5f1] px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
+        <div className="mx-auto max-w-7xl"><div className="max-w-2xl"><p className="lt-label text-[#2563eb]">The product</p><h2 className="lt-heading-2 mt-3">A calm, capable home for customer proof.</h2><p className="lt-body mt-5">LeTrusto brings the collection, curation, and display of social proof into one workspace, so your team can spend less time stitching tools together and more time serving customers.</p></div>
+          <div className="mt-12 grid gap-4 lg:grid-cols-3"><ProductCard icon={Zap} title="Live activity" text="Show recent signups, bookings, and purchases as a quiet rhythm of momentum." /><ProductCard icon={HeartHandshake} title="Customer stories" text="Collect and curate the words that sound like your future customers." /><ProductCard icon={Code2} title="Lightweight embeds" text="Install a focused widget with one script and control its behavior from your workspace." /></div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-12 lg:py-28"><div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center"><div><p className="lt-label text-[#2563eb]">How it works</p><h2 className="lt-heading-2 mt-3 max-w-lg">From customer moment to meaningful signal.</h2><div className="mt-8 space-y-6">{[["01", "Connect your events", "Choose the customer moments that tell the clearest story for your business."], ["02", "Curate the experience", "Set the tone, placement, and visibility rules so proof feels like part of your product."], ["03", "Learn and improve", "Watch the signal work, then refine what you show as your customer story grows."]].map(([number, title, text]) => <div key={number} className="flex gap-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#2563eb] text-xs font-black text-white">{number}</span><div><h3 className="lt-heading-3">{title}</h3><p className="lt-body-sm mt-1">{text}</p></div></div>)}</div></div><div className="border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-lg)]"><LiveProofPreview color="#e11d48" /></div></div></section>
+
+      <section className="border-y border-[#d9e5df] bg-[#f7faf8] px-5 py-20 sm:px-8 lg:px-12 lg:py-28"><div className="mx-auto max-w-7xl"><div className="max-w-2xl"><p className="lt-label text-[#2563eb]">Our trust principles</p><h2 className="lt-heading-2 mt-3">The standard behind every signal.</h2></div><div className="mt-12 grid gap-4 md:grid-cols-2"><Principle icon={ShieldCheck} title="Evidence over theatre" text="We favor useful, recognizable customer signals over noise, inflated claims, or attention for its own sake." /><Principle icon={HeartHandshake} title="Respect the customer" text="The customer experience comes first. Proof should help people decide, never pressure them into a decision." /><Principle icon={Check} title="Control stays with you" text="Your team chooses what is approved, what is visible, and how the experience fits your brand." /><Principle icon={Sparkles} title="Keep improving" text="The best trust experience is never finished. We build for learning, iteration, and steady progress." /></div></div></section>
+
+      <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-12 lg:py-28"><div className="border border-[#17382e] bg-[#17382e] p-8 text-center text-white sm:p-14"><p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#60a5fa]">Build trust into the next step</p><h2 className="mx-auto mt-4 max-w-2xl text-3xl font-black tracking-tight sm:text-5xl">Your next customer is already looking for a reason to believe.</h2><p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#c5d7cf]">Give them a clear signal with a LeTrusto widget built around the way your business earns confidence.</p><Link href="/register" className="lt-btn lt-btn-md mt-8 bg-[#2563eb] text-white hover:bg-blue-500">Create your free workspace <ArrowRight className="h-4 w-4" /></Link></div></section>
     </main>
   );
+}
+
+function ValueCard({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
+  return <article className="lt-card lt-card-hover"><div className="flex h-11 w-11 items-center justify-center bg-[#17382e] text-white"><Icon className="h-5 w-5" /></div><h3 className="lt-heading-3 mt-7">{title}</h3><p className="lt-body-sm mt-3">{text}</p></article>;
+}
+
+function ProductCard({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
+  return <article className="border border-[#d1dfd8] bg-[var(--surface)] p-6"><div className="flex h-11 w-11 items-center justify-center bg-[#2563eb] text-white"><Icon className="h-5 w-5" /></div><h3 className="lt-heading-3 mt-7">{title}</h3><p className="lt-body-sm mt-3">{text}</p></article>;
+}
+
+function Principle({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
+  return <article className="flex gap-4 border-t border-[#d9e5df] pt-5"><Icon className="mt-0.5 h-5 w-5 shrink-0 text-[#2563eb]" /><div><h3 className="lt-heading-3">{title}</h3><p className="lt-body-sm mt-2">{text}</p></div></article>;
 }
