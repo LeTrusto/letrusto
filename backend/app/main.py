@@ -21,6 +21,10 @@ from app.core.security import TokenPayloadError
 
 settings = get_settings()
 
+_LETRUSTO_VERCEL_PREVIEW_ORIGIN_REGEX = (
+    r"^https://letrusto(?:-[a-z0-9]+|-git-[a-z0-9-]+)-le-trusto\.vercel\.app$"
+)
+
 def _build_cors_origins(raw_origins: str, app_env: str) -> list[str]:
     configured = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
     defaults = ["https://letrusto.com", "https://www.letrusto.com", "https://letrusto.vercel.app"]
@@ -63,6 +67,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
+    allow_origin_regex=_LETRUSTO_VERCEL_PREVIEW_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "Origin"],

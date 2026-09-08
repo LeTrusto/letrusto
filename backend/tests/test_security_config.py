@@ -44,11 +44,29 @@ def test_credentialed_cors_allows_only_configured_origins():
         "/api/v1/products",
         headers={"Origin": "https://letrusto.com", "Access-Control-Request-Method": "GET"},
     )
+    generated_preview = client.options(
+        "/api/v1/auth/register",
+        headers={
+            "Origin": "https://letrusto-8m800qyq3-le-trusto.vercel.app",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    branch_preview = client.options(
+        "/api/v1/auth/register",
+        headers={
+            "Origin": "https://letrusto-git-preview-dashboard-routing-preview-le-trusto.vercel.app",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
     blocked = client.options(
         "/api/v1/products",
         headers={"Origin": "https://untrusted.vercel.app", "Access-Control-Request-Method": "GET"},
     )
     assert allowed.headers["access-control-allow-origin"] == "https://letrusto.com"
+    assert generated_preview.headers["access-control-allow-origin"] == "https://letrusto-8m800qyq3-le-trusto.vercel.app"
+    assert branch_preview.headers["access-control-allow-origin"] == "https://letrusto-git-preview-dashboard-routing-preview-le-trusto.vercel.app"
     assert "access-control-allow-origin" not in blocked.headers
 
 
