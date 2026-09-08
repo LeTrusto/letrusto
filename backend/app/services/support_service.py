@@ -115,11 +115,12 @@ class SupportService:
         if req.category != "service_enquiry" and (req.website_status is not None or req.business_type is not None):
             raise HTTPException(status_code=422, detail="Service details are only valid for service enquiries.")
         try:
+            priority = req.priority if req.priority != "normal" else PRIORITY_BY_CATEGORY.get(req.category, "Normal").lower()
             ticket = SupportTicket(
                 user_id=user_id,
                 email=req.email,
                 category=req.category,
-                priority=req.priority,
+                priority=priority,
                 subject=req.subject,
                 body=req.body,
             )
@@ -135,6 +136,7 @@ class SupportService:
             email_context = self._build_email_context(
                 ticket=ticket,
                 req=req,
+                priority=priority,
                 customer_name=customer_name,
                 request=request,
             )
@@ -191,6 +193,7 @@ class SupportService:
         *,
         ticket: SupportTicket,
         req: SupportTicketRequest,
+        priority: str,
         customer_name: str | None,
         request: Request | None,
     ) -> dict[str, Any]:
@@ -207,7 +210,7 @@ class SupportService:
             "customer_email": req.email,
             "subject": req.subject,
             "category": req.category,
-            "priority": req.priority.title(),
+            "priority": priority.title(),
             "message": req.body,
             "created_time": created.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC"),
             "browser": browser,
