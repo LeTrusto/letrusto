@@ -25,9 +25,9 @@ def test_production_allows_unconfigured_razorpay(monkeypatch):
     monkeypatch.setenv("CASHFREE_ENV", "production")
     monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
     monkeypatch.setenv("RAZORPAY_ENV", "sandbox")
-    monkeypatch.delenv("RAZORPAY_KEY_ID", raising=False)
-    monkeypatch.delenv("RAZORPAY_KEY_SECRET", raising=False)
-    monkeypatch.delenv("RAZORPAY_WEBHOOK_SECRET", raising=False)
+    monkeypatch.setenv("RAZORPAY_KEY_ID", "")
+    monkeypatch.setenv("RAZORPAY_KEY_SECRET", "")
+    monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", "")
     get_settings.cache_clear()
     try:
         settings = get_settings()
@@ -87,7 +87,7 @@ def test_production_requires_razorpay_webhook_secret_when_credentials_are_config
     monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
     monkeypatch.setenv("RAZORPAY_KEY_ID", "rzp_test_configured")
     monkeypatch.setenv("RAZORPAY_KEY_SECRET", "configured-secret")
-    monkeypatch.delenv("RAZORPAY_WEBHOOK_SECRET", raising=False)
+    monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", "")
     get_settings.cache_clear()
     try:
         with pytest.raises(RuntimeError, match="RAZORPAY_WEBHOOK_SECRET"):

@@ -37,6 +37,16 @@ uvicorn app.main:app --reload --port 8000
 
 Docs: http://localhost:8000/docs
 
+## SaaS release validation
+
+Run the active SaaS release gate without retired commerce tests:
+
+```bash
+pytest -c pytest-saas.ini -q
+```
+
+The default `pytest -q` remains the complete historical suite and may include failures from retired product areas.
+
 ## Support Email
 
 Support ticket submissions are saved to the database and also sent via Resend.
