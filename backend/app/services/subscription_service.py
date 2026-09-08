@@ -20,6 +20,16 @@ from app.schemas.subscriptions import SubscriptionCancelResponse, SubscriptionCr
 
 logger = logging.getLogger(__name__)
 
+SUBSCRIPTION_STATUS_BY_EVENT = {
+    "subscription.authenticated": "trialing",
+    "subscription.activated": "active",
+    "subscription.charged": "active",
+    "subscription.cancelled": "cancelled",
+    "subscription.halted": "failed",
+    "subscription.completed": "expired",
+    "subscription.pending": "pending",
+}
+
 
 class SubscriptionService:
     PLAN_NAMES = {"starter", "pro"}
@@ -161,7 +171,7 @@ class SubscriptionService:
         self.db.add(SubscriptionWebhookEvent(provider_event_id=event_id, event_name=event_name))
         self.db.flush()
 
-        if event_name not in {"subscription.authenticated", "subscription.charged", "subscription.cancelled", "subscription.halted", "subscription.completed", "subscription.pending"}:
+        if event_name not in SUBSCRIPTION_STATUS_BY_EVENT:
             self.db.commit()
             return
 
@@ -181,14 +191,7 @@ class SubscriptionService:
             raise BadRequestError("Subscription record not found")
 
         record.razorpay_subscription_id = provider_id
-        record.status = {
-            "subscription.authenticated": "trialing",
-            "subscription.charged": "active",
-            "subscription.cancelled": "cancelled",
-            "subscription.halted": "failed",
-            "subscription.completed": "expired",
-            "subscription.pending": "pending",
-        }[event_name]
+        record.status = SUBSCRIPTION_STATUS_BY_EVENT[event_name]
         if event_name == "subscription.cancelled":
             record.cancelled_at = datetime.now(timezone.utc)
         if event_name == "subscription.halted":

@@ -8,6 +8,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.entities import User, Widget, WidgetEvent
 from app.schemas.widgets import WidgetEventCreate, WidgetEventDTO
+from app.services.entitlement_service import require_active_entitlement
 
 router = APIRouter(tags=["widget-events"])
 
@@ -37,6 +38,7 @@ def create_widget_event(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> WidgetEvent:
+    require_active_entitlement(db, current_user)
     _owned_widget(db, current_user, widget_id)
     event = WidgetEvent(widget_id=widget_id, **payload.model_dump())
     db.add(event)
@@ -51,6 +53,7 @@ def list_widget_events(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[WidgetEvent]:
+    require_active_entitlement(db, current_user)
     _owned_widget(db, current_user, widget_id)
     return list(
         db.scalars(
@@ -67,6 +70,7 @@ def hide_widget_event(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> WidgetEvent:
+    require_active_entitlement(db, current_user)
     event = _owned_event(db, current_user, event_id)
     event.is_approved = False
     db.commit()

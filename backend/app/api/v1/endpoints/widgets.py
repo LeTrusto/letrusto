@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.services.entitlement_service import get_entitlement
+from app.services.entitlement_service import require_active_entitlement
 from app.models.entities import User, Widget
 from app.schemas.widgets import WidgetCreate, WidgetDTO, WidgetUpdate
 
@@ -26,9 +26,7 @@ def create_widget(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Widget:
-    entitlement = get_entitlement(db, current_user)
-    if not entitlement.active:
-        raise HTTPException(status_code=403, detail="Your trial has expired. Choose a paid plan to continue using LeTrusto.")
+    entitlement = require_active_entitlement(db, current_user)
     if entitlement.max_widgets is not None:
         widget_count = db.scalar(
             select(func.count()).select_from(Widget).where(Widget.user_id == current_user.id, Widget.is_active.is_(True))
@@ -47,6 +45,7 @@ def list_widgets(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[Widget]:
+    require_active_entitlement(db, current_user)
     return list(db.scalars(select(Widget).where(Widget.user_id == current_user.id).order_by(Widget.created_at.desc())).all())
 
 
@@ -56,6 +55,7 @@ def get_widget(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Widget:
+    require_active_entitlement(db, current_user)
     return _owned_widget(db, current_user, widget_id)
 
 
@@ -66,6 +66,7 @@ def update_widget(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Widget:
+    require_active_entitlement(db, current_user)
     widget = _owned_widget(db, current_user, widget_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(widget, field, value)
@@ -80,6 +81,7 @@ def delete_widget(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Widget:
+    require_active_entitlement(db, current_user)
     widget = _owned_widget(db, current_user, widget_id)
     widget.is_active = False
     db.commit()

@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -36,8 +37,8 @@ def get_entitlement(db: Session, user: User) -> Entitlement:
         .order_by(Subscription.created_at.desc())
     )
     if subscription and subscription.plan_name in {"starter", "pro"}:
-        paid_active = subscription.status in {"created", "pending", "authenticated", "active", "cancellation_pending"}
-        period_active = subscription.current_period_end is None or _as_utc(subscription.current_period_end) > now
+        paid_active = subscription.status in {"active", "cancellation_pending"}
+        period_active = subscription.current_period_end is not None and _as_utc(subscription.current_period_end) > now
         grace_active = subscription.grace_until is not None and _as_utc(subscription.grace_until) > now
         if paid_active and (period_active or grace_active):
             return _build(subscription.plan_name, subscription.status, True, False, user.trial_ends_at)
@@ -57,6 +58,16 @@ def get_entitlement(db: Session, user: User) -> Entitlement:
             features=frozenset(),
         )
     return _build("free", "free", True, False, trial_end)
+
+
+def require_active_entitlement(db: Session, user: User) -> Entitlement:
+    entitlement = get_entitlement(db, user)
+    if not entitlement.active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your trial has expired. Choose a paid plan to continue using LeTrusto.",
+        )
+    return entitlement
 
 
 def _build(plan: str, status: str, active: bool, is_trial: bool, trial_ends_at: datetime | None) -> Entitlement:
