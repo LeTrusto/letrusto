@@ -1,5 +1,18 @@
 import type { NextConfig } from "next";
 
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com https://checkout-static-next.razorpay.com https://www.google.com https://www.gstatic.com https://cdn.vercel-insights.com https://va.vercel-scripts.com https://vercel.live",
+  "style-src 'self' 'unsafe-inline' https://checkout-static-next.razorpay.com https://fonts.googleapis.com",
+  "img-src * blob: data:",
+  "font-src 'self' data: https://fonts.gstatic.com https://assets.razorpay.com https://checkout-static-next.razorpay.com",
+  "connect-src 'self' https://letrusto-staging.up.railway.app https://letrusto-production.up.railway.app https://api.razorpay.com https://lumberjack.razorpay.com https://lumberjack-metrics.razorpay.com https://checkout.razorpay.com https://checkout-static-next.razorpay.com https://vercel.live wss://*.vercel.com",
+  "frame-src https://api.razorpay.com https://checkout.razorpay.com https://*.razorpay.com https://vercel.live",
+  "child-src https://api.razorpay.com https://checkout.razorpay.com https://*.razorpay.com https://vercel.live",
+  "worker-src 'self' blob:",
+  "frame-ancestors 'none'",
+].join(";");
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -17,6 +30,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "Content-Security-Policy", value: contentSecurityPolicy },
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
         ],
       },
