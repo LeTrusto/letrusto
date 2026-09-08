@@ -10,6 +10,7 @@ from typing import Any
 
 import razorpay
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
@@ -166,16 +167,51 @@ class SubscriptionService:
             raise BadRequestError("Invalid Razorpay subscription webhook payload") from exc
 
         event_id = str(payload.get("id") or hashlib.sha256(body).hexdigest())
+        provider_id = str(entity.get("id") or "")
+        logger.info(
+            "Razorpay subscription webhook received: event=%s event_id=%s subscription_id=%s",
+            event_name,
+            event_id,
+            provider_id or "unknown",
+        )
         if self.db.scalar(select(SubscriptionWebhookEvent).where(SubscriptionWebhookEvent.provider_event_id == event_id)):
+            logger.info(
+                "Razorpay subscription webhook duplicate ignored: event=%s event_id=%s subscription_id=%s",
+                event_name,
+                event_id,
+                provider_id or "unknown",
+            )
             return
-        self.db.add(SubscriptionWebhookEvent(provider_event_id=event_id, event_name=event_name))
-        self.db.flush()
+        try:
+            with self.db.begin_nested():
+                self.db.add(SubscriptionWebhookEvent(provider_event_id=event_id, event_name=event_name))
+                self.db.flush()
+        except IntegrityError:
+            concurrent_event = self.db.scalar(
+                select(SubscriptionWebhookEvent).where(
+                    SubscriptionWebhookEvent.provider_event_id == event_id
+                )
+            )
+            if concurrent_event is None:
+                raise
+            logger.info(
+                "Razorpay subscription webhook concurrent duplicate ignored: event=%s event_id=%s subscription_id=%s",
+                event_name,
+                event_id,
+                provider_id or "unknown",
+            )
+            return
 
         if event_name not in SUBSCRIPTION_STATUS_BY_EVENT:
             self.db.commit()
+            logger.info(
+                "Razorpay subscription webhook recorded without state transition: event=%s event_id=%s subscription_id=%s",
+                event_name,
+                event_id,
+                provider_id or "unknown",
+            )
             return
 
-        provider_id = str(entity.get("id") or "")
         if not provider_id:
             raise BadRequestError("Subscription webhook has no subscription ID")
         record = self.db.scalar(
@@ -199,6 +235,13 @@ class SubscriptionService:
             record.failure_reason = str(entity.get("error_description") or "Razorpay subscription payment failed")[:500]
         record.current_period_end = _epoch_to_datetime(entity.get("current_end"))
         self.db.commit()
+        logger.info(
+            "Razorpay subscription webhook processed: event=%s event_id=%s subscription_id=%s status=%s",
+            event_name,
+            event_id,
+            provider_id,
+            record.status,
+        )
 
 
 def _epoch_to_datetime(value: Any) -> datetime | None:

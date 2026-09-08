@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,6 +12,7 @@ from app.services.entitlement_service import get_entitlement
 from app.services.subscription_service import SubscriptionService
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/status", response_model=EntitlementResponse)
@@ -61,5 +64,12 @@ async def subscription_webhook(
     x_razorpay_signature: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    SubscriptionService(db).process_webhook(await request.body(), x_razorpay_signature)
+    try:
+        SubscriptionService(db).process_webhook(await request.body(), x_razorpay_signature)
+    except Exception as exc:
+        logger.exception(
+            "Razorpay subscription webhook failed: error_type=%s",
+            type(exc).__name__,
+        )
+        raise
     return {"status": "ok"}
