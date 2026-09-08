@@ -5,6 +5,7 @@ import { Check, Loader2, X } from "lucide-react";
 import { useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
+import type { RazorpayResult } from "@/lib/razorpayCheckout";
 import { createSubscription } from "@/services/saas.service";
 
 const checkoutScript = "https://checkout.razorpay.com/v1/checkout.js";
@@ -13,7 +14,20 @@ type Props = { open: boolean; onClose: () => void };
 
 type RazorpayPaymentFailure = { error?: { description?: string } };
 type RazorpayInstance = { open: () => void; on?: (event: string, handler: (failure: RazorpayPaymentFailure) => void) => void };
-type RazorpayConstructor = new (options: Record<string, unknown>) => RazorpayInstance;
+type RazorpayOptions = {
+  key: string;
+  amount?: number;
+  currency?: string;
+  order_id?: string;
+  subscription_id?: string;
+  name: string;
+  description: string;
+  prefill?: { name?: string; email?: string; contact?: string };
+  theme?: { color: string };
+  handler?: (result: RazorpayResult) => void;
+  modal?: { ondismiss?: () => void };
+};
+type RazorpayConstructor = new (options: RazorpayOptions) => RazorpayInstance;
 
 declare global {
   interface Window { Razorpay?: RazorpayConstructor }

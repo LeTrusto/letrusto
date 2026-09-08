@@ -17,7 +17,11 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+import { useAuth } from "@/hooks/useAuth";
+import { authenticatedApiRequest } from "@/services/api";
 
 const previewModes = [
   { label: "Live Sales Popup", icon: Zap, name: "Aarav Mehta", location: "Mumbai", action: "just booked a strategy call", accent: "#d4af37" },
@@ -27,8 +31,8 @@ const previewModes = [
 
 const plans = [
   { name: "Free", monthly: 0, description: "A considered first signal for growing teams.", features: ["1 widget", "1,000 views / month", "Live sales popups"], action: "Start free" },
-  { name: "Starter", monthly: 999, description: "The trust layer for an active storefront.", features: ["3 widgets", "10,000 views / month", "Custom colors", "Review collection"], action: "Start trial", featured: true },
-  { name: "Pro", monthly: 2499, description: "Every proof format, ready to compound.", features: ["Unlimited widgets", "Unlimited views", "Video reviews", "Priority support"], action: "Go Pro" },
+  { name: "Starter", monthly: 999, description: "The trust layer for an active storefront.", features: ["14-day free trial", "First 3 months at ₹99/mo", "3 widgets", "10,000 views / month", "Custom colors", "Review collection"], action: "Start trial", featured: true },
+  { name: "Pro", monthly: 2499, description: "Every proof format, ready to compound.", features: ["14-day free trial", "First 3 months at ₹99/mo", "Unlimited widgets", "Unlimited views", "Video reviews", "Priority support"], action: "Go Pro" },
 ];
 
 const faqs = [
@@ -93,5 +97,56 @@ function PlanCard({ plan, annual, currency }: { plan: (typeof plans)[number]; an
   const price = annual ? Math.round(plan.monthly * 0.8) : plan.monthly;
   const displayPrice = currency === "USD" ? Math.round(price / 83) : price;
   const symbol = currency === "USD" ? "$" : "₹";
-  return <article className={`relative flex flex-col border p-6 backdrop-blur-xl ${plan.featured ? "border-[#d4af37]/70 bg-[#191710]/80 shadow-[0_0_35px_rgba(212,175,55,0.14)]" : "glass-card"}`}>{plan.featured && <span className="absolute right-5 top-5 bg-[#d4af37] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#0a0d14]">Popular</span>}<h3 className="text-lg font-bold text-white">{plan.name}</h3><p className="mt-6 text-4xl font-black text-white">{symbol}{displayPrice.toLocaleString()}<span className="text-sm font-medium text-[#778296]"> / month</span></p><p className="mt-5 min-h-10 text-sm leading-6 text-[#9da7b8]">{plan.description}</p><ul className="mt-6 flex-1 space-y-3 border-t border-white/10 pt-5">{plan.features.map((feature) => <li key={feature} className="flex items-center gap-2 text-sm text-[#c4cad5]"><Check className="h-3.5 w-3.5 text-[#d4af37]" />{feature}</li>)}</ul><Link href={plan.name === "Free" ? "/register" : `/register?plan=${plan.name.toLowerCase()}`} className={`mt-8 flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold ${plan.featured ? "bg-[#d4af37] text-[#0a0d14] hover:bg-[#f3e5ab]" : "border border-white/20 text-white hover:border-[#d4af37] hover:text-[#f3e5ab]"}`}>{plan.action}<ArrowRight className="h-4 w-4" /></Link></article>;
+  return <article className={`relative flex flex-col border p-6 backdrop-blur-xl ${plan.featured ? "border-[#d4af37]/70 bg-[#191710]/80 shadow-[0_0_35px_rgba(212,175,55,0.14)]" : "glass-card"}`}>{plan.featured && <span className="absolute right-5 top-5 bg-[#d4af37] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#0a0d14]">Popular</span>}<h3 className="text-lg font-bold text-white">{plan.name}</h3><p className="mt-6 text-4xl font-black text-white">{symbol}{displayPrice.toLocaleString()}<span className="text-sm font-medium text-[#778296]"> / month</span></p><p className="mt-5 min-h-10 text-sm leading-6 text-[#9da7b8]">{plan.description}</p><ul className="mt-6 flex-1 space-y-3 border-t border-white/10 pt-5">{plan.features.map((feature) => <li key={feature} className="flex items-center gap-2 text-sm text-[#c4cad5]"><Check className="h-3.5 w-3.5 text-[#d4af37]" />{feature}</li>)}</ul>{plan.name === "Free" ? <Link href="/signup?plan=free" className={`mt-8 flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold ${plan.featured ? "bg-[#d4af37] text-[#0a0d14] hover:bg-[#f3e5ab]" : "border border-white/20 text-white hover:border-[#d4af37] hover:text-[#f3e5ab]"}`}>{plan.action}<ArrowRight className="h-4 w-4" /></Link> : <TrialButton planName={plan.name.toLowerCase() as "starter" | "pro"} label={plan.action} featured={Boolean(plan.featured)} />}</article>;
+}
+
+function TrialButton({ planName, label, featured }: { planName: "starter" | "pro"; label: string; featured: boolean }) {
+  const { accessToken, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function startTrial() {
+    if (!isAuthenticated || !accessToken) {
+      router.push(`/signup?plan=${planName}`);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const subscription = await authenticatedApiRequest<{ subscription_id: string; key_id: string }>(accessToken, "/subscriptions", {
+        method: "POST",
+        body: JSON.stringify({ plan_name: planName }),
+      });
+      await loadRazorpay();
+      const Razorpay = window.Razorpay;
+      if (!Razorpay) throw new Error("Razorpay Checkout could not be loaded.");
+      const razorpay = new Razorpay({
+        key: subscription.key_id,
+        subscription_id: subscription.subscription_id,
+        name: "LeTrusto",
+        description: "14-day free trial, then ₹99/mo for the first 3 cycles",
+        theme: { color: "#D4AF37" },
+        handler: () => router.push("/dashboard?billing=trial-started"),
+      });
+      razorpay.open();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to start the trial right now.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return <div className="mt-8"><button type="button" onClick={() => { void startTrial(); }} disabled={loading} className={`flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] disabled:cursor-wait disabled:opacity-60 ${featured ? "bg-[#d4af37] text-[#0a0d14] hover:bg-[#f3e5ab]" : "border border-white/20 text-white hover:border-[#d4af37] hover:text-[#f3e5ab]"}`}>{loading ? "Opening checkout..." : label}<ArrowRight className="h-4 w-4" /></button>{error && <p className="mt-2 text-xs text-rose-300">{error}</p>}</div>;
+}
+
+async function loadRazorpay(): Promise<void> {
+  if (window.Razorpay) return;
+  await new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Razorpay Checkout could not be loaded."));
+    document.body.appendChild(script);
+  });
 }

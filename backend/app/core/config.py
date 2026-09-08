@@ -96,6 +96,9 @@ class Settings(BaseSettings):
     RAZORPAY_WEBHOOK_SECRET: str = ""
     RAZORPAY_STARTER_PLAN_ID: str = ""
     RAZORPAY_PRO_PLAN_ID: str = ""
+    RAZORPAY_STARTER_OFFER_ID: str = ""
+    RAZORPAY_PRO_OFFER_ID: str = ""
+    RAZORPAY_TRIAL_DAYS: int = 14
 
     # Stripe Checkout for non-India orders. Keep credentials server-side only.
     STRIPE_SECRET_KEY: str = ""

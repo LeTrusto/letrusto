@@ -13,6 +13,7 @@ class FaqListResponse(BaseModel):
 
 class SupportTicketRequest(BaseModel):
     email: EmailStr
+    priority: str = Field(default="normal", pattern=r"^(low|normal|high|urgent)$")
     category: str = Field(pattern=r"^(contact|feedback|report_wrong|report_broken|service_enquiry|other)$")
     subject: str = Field(min_length=5, max_length=200)
     body: str = Field(min_length=10, max_length=2000)

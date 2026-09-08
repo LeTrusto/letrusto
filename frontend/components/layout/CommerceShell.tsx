@@ -12,6 +12,7 @@ const AUTH_ROUTES = new Set([
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/signup",
 ]);
 
 export default function CommerceShell({ children }: { children: React.ReactNode }) {

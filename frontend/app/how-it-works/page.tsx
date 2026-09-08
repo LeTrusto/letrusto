@@ -12,7 +12,7 @@ const STEPS = [
   {
     icon: Code2,
     title: "Connect Your Events",
-    description: "Integrate your storefront, webhooks, or CRM in minutes using our lightweight script.",
+    description: "Integrate your storefront, webhooks, or CRM in minutes using our lightweight 1KB script.",
   },
   {
     icon: Palette,
@@ -22,12 +22,12 @@ const STEPS = [
   {
     icon: Play,
     title: "Go Live & Automate",
-    description: "Automatically display real-time sales notifications, reviews, and sign-ups.",
+    description: "Automatically display real-time sales notifications, reviews, and sign-ups as a quiet rhythm of confidence.",
   },
   {
     icon: BarChart3,
     title: "Analyze & Optimize",
-    description: "Track visitor conversion lift and iterate on high-converting social proof signals.",
+    description: "Track visitor conversion lift and iterate on high-converting social proof signals with real-time analytics.",
   },
 ];
 
@@ -62,8 +62,8 @@ export default function HowItWorksPage() {
         </div>
 
         <div className="mt-12 text-center">
-          <Link href="/dashboard" className="lt-btn lt-btn-lg lt-btn-primary">
-            Start Free Trial
+          <Link href="/signup?plan=starter" className="lt-btn lt-btn-lg lt-btn-primary">
+            Start 14-Day Free Trial
             <ArrowRight size={16} />
           </Link>
         </div>

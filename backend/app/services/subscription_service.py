@@ -5,7 +5,7 @@ import hmac
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import razorpay
@@ -42,6 +42,12 @@ class SubscriptionService:
             raise BadRequestError(f"Razorpay plan is not configured for {plan_name}")
         return plan_id
 
+    def _offer_id(self, plan_name: str) -> str | None:
+        return {
+            "starter": self.settings.RAZORPAY_STARTER_OFFER_ID,
+            "pro": self.settings.RAZORPAY_PRO_OFFER_ID,
+        }.get(plan_name) or None
+
     def create_subscription(self, user: User, plan_name: str) -> SubscriptionCreateResponse:
         if plan_name not in self.PLAN_NAMES:
             raise BadRequestError("Only starter and pro plans can be subscribed to")
@@ -63,17 +69,26 @@ class SubscriptionService:
                 status=existing.status,
             )
 
+        plan_id = self._plan_id(plan_name)
+        trial_ends_at = datetime.now(timezone.utc) + timedelta(days=self.settings.RAZORPAY_TRIAL_DAYS)
+        subscription_options: dict[str, Any] = {
+            "plan_id": plan_id,
+            "total_count": 12,
+            "quantity": 1,
+            "customer_notify": 1,
+            "start_at": int(trial_ends_at.timestamp()),
+            "notes": {
+                "letrusto_user_id": str(user.id),
+                "letrusto_plan_name": plan_name,
+                "letrusto_trial_ends_at": trial_ends_at.isoformat(),
+            },
+        }
+        offer_id = self._offer_id(plan_name)
+        if offer_id:
+            subscription_options["offer_id"] = offer_id
+
         try:
-            plan_id = self._plan_id(plan_name)
-            provider_subscription = self._client().subscription.create({
-                "plan_id": plan_id,
-                "total_count": 120,
-                "customer_notify": 1,
-                "notes": {
-                    "letrusto_user_id": str(user.id),
-                    "letrusto_plan_name": plan_name,
-                },
-            })
+            provider_subscription = self._client().subscription.create(subscription_options)
         except Exception as exc:
             logger.exception(
                 "Razorpay subscription creation failed: plan_name=%s plan_id=%s error_type=%s provider_error=%s",
@@ -90,8 +105,10 @@ class SubscriptionService:
 
         record = existing or Subscription(user_id=user.id, plan_name=plan_name)
         record.razorpay_subscription_id = provider_id
-        record.status = str(provider_subscription.get("status") or "created")
+        record.status = "trialing"
         record.current_period_end = _epoch_to_datetime(provider_subscription.get("current_end"))
+        user.trial_started_at = datetime.now(timezone.utc)
+        user.trial_ends_at = trial_ends_at
         self.db.add(record)
         self.db.commit()
         self.db.refresh(record)
@@ -144,7 +161,7 @@ class SubscriptionService:
         self.db.add(SubscriptionWebhookEvent(provider_event_id=event_id, event_name=event_name))
         self.db.flush()
 
-        if event_name not in {"subscription.charged", "subscription.cancelled", "subscription.halted", "subscription.completed", "subscription.pending"}:
+        if event_name not in {"subscription.authenticated", "subscription.charged", "subscription.cancelled", "subscription.halted", "subscription.completed", "subscription.pending"}:
             self.db.commit()
             return
 
@@ -165,6 +182,7 @@ class SubscriptionService:
 
         record.razorpay_subscription_id = provider_id
         record.status = {
+            "subscription.authenticated": "trialing",
             "subscription.charged": "active",
             "subscription.cancelled": "cancelled",
             "subscription.halted": "failed",

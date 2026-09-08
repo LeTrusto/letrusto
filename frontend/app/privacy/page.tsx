@@ -24,24 +24,32 @@ const sections = [
     ],
   },
   {
-    title: "3. Data Protection",
+    title: "3. Webhooks, Event Streams, and Cookies",
+    body: [
+      "When you connect a storefront, CRM, or webhook, LeTrusto receives only the event fields you configure. We validate the workspace destination, record delivery metadata, apply your approval rules, and expose approved events to the widget. Customers remain responsible for lawful collection and for removing data they no longer have permission to process.",
+      "LeTrusto uses essential browser storage for authentication, security, consent preferences, and reliable product operation. Optional analytics or marketing storage is used only according to your consent choice and may be changed through Cookie Preferences.",
+    ],
+  },
+  {
+    title: "4. Data Protection",
     body: [
       "LeTrusto uses access controls, authenticated APIs, encrypted connections, and operational safeguards designed to protect account, workspace, event, and visitor data. Access is limited according to role and service need.",
       "No online service can guarantee absolute security. You are responsible for protecting account credentials, API keys, and the data you send to your workspace. Notify support promptly if you suspect unauthorized access.",
     ],
   },
   {
-    title: "4. Third-Party Processing",
+    title: "5. Third-Party Processing",
     body: [
       "We use infrastructure, email delivery, analytics, authentication, and monitoring providers to operate LeTrusto. These providers process information only as needed to provide services to LeTrusto and under appropriate contractual or technical safeguards.",
       "A customer who installs a public widget remains responsible for its own notices, lawful basis, consent choices, and privacy commitments relating to visitor data collected through its website. LeTrusto does not sell personal information.",
     ],
   },
   {
-    title: "5. GDPR and Compliance",
+    title: "6. GDPR, DPDP Act, and Compliance",
     body: [
       "Depending on the relationship and data involved, LeTrusto may act as a processor for customer-controlled event and visitor data, and as a controller for account, billing, support, and product administration data. Customers are responsible for determining their lawful basis and providing required notices to their users.",
       "Where GDPR or similar privacy laws apply, individuals may have rights to access, correct, delete, restrict, object to, or export personal data, subject to applicable exceptions. Send requests to support@letrusto.com with enough detail for us to identify the relevant workspace.",
+      "For customers and individuals in India, LeTrusto aims to support obligations under the Digital Personal Data Protection Act, 2023 and applicable rules. Customers determine the lawful purpose and notices for their event data, and LeTrusto processes that data on the customer's documented instructions where it acts as a data processor.",
       "We retain information for as long as needed to provide the service, meet contractual and legal duties, resolve disputes, prevent misuse, and maintain appropriate operational records. Retention may vary by data category.",
     ],
   },

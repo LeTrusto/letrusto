@@ -22,6 +22,7 @@ type SupportFormState = {
   customer_name: string;
   email: string;
   category: SupportCategory;
+  priority: "low" | "normal" | "high" | "urgent";
   subject: string;
   body: string;
 };
@@ -30,6 +31,7 @@ const DEFAULT_FORM: SupportFormState = {
   customer_name: "",
   email: "",
   category: "contact",
+  priority: "normal",
   subject: "",
   body: "",
 };
@@ -264,6 +266,19 @@ export default function SupportPage() {
                     {CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>{c.label}</option>
                     ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Priority</label>
+                  <select
+                    value={form.priority}
+                    onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as SupportFormState["priority"] }))}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
+                  >
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
                   </select>
                 </div>
                 <div>

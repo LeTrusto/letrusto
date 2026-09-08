@@ -9,7 +9,7 @@ export const footerLinks = {
   { label: "Features", href: "/#features" },
   { label: "Pricing", href: "/#pricing" },
   { label: "Live Demo", href: "/demo" },
-  { label: "About", href: "/about" },
+  { label: "About Us", href: "/about" },
   { label: "Dashboard", href: "/dashboard" },
   ],
   legal: [

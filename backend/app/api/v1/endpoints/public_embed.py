@@ -42,6 +42,8 @@ def get_public_widget(
     if owner is None:
         return JSONResponse(status_code=404, content={"detail": "Widget owner not found"})  # type: ignore[return-value]
     entitlement = get_entitlement(db, owner)
+    if not entitlement.active:
+        return JSONResponse(status_code=403, content={"detail": "This widget is unavailable because the account trial has expired"})  # type: ignore[return-value]
     period_start = date.today().replace(day=1)
     usage = db.scalar(
         select(WidgetUsage).where(WidgetUsage.widget_id == widget.id, WidgetUsage.period_start == period_start)

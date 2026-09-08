@@ -27,6 +27,8 @@ def create_widget(
     db: Session = Depends(get_db),
 ) -> Widget:
     entitlement = get_entitlement(db, current_user)
+    if not entitlement.active:
+        raise HTTPException(status_code=403, detail="Your trial has expired. Choose a paid plan to continue using LeTrusto.")
     if entitlement.max_widgets is not None:
         widget_count = db.scalar(
             select(func.count()).select_from(Widget).where(Widget.user_id == current_user.id, Widget.is_active.is_(True))

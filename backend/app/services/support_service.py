@@ -119,6 +119,7 @@ class SupportService:
                 user_id=user_id,
                 email=req.email,
                 category=req.category,
+                priority=req.priority,
                 subject=req.subject,
                 body=req.body,
             )
@@ -206,7 +207,7 @@ class SupportService:
             "customer_email": req.email,
             "subject": req.subject,
             "category": req.category,
-            "priority": PRIORITY_BY_CATEGORY.get(req.category, "Normal"),
+            "priority": req.priority.title(),
             "message": req.body,
             "created_time": created.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC"),
             "browser": browser,

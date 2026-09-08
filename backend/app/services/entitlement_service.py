@@ -45,6 +45,17 @@ def get_entitlement(db: Session, user: User) -> Entitlement:
     trial_end = _as_utc(user.trial_ends_at) if user.trial_ends_at else None
     if trial_end and trial_end > now:
         return _build("starter", "trialing", True, True, trial_end)
+    if trial_end and trial_end <= now:
+        return Entitlement(
+            plan="expired",
+            status="trial_expired",
+            active=False,
+            is_trial=False,
+            trial_ends_at=trial_end,
+            max_widgets=0,
+            monthly_view_limit=0,
+            features=frozenset(),
+        )
     return _build("free", "free", True, False, trial_end)
 
 

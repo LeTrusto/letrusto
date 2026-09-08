@@ -18,8 +18,10 @@ const sections = [
   {
     title: "2. Subscription Billing and Renewal",
     body: [
-      "LeTrusto plans, included usage, limits, and features are shown in the workspace or applicable order page. A paid subscription begins when the selected plan is activated and continues for the billing period shown at checkout or in the workspace.",
+      "LeTrusto plans, included usage, limits, and features are shown in the workspace or applicable order page. New Starter and Pro subscribers receive a 14-day trial. No subscription charge is intended during the trial period, although your payment provider may require authorization for recurring billing.",
+      "Where the launch offer is displayed and accepted, the first three paid monthly cycles are charged at ₹99 per month through Razorpay. After those three cycles, the selected plan renews at its then-current standard INR price shown at checkout. The offer is limited to one qualifying workspace, cannot be combined with another offer, and may be withdrawn for new sign-ups.",
       "Unless cancelled before the renewal date, a paid subscription renews for the same billing period. You authorize the applicable payment provider to charge the selected payment method for recurring renewals, taxes, and permitted adjustments. You can manage or cancel renewal from your workspace or by contacting support.",
+      "Cancel before the next renewal to avoid the next charge. Cancellation normally stops future renewal while access remains available through the current paid period; trial cancellation stops the scheduled trial conversion. We do not promise refunds for a partially used paid period except where required by law or expressly stated at checkout.",
       "Plan changes may affect included usage immediately or at the next renewal, as shown when the change is confirmed. We may suspend paid features for failed or overdue payments after providing reasonable notice where practical.",
     ],
   },
