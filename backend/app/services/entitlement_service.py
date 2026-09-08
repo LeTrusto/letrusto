@@ -44,6 +44,14 @@ def get_entitlement(db: Session, user: User) -> Entitlement:
             return _build(subscription.plan_name, subscription.status, True, False, user.trial_ends_at)
 
     trial_end = _as_utc(user.trial_ends_at) if user.trial_ends_at else None
+    if (
+        subscription
+        and subscription.plan_name in {"starter", "pro"}
+        and subscription.status == "trialing"
+        and trial_end
+        and trial_end > now
+    ):
+        return _build(subscription.plan_name, "trialing", True, True, trial_end)
     if trial_end and trial_end > now:
         return _build("starter", "trialing", True, True, trial_end)
     if trial_end and trial_end <= now:

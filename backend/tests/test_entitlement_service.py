@@ -52,6 +52,29 @@ def test_pending_subscription_without_period_end_does_not_grant_paid_access():
     assert entitlement.status == "free"
 
 
+def test_trialing_pro_subscription_uses_pro_trial_entitlement():
+    user = SimpleNamespace(trial_ends_at=datetime.now(timezone.utc) + timedelta(days=14), id="user-id")
+    subscription = SimpleNamespace(
+        user_id="user-id",
+        plan_name="pro",
+        status="trialing",
+        current_period_end=None,
+        grace_until=None,
+    )
+    db = MagicMock()
+    db.scalar.return_value = subscription
+
+    entitlement = get_entitlement(db, user)
+
+    assert entitlement.active is True
+    assert entitlement.plan == "pro"
+    assert entitlement.status == "trialing"
+    assert entitlement.is_trial is True
+    assert entitlement.max_widgets is None
+    assert entitlement.monthly_view_limit is None
+    assert "video_reviews" in entitlement.features
+
+
 def test_cancellation_pending_without_period_end_does_not_grant_indefinite_access():
     user = SimpleNamespace(trial_ends_at=None, id="user-id")
     subscription = SimpleNamespace(
