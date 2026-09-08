@@ -1,14 +1,12 @@
 "use client";
 
-import Script from "next/script";
 import { Check, Loader2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import type { RazorpayResult } from "@/lib/razorpayCheckout";
+import { isRazorpayReady, loadRazorpay } from "@/lib/razorpayLoader";
 import { createSubscription } from "@/services/saas.service";
-
-const checkoutScript = "https://checkout.razorpay.com/v1/checkout.js";
 
 type Props = { open: boolean; onClose: () => void };
 
@@ -38,23 +36,43 @@ export default function UpgradePlanModal({ open, onClose }: Props) {
   const [plan, setPlan] = useState<"starter" | "pro">("starter");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [sdkState, setSdkState] = useState<"loading" | "ready" | "error">("loading");
+  const checkoutStarted = useRef(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    if (isRazorpayReady()) {
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setMessage("");
+          setSdkState("ready");
+        }
+      });
+    } else {
+      void loadRazorpay()
+        .then(() => { if (!cancelled) setSdkState("ready"); })
+        .catch(() => { if (!cancelled) setSdkState("error"); });
+    }
+    return () => { cancelled = true; };
+  }, [open]);
 
   if (!open) return null;
 
   async function beginCheckout() {
+    if (checkoutStarted.current || sdkState !== "ready") return;
     if (!accessToken || !user) {
       setMessage("Please sign in before upgrading your plan.");
       return;
     }
-    if (!window.Razorpay) {
-      setMessage("Razorpay Checkout is still loading. Try again in a moment.");
-      return;
-    }
+    const Razorpay = window.Razorpay;
+    if (!Razorpay) return;
+    checkoutStarted.current = true;
     setBusy(true);
     setMessage("");
     try {
       const checkout = await createSubscription(accessToken, plan);
-      const razorpay = new window.Razorpay({
+      const razorpay = new Razorpay({
         key: checkout.key_id,
         subscription_id: checkout.subscription_id,
         name: "LeTrusto",
@@ -64,19 +82,20 @@ export default function UpgradePlanModal({ open, onClose }: Props) {
         handler: () => {
           setMessage("Checkout complete. Your plan will activate when Razorpay confirms the subscription.");
           setBusy(false);
+          checkoutStarted.current = false;
         },
-        modal: { ondismiss: () => setBusy(false) },
+        modal: { ondismiss: () => { setBusy(false); checkoutStarted.current = false; } },
       });
       razorpay.open();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to start checkout.");
       setBusy(false);
+      checkoutStarted.current = false;
     }
   }
 
   return (
     <>
-      <Script src={checkoutScript} strategy="afterInteractive" />
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#10231dcc] px-4 py-8" role="dialog" aria-modal="true" aria-labelledby="upgrade-title">
         <div className="w-full max-w-lg border border-[#d5e0db] bg-[#fbfdfc] p-6 shadow-2xl sm:p-8">
           <div className="flex items-start justify-between gap-4">
@@ -93,8 +112,9 @@ export default function UpgradePlanModal({ open, onClose }: Props) {
             ))}
           </div>
           {message && <p className="mt-4 border border-[#f6c5cf] bg-[#fff4f5] px-3 py-2 text-sm text-[#a31835]" role="alert">{message}</p>}
-          <button type="button" onClick={beginCheckout} disabled={busy} className="mt-6 flex w-full items-center justify-center gap-2 bg-[#e11d48] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#be123c] disabled:cursor-wait disabled:opacity-60">
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Continue to secure checkout
+          {sdkState === "error" && <p className="mt-4 border border-[#f6c5cf] bg-[#fff4f5] px-3 py-2 text-sm text-[#a31835]" role="alert">Razorpay Checkout could not be loaded. Please try again.</p>}
+          <button type="button" onClick={beginCheckout} disabled={busy || sdkState !== "ready"} className="mt-6 flex w-full items-center justify-center gap-2 bg-[#e11d48] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#be123c] disabled:cursor-wait disabled:opacity-60">
+            {(busy || sdkState === "loading") && <Loader2 className="h-4 w-4 animate-spin" />} {sdkState === "loading" ? "Loading secure checkout..." : "Continue to secure checkout"}
           </button>
           <p className="mt-3 text-center text-xs text-[#71877f]">Recurring billing is handled securely by Razorpay.</p>
         </div>
