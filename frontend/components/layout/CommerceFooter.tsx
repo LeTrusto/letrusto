@@ -25,7 +25,7 @@ export const legacyPolicyRedirects = ["/privacy-policy", "/terms-of-use"];
 
 export default function CommerceFooter() {
   return (
-    <footer className="border-t border-slate-800 bg-slate-950 pb-24 text-slate-300 lg:pb-0">
+    <footer className="relative z-10 pointer-events-auto border-t border-slate-800 bg-slate-950 pb-24 text-slate-300 lg:pb-0">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-12">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
           <div>
@@ -36,7 +36,7 @@ export default function CommerceFooter() {
           <div>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Product</h3>
             <ul className="space-y-2.5">
-              {footerLinks.product.map((link) => <li key={link.href}><Link href={link.href} data-scroll-target={link.label === "Live Demo" ? liveDemoScrollTarget : undefined} className="text-sm text-slate-400 transition-colors duration-200 hover:text-amber-400">{link.label}</Link></li>)}
+              {footerLinks.product.map((link) => <li key={link.href}><Link href={link.href} data-scroll-target={link.label === "Live Demo" ? liveDemoScrollTarget : undefined} className="relative z-10 inline-block cursor-pointer pointer-events-auto text-sm text-slate-400 transition-colors duration-200 hover:text-amber-400">{link.label}</Link></li>)}
             </ul>
           </div>
           <div>
@@ -44,12 +44,12 @@ export default function CommerceFooter() {
             <ul className="space-y-2.5">
               {footerLinks.legal.slice(0, 3).map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-slate-400 transition-colors duration-200 hover:text-amber-400">
+                  <Link href={link.href} className="relative z-10 inline-block cursor-pointer pointer-events-auto text-sm text-slate-400 transition-colors duration-200 hover:text-amber-400">
                     {link.label}
                   </Link>
                 </li>
               ))}
-              <li><a href="#cookies" onClick={(event) => { event.preventDefault(); openCookiePreferences(); }} className="text-sm text-slate-400 transition-colors duration-200 hover:text-amber-400">Cookie Preferences</a></li>
+              <li><a href="#cookies" onClick={(event) => { event.preventDefault(); openCookiePreferences(); }} className="relative z-10 inline-block cursor-pointer pointer-events-auto text-sm text-slate-400 transition-colors duration-200 hover:text-amber-400">Cookie Preferences</a></li>
             </ul>
           </div>
         </div>
