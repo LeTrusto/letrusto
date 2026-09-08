@@ -68,7 +68,7 @@ class SubscriptionService:
             .where(
                 Subscription.user_id == user.id,
                 Subscription.plan_name == plan_name,
-                Subscription.status.in_(["created", "authenticated", "active"]),
+                Subscription.status.in_(["created", "trialing", "authenticated", "active"]),
             )
             .order_by(Subscription.created_at.desc())
         )

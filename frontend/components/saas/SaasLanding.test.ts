@@ -11,5 +11,6 @@ describe("SaaS pricing billing contract", () => {
     expect(source).toContain('monthly: 999');
     expect(source).toContain('monthly: 2499');
     expect(source).not.toMatch(/annual|yearly|save 20%/i);
+    expect(source).not.toMatch(/₹99|99\/mo|first 3/i);
   });
 });

@@ -32,6 +32,32 @@ def _webhook(event_name: str) -> tuple[bytes, str]:
     return body, signature
 
 
+def test_existing_trialing_subscription_is_reused_for_checkout():
+    existing = SimpleNamespace(
+        razorpay_subscription_id="sub_existing_trialing",
+        plan_name="pro",
+        status="trialing",
+    )
+    db = MagicMock()
+    db.scalar.return_value = existing
+    service = SubscriptionService(
+        db,
+        Settings(
+            RAZORPAY_KEY_ID="rzp_test_checkout",
+            RAZORPAY_KEY_SECRET="test-secret",
+            RAZORPAY_PRO_PLAN_ID="plan_pro",
+        ),
+    )
+    service._client = MagicMock()  # type: ignore[method-assign]
+
+    response = service.create_subscription(SimpleNamespace(id="user-id"), "pro")
+
+    assert response.subscription_id == "sub_existing_trialing"
+    assert response.status == "trialing"
+    service._client.assert_not_called()
+    db.commit.assert_not_called()
+
+
 @pytest.mark.parametrize(
     ("event_name", "expected_status"),
     [

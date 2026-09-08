@@ -21,7 +21,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
-import { authenticatedApiRequest } from "@/services/api";
+import { loadRazorpay } from "@/lib/razorpayLoader";
+import { createSubscription } from "@/services/saas.service";
 
 const previewModes = [
   { label: "Live Sales Popup", icon: Zap, name: "Aarav Mehta", location: "Mumbai", action: "just booked a strategy call", accent: "#d4af37" },
@@ -31,8 +32,8 @@ const previewModes = [
 
 const plans = [
   { name: "Free", monthly: 0, description: "A considered first signal for growing teams.", features: ["1 widget", "1,000 views / month", "Live sales popups"], action: "Start free" },
-  { name: "Starter", monthly: 999, description: "The trust layer for an active storefront.", features: ["14-day free trial", "First 3 months at ₹99/mo", "3 widgets", "10,000 views / month", "Custom colors", "Review collection"], action: "Start trial", featured: true },
-  { name: "Pro", monthly: 2499, description: "Every proof format, ready to compound.", features: ["14-day free trial", "First 3 months at ₹99/mo", "Unlimited widgets", "Unlimited views", "Video reviews", "Priority support"], action: "Go Pro" },
+  { name: "Starter", monthly: 999, description: "The trust layer for an active storefront.", features: ["14-day free trial", "3 widgets", "10,000 views / month", "Custom colors", "Review collection"], action: "Start trial", featured: true },
+  { name: "Pro", monthly: 2499, description: "Every proof format, ready to compound.", features: ["14-day free trial", "Unlimited widgets", "Unlimited views", "Video reviews", "Priority support"], action: "Go Pro" },
 ];
 
 const faqs = [
@@ -112,10 +113,7 @@ function TrialButton({ planName, label, featured }: { planName: "starter" | "pro
     setLoading(true);
     setError("");
     try {
-      const subscription = await authenticatedApiRequest<{ subscription_id: string; key_id: string }>(accessToken, "/subscriptions", {
-        method: "POST",
-        body: JSON.stringify({ plan_name: planName }),
-      });
+      const subscription = await createSubscription(accessToken, planName);
       await loadRazorpay();
       const Razorpay = window.Razorpay;
       if (!Razorpay) throw new Error("Razorpay Checkout could not be loaded.");
@@ -123,7 +121,7 @@ function TrialButton({ planName, label, featured }: { planName: "starter" | "pro
         key: subscription.key_id,
         subscription_id: subscription.subscription_id,
         name: "LeTrusto",
-        description: "14-day free trial, then ₹99/mo for the first 3 cycles",
+        description: `${planName === "pro" ? "Pro" : "Starter"} Social Proof plan`,
         theme: { color: "#D4AF37" },
         handler: () => router.push("/dashboard?billing=trial-started"),
       });
@@ -136,15 +134,4 @@ function TrialButton({ planName, label, featured }: { planName: "starter" | "pro
   }
 
   return <div className="mt-8"><button type="button" onClick={() => { void startTrial(); }} disabled={loading} className={`flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] disabled:cursor-wait disabled:opacity-60 ${featured ? "bg-[#d4af37] text-[#0a0d14] hover:bg-[#f3e5ab]" : "border border-white/20 text-white hover:border-[#d4af37] hover:text-[#f3e5ab]"}`}>{loading ? "Opening checkout..." : label}<ArrowRight className="h-4 w-4" /></button>{error && <p className="mt-2 text-xs text-rose-300">{error}</p>}</div>;
-}
-
-async function loadRazorpay(): Promise<void> {
-  if (window.Razorpay) return;
-  await new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Razorpay Checkout could not be loaded."));
-    document.body.appendChild(script);
-  });
 }
