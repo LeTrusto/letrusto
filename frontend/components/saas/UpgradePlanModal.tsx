@@ -1,11 +1,11 @@
 "use client";
 
 import { Check, Loader2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import type { RazorpayResult } from "@/lib/razorpayCheckout";
-import { isRazorpayReady, loadRazorpay } from "@/lib/razorpayLoader";
+import { loadRazorpay } from "@/lib/razorpayLoader";
 import { createSubscription } from "@/services/saas.service";
 
 type Props = { open: boolean; onClose: () => void };
@@ -36,42 +36,27 @@ export default function UpgradePlanModal({ open, onClose }: Props) {
   const [plan, setPlan] = useState<"starter" | "pro">("starter");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [sdkState, setSdkState] = useState<"loading" | "ready" | "error">("loading");
+  const [sdkState, setSdkState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const checkoutStarted = useRef(false);
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    if (isRazorpayReady()) {
-      queueMicrotask(() => {
-        if (!cancelled) {
-          setMessage("");
-          setSdkState("ready");
-        }
-      });
-    } else {
-      void loadRazorpay()
-        .then(() => { if (!cancelled) setSdkState("ready"); })
-        .catch(() => { if (!cancelled) setSdkState("error"); });
-    }
-    return () => { cancelled = true; };
-  }, [open]);
 
   if (!open) return null;
 
   async function beginCheckout() {
-    if (checkoutStarted.current || sdkState !== "ready") return;
+    if (checkoutStarted.current) return;
     if (!accessToken || !user) {
       setMessage("Please sign in before upgrading your plan.");
       return;
     }
-    const Razorpay = window.Razorpay;
-    if (!Razorpay) return;
     checkoutStarted.current = true;
     setBusy(true);
+    setSdkState("loading");
     setMessage("");
     try {
       const checkout = await createSubscription(accessToken, plan);
+      await loadRazorpay();
+      setSdkState("ready");
+      const Razorpay = window.Razorpay;
+      if (!Razorpay) throw new Error("Razorpay Checkout could not be loaded.");
       const razorpay = new Razorpay({
         key: checkout.key_id,
         subscription_id: checkout.subscription_id,
@@ -88,6 +73,7 @@ export default function UpgradePlanModal({ open, onClose }: Props) {
       });
       razorpay.open();
     } catch (error) {
+      setSdkState("error");
       setMessage(error instanceof Error ? error.message : "Unable to start checkout.");
       setBusy(false);
       checkoutStarted.current = false;
@@ -113,8 +99,8 @@ export default function UpgradePlanModal({ open, onClose }: Props) {
           </div>
           {message && <p className="mt-4 border border-[#f6c5cf] bg-[#fff4f5] px-3 py-2 text-sm text-[#a31835]" role="alert">{message}</p>}
           {sdkState === "error" && <p className="mt-4 border border-[#f6c5cf] bg-[#fff4f5] px-3 py-2 text-sm text-[#a31835]" role="alert">Razorpay Checkout could not be loaded. Please try again.</p>}
-          <button type="button" onClick={beginCheckout} disabled={busy || sdkState !== "ready"} className="mt-6 flex w-full items-center justify-center gap-2 bg-[#e11d48] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#be123c] disabled:cursor-wait disabled:opacity-60">
-            {(busy || sdkState === "loading") && <Loader2 className="h-4 w-4 animate-spin" />} {sdkState === "loading" ? "Loading secure checkout..." : "Continue to secure checkout"}
+          <button type="button" onClick={beginCheckout} disabled={busy} className="mt-6 flex w-full items-center justify-center gap-2 bg-[#e11d48] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#be123c] disabled:cursor-wait disabled:opacity-60">
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} {busy ? "Loading secure checkout..." : "Continue to secure checkout"}
           </button>
           <p className="mt-3 text-center text-xs text-[#71877f]">Recurring billing is handled securely by Razorpay.</p>
         </div>
