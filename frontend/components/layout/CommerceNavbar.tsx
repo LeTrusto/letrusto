@@ -22,6 +22,7 @@ function CommerceNavbarContent() {
     { href: "/#features", label: "Features" },
     { href: "/#pricing", label: "Pricing" },
     { href: "/#faq", label: "FAQ" },
+    { href: "/about", label: "About" },
   ];
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/95 text-white shadow-lg backdrop-blur-md">

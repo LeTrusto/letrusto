@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutDashboard, Sparkles, Tag } from "lucide-react";
+import { Home, Info, LayoutDashboard, Sparkles, Tag } from "lucide-react";
 import clsx from "clsx";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -10,6 +10,7 @@ const TABS = [
   { label: "Home", href: "/", icon: Home },
   { label: "Features", href: "/#features", icon: Sparkles },
   { label: "Pricing", href: "/#pricing", icon: Tag },
+  { label: "About", href: "/about", icon: Info },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
 ] as const;
 
