@@ -33,7 +33,6 @@ Keep customer-facing SaaS work scoped to the task. Do not redesign unrelated fro
 - Inspect foreign keys and cascade behavior before data deletion.
 - Never delete users, admins, authentication records, or unrelated application data.
 - Do not run destructive seed/reset scripts against the current database.
-- Do not re-enable `seed_products.py`, `seed_smartphones.py`, `seed_hosting_saas.py`, or `sync_verified_apple_iphones.py` during normal startup.
 - Do not modify Railway or Vercel configuration unless explicitly requested.
 - Do not commit, push, merge, or deploy unless explicitly requested.
 
