@@ -28,12 +28,34 @@ def test_production_allows_unconfigured_razorpay(monkeypatch):
     monkeypatch.setenv("RAZORPAY_KEY_ID", "")
     monkeypatch.setenv("RAZORPAY_KEY_SECRET", "")
     monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", "")
+    monkeypatch.setenv("RAZORPAY_STARTER_PLAN_ID", "")
+    monkeypatch.setenv("RAZORPAY_PRO_PLAN_ID", "")
+    monkeypatch.setenv("RAZORPAY_STARTER_OFFER_ID", "")
+    monkeypatch.setenv("RAZORPAY_PRO_OFFER_ID", "")
     get_settings.cache_clear()
     try:
         settings = get_settings()
         assert settings.RAZORPAY_KEY_ID == ""
         assert settings.RAZORPAY_KEY_SECRET == ""
         assert settings.RAZORPAY_WEBHOOK_SECRET == ""
+    finally:
+        get_settings.cache_clear()
+
+
+def test_production_rejects_configured_sandbox_razorpay(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")
+    monkeypatch.setenv("JWT_SECRET_KEY", "12345678901234567890123456789012")
+    monkeypatch.setenv("CASHFREE_ENV", "production")
+    monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
+    monkeypatch.setenv("RAZORPAY_ENV", "sandbox")
+    monkeypatch.setenv("RAZORPAY_KEY_ID", "rzp_test_configured")
+    monkeypatch.setenv("RAZORPAY_KEY_SECRET", "configured-secret")
+    monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", "configured-webhook")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(RuntimeError, match="RAZORPAY_ENV=production"):
+            get_settings()
     finally:
         get_settings.cache_clear()
 
@@ -103,6 +125,7 @@ def test_production_requires_razorpay_webhook_secret_when_credentials_are_config
     monkeypatch.setenv("JWT_SECRET_KEY", "12345678901234567890123456789012")
     monkeypatch.setenv("CASHFREE_ENV", "production")
     monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
+    monkeypatch.setenv("RAZORPAY_ENV", "production")
     monkeypatch.setenv("RAZORPAY_KEY_ID", "rzp_test_configured")
     monkeypatch.setenv("RAZORPAY_KEY_SECRET", "configured-secret")
     monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", "")

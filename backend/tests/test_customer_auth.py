@@ -241,6 +241,7 @@ def test_production_rejects_mock_sms_provider(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")
     monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
     monkeypatch.setenv("SMS_PROVIDER", "mock")
+    monkeypatch.setenv("RAZORPAY_ENV", "production")
     get_settings.cache_clear()
     try:
         with pytest.raises(BadRequestError, match="Production SMS"):

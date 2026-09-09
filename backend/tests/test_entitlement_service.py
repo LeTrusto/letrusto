@@ -111,3 +111,41 @@ def test_active_paid_subscription_with_future_period_end_keeps_access():
     assert entitlement.plan == "pro"
     assert entitlement.status == "active"
     assert entitlement.is_trial is False
+
+
+def test_halted_subscription_does_not_fall_back_to_paid_trial_access():
+    user = SimpleNamespace(trial_ends_at=datetime.now(timezone.utc) + timedelta(days=7), id="user-id")
+    subscription = SimpleNamespace(
+        user_id="user-id",
+        plan_name="pro",
+        status="failed",
+        current_period_end=None,
+        grace_until=None,
+    )
+    db = MagicMock()
+    db.scalar.return_value = subscription
+
+    entitlement = get_entitlement(db, user)
+
+    assert entitlement.plan == "free"
+    assert entitlement.active is True
+    assert entitlement.is_trial is False
+
+
+def test_cancelled_subscription_keeps_access_until_current_period_end():
+    user = SimpleNamespace(trial_ends_at=None, id="user-id")
+    subscription = SimpleNamespace(
+        user_id="user-id",
+        plan_name="starter",
+        status="cancelled",
+        current_period_end=datetime.now(timezone.utc) + timedelta(days=7),
+        grace_until=None,
+    )
+    db = MagicMock()
+    db.scalar.return_value = subscription
+
+    entitlement = get_entitlement(db, user)
+
+    assert entitlement.plan == "starter"
+    assert entitlement.active is True
+    assert entitlement.status == "cancelled"

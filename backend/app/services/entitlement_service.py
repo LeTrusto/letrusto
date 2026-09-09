@@ -37,7 +37,7 @@ def get_entitlement(db: Session, user: User) -> Entitlement:
         .order_by(Subscription.created_at.desc())
     )
     if subscription and subscription.plan_name in {"starter", "pro"}:
-        paid_active = subscription.status in {"active", "cancellation_pending"}
+        paid_active = subscription.status in {"active", "cancellation_pending", "cancelled"}
         period_active = subscription.current_period_end is not None and _as_utc(subscription.current_period_end) > now
         grace_active = subscription.grace_until is not None and _as_utc(subscription.grace_until) > now
         if paid_active and (period_active or grace_active):
@@ -52,6 +52,8 @@ def get_entitlement(db: Session, user: User) -> Entitlement:
         and trial_end > now
     ):
         return _build(subscription.plan_name, "trialing", True, True, trial_end)
+    if subscription and subscription.plan_name in {"starter", "pro"}:
+        return _build("free", "free", True, False, trial_end)
     if trial_end and trial_end > now:
         return _build("starter", "trialing", True, True, trial_end)
     if trial_end and trial_end <= now:
