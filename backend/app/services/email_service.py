@@ -332,6 +332,52 @@ def _digital_purchase_template(context: Mapping[str, Any]) -> RenderedEmail:
     ]))
 
 
+def _subscription_template(context: Mapping[str, Any]) -> RenderedEmail:
+    event = str(context["event"])
+    plan_name = str(context["plan_name"]).title()
+    status = str(context["status"]).replace("_", " ").title()
+    customer_email = str(context["customer_email"])
+    event_details = {
+        "trial_started": ("Your trial has started", f"Your {plan_name} trial is ready to use."),
+        "activated": ("Your subscription is active", f"Your {plan_name} subscription is now active."),
+        "charged": ("Your subscription was renewed", f"Your {plan_name} subscription was successfully renewed."),
+        "updated": ("Your subscription was updated", f"Your {plan_name} subscription details were updated."),
+        "cancellation_scheduled": ("Cancellation scheduled", f"Your {plan_name} subscription will end at the end of the current billing period."),
+        "halted": ("Action needed for your subscription", f"We could not renew your {plan_name} subscription."),
+        "completed": ("Your subscription has ended", f"Your {plan_name} subscription has ended."),
+    }
+    title, message = event_details[event]
+    rows = "".join([
+        _render_label_value("Account email", customer_email),
+        _render_label_value("Plan", plan_name),
+        _render_label_value("Status", status),
+        _render_label_value("Effective time", str(context["effective_at"])),
+    ])
+    if context.get("period_end"):
+        rows += _render_label_value("Current period ends", str(context["period_end"]))
+    html = _html_document(
+        f"{title} | LeTrusto",
+        (
+            f'<h1 style="margin:0 0 10px 0;font-size:27px;line-height:1.2;color:#0f172a;">{escape(title)}</h1>'
+            f'<p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#475569;">{escape(message)}</p>'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:1px solid #e2e8f0;">'
+            f'<tr><td style="padding:18px 20px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">{rows}</table></td></tr></table>'
+            f'<p style="margin:20px 0 0 0;font-size:14px;line-height:1.7;color:#475569;">Manage your subscription in the <a href="{escape(str(context["dashboard_url"]))}" style="color:#1d4ed8;">LeTrusto dashboard</a>.</p>'
+            f'<p style="margin:12px 0 0 0;font-size:13px;line-height:1.7;color:#64748b;">Questions? Contact <a href="mailto:{escape(str(context["support_email"]))}" style="color:#1d4ed8;">{escape(str(context["support_email"]))}</a>.</p>'
+        ),
+        logo_url=str(context.get("logo_url", "https://letrusto.com/images/logo/logo.png")),
+        website_url=str(context.get("website_url", "https://letrusto.com")),
+    )
+    text_lines = [
+        title, message, f"Account email: {customer_email}", f"Plan: {plan_name}",
+        f"Status: {status}", f"Effective time: {context['effective_at']}",
+    ]
+    if context.get("period_end"):
+        text_lines.append(f"Current period ends: {context['period_end']}")
+    text_lines.extend([f"Manage your subscription: {context['dashboard_url']}", f"Support: {context['support_email']}"])
+    return RenderedEmail(subject=f"{title} | LeTrusto", html=html, text=_text_block(text_lines))
+
+
 def _shipment_template(context: Mapping[str, Any]) -> RenderedEmail:
     status = str(context["status"])
     order_number = str(context["order_number"])
@@ -443,6 +489,7 @@ class EmailService:
         registry.register("password_reset", _password_reset_template)
         registry.register("order_confirmation", _order_confirmation_template)
         registry.register("digital_purchase_confirmation", _digital_purchase_template)
+        registry.register("subscription_notification", _subscription_template)
         registry.register("order_shipped", _shipped_template)
         registry.register("order_delivered", _delivered_template)
         registry.register("operational_alert", _operational_alert_template)

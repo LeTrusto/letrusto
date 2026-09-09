@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.core.config import Settings
+from app.services.email_service import EmailDeliveryError
 from app.services.subscription_service import SubscriptionService
 
 
@@ -141,3 +142,98 @@ def test_non_duplicate_integrity_error_is_not_swallowed():
         )
 
     assert raised.value is error
+
+
+class FakeEmailService:
+    def __init__(self, failure: bool = False):
+        self.calls: list[dict[str, object]] = []
+        self.failure = failure
+
+    def send_template(self, template_name: str, *, to: str, context: dict[str, object]):
+        if self.failure:
+            raise EmailDeliveryError("simulated delivery failure")
+        self.calls.append({"template": template_name, "to": to, "context": context})
+
+
+@pytest.mark.parametrize(
+    ("event_name", "customer_event"),
+    [
+        ("subscription.activated", "activated"),
+        ("subscription.charged", "charged"),
+        ("subscription.updated", "updated"),
+        ("subscription.cancelled", "cancellation_scheduled"),
+        ("subscription.halted", "halted"),
+        ("subscription.completed", "completed"),
+    ],
+)
+def test_subscription_events_send_customer_email_after_state_commit(event_name, customer_event):
+    record = SimpleNamespace(
+        razorpay_subscription_id="sub_test_123",
+        plan_name="pro",
+        status="active",
+        current_period_end=None,
+        cancelled_at=None,
+        failed_at=None,
+        failure_reason=None,
+        user=SimpleNamespace(email="customer@example.test"),
+    )
+    db = MagicMock()
+    db.scalar.side_effect = [None, record]
+    email = FakeEmailService()
+    body, signature = _webhook(event_name)
+
+    SubscriptionService(db, Settings(RAZORPAY_WEBHOOK_SECRET="webhook-secret"), email).process_webhook(body, signature)
+
+    assert db.commit.call_count == 1
+    assert len(email.calls) == 1
+    assert email.calls[0]["to"] == "customer@example.test"
+    assert email.calls[0]["context"]["event"] == customer_event
+
+
+def test_duplicate_subscription_webhook_does_not_send_duplicate_email():
+    record = SimpleNamespace(
+        razorpay_subscription_id="sub_test_123",
+        plan_name="starter",
+        status="active",
+        current_period_end=None,
+        cancelled_at=None,
+        failed_at=None,
+        failure_reason=None,
+        user=SimpleNamespace(email="customer@example.test"),
+    )
+    event = SimpleNamespace(provider_event_id="evt_subscription_charged", event_name="subscription.charged")
+    db = MagicMock()
+    db.scalar.side_effect = [None, record, event]
+    email = FakeEmailService()
+    body, signature = _webhook("subscription.charged")
+
+    service = SubscriptionService(db, Settings(RAZORPAY_WEBHOOK_SECRET="webhook-secret"), email)
+    service.process_webhook(body, signature)
+    service.process_webhook(body, signature)
+
+    assert len(email.calls) == 1
+
+
+def test_email_delivery_failure_does_not_fail_successful_webhook(caplog):
+    record = SimpleNamespace(
+        razorpay_subscription_id="sub_test_123",
+        plan_name="pro",
+        status="created",
+        current_period_end=None,
+        cancelled_at=None,
+        failed_at=None,
+        failure_reason=None,
+        user=SimpleNamespace(email="customer@example.test"),
+    )
+    db = MagicMock()
+    db.scalar.side_effect = [None, record]
+    body, signature = _webhook("subscription.activated")
+
+    SubscriptionService(
+        db,
+        Settings(RAZORPAY_WEBHOOK_SECRET="webhook-secret"),
+        FakeEmailService(failure=True),
+    ).process_webhook(body, signature)
+
+    assert record.status == "active"
+    assert db.commit.call_count == 1

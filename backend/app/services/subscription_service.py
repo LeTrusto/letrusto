@@ -17,6 +17,7 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import BadRequestError
 from app.models.entities import Subscription, SubscriptionWebhookEvent, User
 from app.schemas.subscriptions import SubscriptionCancelResponse, SubscriptionCreateResponse
+from app.services.email_service import EmailDeliveryError, EmailService
 
 
 logger = logging.getLogger(__name__)
@@ -29,15 +30,22 @@ SUBSCRIPTION_STATUS_BY_EVENT = {
     "subscription.halted": "failed",
     "subscription.completed": "expired",
     "subscription.pending": "pending",
+    "subscription.updated": "updated",
 }
 
 
 class SubscriptionService:
     PLAN_NAMES = {"starter", "pro"}
 
-    def __init__(self, db: Session, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        db: Session,
+        settings: Settings | None = None,
+        email_service: EmailService | None = None,
+    ) -> None:
         self.db = db
         self.settings = settings or get_settings()
+        self.email_service = email_service or EmailService.from_settings(self.settings)
 
     def _client(self) -> razorpay.Client:
         if not self.settings.RAZORPAY_KEY_ID or not self.settings.RAZORPAY_KEY_SECRET:
@@ -123,6 +131,13 @@ class SubscriptionService:
         self.db.add(record)
         self.db.commit()
         self.db.refresh(record)
+        self._send_notification(
+            user,
+            plan_name=getattr(record, "plan_name", "subscription"),
+            event="trial_started",
+            status=record.status,
+            period_end=record.current_period_end,
+        )
         return SubscriptionCreateResponse(
             subscription_id=provider_id,
             plan_name=plan_name,
@@ -148,6 +163,13 @@ class SubscriptionService:
         record.status = "cancellation_pending"
         record.cancel_at_period_end = True
         self.db.commit()
+        self._send_notification(
+            user,
+            plan_name=record.plan_name,
+            event="cancellation_scheduled",
+            status=record.status,
+            period_end=record.current_period_end,
+        )
         return SubscriptionCancelResponse(status=record.status, access_until=record.current_period_end)
 
     def process_webhook(self, body: bytes, signature: str | None) -> None:
@@ -227,14 +249,24 @@ class SubscriptionService:
             raise BadRequestError("Subscription record not found")
 
         record.razorpay_subscription_id = provider_id
-        record.status = SUBSCRIPTION_STATUS_BY_EVENT[event_name]
+        if event_name != "subscription.updated":
+            record.status = SUBSCRIPTION_STATUS_BY_EVENT[event_name]
         if event_name == "subscription.cancelled":
             record.cancelled_at = datetime.now(timezone.utc)
         if event_name == "subscription.halted":
             record.failed_at = datetime.now(timezone.utc)
             record.failure_reason = str(entity.get("error_description") or "Razorpay subscription payment failed")[:500]
         record.current_period_end = _epoch_to_datetime(entity.get("current_end"))
+        if event_name == "subscription.updated":
+            record.status = _status_for_updated_entity(entity.get("status"), record.status)
         self.db.commit()
+        self._send_notification(
+            getattr(record, "user", None),
+            plan_name=getattr(record, "plan_name", "subscription"),
+            event=_customer_event_for_webhook(event_name),
+            status=record.status,
+            period_end=record.current_period_end,
+        )
         logger.info(
             "Razorpay subscription webhook processed: event=%s event_id=%s subscription_id=%s status=%s",
             event_name,
@@ -242,6 +274,58 @@ class SubscriptionService:
             provider_id,
             record.status,
         )
+
+    def _send_notification(
+        self,
+        user: User | None,
+        *,
+        plan_name: str,
+        event: str,
+        status: str,
+        period_end: datetime | None,
+    ) -> None:
+        if not user or not user.email:
+            return
+        try:
+            self.email_service.send_template(
+                "subscription_notification",
+                to=user.email,
+                context={
+                    "event": event,
+                    "plan_name": plan_name,
+                    "status": status,
+                    "customer_email": user.email,
+                    "effective_at": datetime.now(timezone.utc).isoformat(),
+                    "period_end": period_end.isoformat() if period_end else None,
+                    "dashboard_url": f"{self.settings.PUBLIC_APP_URL.rstrip('/')}/dashboard",
+                    "support_email": self.settings.SUPPORT_EMAIL,
+                    "website_url": self.settings.PUBLIC_APP_URL,
+                },
+            )
+        except EmailDeliveryError:
+            logger.exception("Subscription email delivery failed: event=%s", event)
+
+
+def _customer_event_for_webhook(event_name: str) -> str:
+    return {
+        "subscription.activated": "activated",
+        "subscription.charged": "charged",
+        "subscription.updated": "updated",
+        "subscription.cancelled": "cancellation_scheduled",
+        "subscription.halted": "halted",
+        "subscription.completed": "completed",
+    }.get(event_name, "updated")
+
+
+def _status_for_updated_entity(provider_status: Any, current_status: str) -> str:
+    return {
+        "authenticated": "trialing",
+        "active": "active",
+        "pending": "pending",
+        "halted": "failed",
+        "cancelled": "cancelled",
+        "completed": "expired",
+    }.get(str(provider_status or "").lower(), current_status)
 
 
 def _epoch_to_datetime(value: Any) -> datetime | None:

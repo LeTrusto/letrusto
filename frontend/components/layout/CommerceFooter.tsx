@@ -8,7 +8,7 @@ export const footerLinks = {
   product: [
   { label: "Features", href: "/#features" },
   { label: "Pricing", href: "/#pricing" },
-  { label: "Live Demo", href: "/demo" },
+  { label: "Live Demo", href: "/#demo" },
   { label: "About Us", href: "/about" },
   { label: "Dashboard", href: "/dashboard" },
   ],
