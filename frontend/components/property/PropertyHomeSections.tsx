@@ -2,27 +2,30 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowDown, ArrowRight, Camera, Play, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, Eye, Menu, Send, Sparkles, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 
 import { categories, localities, properties } from "@/lib/propertyMockData";
 import { PropertyCategoryCard } from "./PropertyCategoryCard";
 
 export function HomeHero() {
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <section className="home-hero">
       <div className="hero-grain" aria-hidden="true" />
       <nav className="site-nav section-shell" aria-label="Main navigation">
         <Link href="/" className="temporary-mark" aria-label="Home"><span className="mark-dot" />BENGALURU PROPERTY</Link>
-        <div className="nav-links"><Link href="/properties">Discover</Link><a href="#story">Our point of view</a><Link href="/login">Sign in</Link></div>
-        <Link href="/properties" className="nav-pill">Explore <ArrowRight size={15} /></Link>
+        <div id="homepage-navigation" className={`nav-links ${menuOpen ? "is-open" : ""}`}><Link href="/properties" onClick={() => setMenuOpen(false)}>Discover</Link><Link href="/properties" onClick={() => setMenuOpen(false)}>Buy</Link><Link href="/sell" onClick={() => setMenuOpen(false)}>Sell</Link><a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a></div>
+        <div className="nav-actions"><Link href="/login" className="nav-sign-in">Sign in</Link><Link href="/sell" className="nav-pill">List your property <ArrowRight size={15} /></Link></div>
+        <button type="button" className="mobile-menu-button" aria-expanded={menuOpen} aria-controls="homepage-navigation" aria-label={menuOpen ? "Close navigation" : "Open navigation"} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X size={20} /> : <Menu size={20} />}</button>
       </nav>
       <div className="hero-inner section-shell">
         <div className="hero-copy">
           <p className="eyebrow hero-eyebrow"><span className="eyebrow-line" /> Bangalore / Property journal</p>
           <h1 className="hero-title">Find somewhere<br /><em>worth coming</em><br />home to.</h1>
-          <p className="hero-subtitle">A more considered way to discover the homes, plots and spaces shaping Bangalore.</p>
-          <div className="hero-actions"><Link href="/properties" className="button button-dark">Explore properties <ArrowRight size={17} /></Link><a href="#collection" className="hero-scroll"><span className="scroll-icon"><ArrowDown size={15} /></span> Scroll to wander</a></div>
+          <p className="hero-subtitle">A more considered way to discover homes, plots and spaces across Bengaluru.</p>
+          <div className="hero-actions"><Link href="/properties" className="button button-dark">Explore properties <ArrowRight size={17} /></Link><Link href="/sell" className="button button-outline hero-seller-button">Sell your property <ArrowRight size={17} /></Link></div>
         </div>
         <div className="hero-visual" aria-label="Featured Bangalore property">
           <div className="hero-stamp">The<br /><strong>good<br />address</strong><br />project</div>
@@ -34,6 +37,10 @@ export function HomeHero() {
       <div className="hero-bottom section-shell"><span>Curated, not crowded</span><span className="hero-bottom-rule" /><span>Scroll to explore <ArrowDown size={14} /></span></div>
     </section>
   );
+}
+
+export function BuyerSellerSection() {
+  return <section className="buyer-seller-section section-shell" aria-label="Choose your journey"><article className="journey-panel journey-buyers" style={{ backgroundImage: `linear-gradient(90deg, rgba(22, 27, 21, .84), rgba(22, 27, 21, .18)), url(${properties[1].image})` }}><p className="eyebrow">For buyers</p><h2>Find a place worth<br /><em>coming home to.</em></h2><p>Discover apartments, houses, villas and plots across Bengaluru.</p><Link href="/properties" className="button button-light">Explore properties <ArrowRight size={17} /></Link></article><article className="journey-panel journey-sellers" style={{ backgroundImage: `linear-gradient(90deg, rgba(44, 38, 30, .87), rgba(44, 38, 30, .17)), url(${properties[4].image})` }}><p className="eyebrow">For sellers</p><h2>Have a property<br /><em>to sell?</em></h2><p>Let us present your property beautifully and connect it with interested buyers.</p><Link href="/sell" className="button button-light">List your property <ArrowRight size={17} /></Link></article></section>;
 }
 
 export function IntroSection() {
@@ -53,14 +60,15 @@ export function LocalitySection() {
 }
 
 export function DifferenceSection() {
-  const steps = [{ number: "01", title: "Discover", copy: "Property discovery with a point of view." }, { number: "02", title: "See", copy: "Rich photography and the details that matter." }, { number: "03", title: "Enquire", copy: "A direct line to the person behind the place." }, { number: "04", title: "Follow", copy: "Know what happens after you reach out." }];
-  return <section className="difference-section" id="collection"><div className="section-shell"><div className="difference-top"><div><p className="eyebrow">The difference</p><h2 className="display-title display-title-small">Less noise.<br /><em>More place.</em></h2></div><p className="section-aside">A home deserves more than a thumbnail and a filter. We are building a slower, more human way to find one.</p></div><div className="difference-grid">{steps.map((step, index) => <motion.div key={step.number} className={`difference-step difference-step-${index + 1}`} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }} transition={{ delay: index * 0.08 }}><span>{step.number}</span><div className="difference-icon">{index === 0 ? <Sparkles size={19} /> : index === 1 ? <Play size={17} /> : index === 2 ? <ArrowRight size={19} /> : <span className="follow-dot" />}</div><h3>{step.title}</h3><p>{step.copy}</p></motion.div>)}</div></div></section>;
+  const steps = [{ number: "01", title: "Discover", copy: "Explore carefully presented properties across Bengaluru.", icon: <Sparkles size={19} /> }, { number: "02", title: "See the story", copy: "View photos, details and property information.", icon: <Eye size={18} /> }, { number: "03", title: "Get details", copy: "Send a free enquiry for the property you're interested in.", icon: <Send size={18} /> }, { number: "04", title: "Connect", copy: "The property contact can follow up with you.", icon: <Check size={18} /> }];
+  return <section className="difference-section" id="how-it-works"><div className="section-shell"><div className="difference-top"><div><p className="eyebrow">How it works</p><h2 className="display-title display-title-small">A simpler way<br /><em>to begin.</em></h2></div><p className="section-aside">Discover a property, understand the story, and enquire when something feels right.</p></div><div className="difference-grid">{steps.map((step, index) => <motion.div key={step.number} className={`difference-step difference-step-${index + 1}`} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }} transition={{ delay: index * 0.08 }}><span>{step.number}</span><div className="difference-icon">{step.icon}</div><h3>{step.title}</h3><p>{step.copy}</p></motion.div>)}</div><div className="seller-flow"><p className="eyebrow">For sellers</p><strong>Submit</strong><ArrowRight size={15} /><strong>Review</strong><ArrowRight size={15} /><strong>Publish</strong><ArrowRight size={15} /><strong>Reach buyers</strong></div></div></section>;
 }
 
-export function SocialSection() {
-  return <section className="social-section section-shell"><div className="social-copy"><p className="eyebrow"><Camera size={14} /> The social edit</p><h2 className="display-title display-title-small">Seen somewhere<br /><em>beautiful?</em></h2><p>Every property can become a story worth sharing. Follow the trail from a saved post to a place you can actually visit.</p><Link href="/properties" className="button button-outline">Discover the stories <ArrowRight size={17} /></Link></div><div className="social-collage"><div className="social-card social-card-main"><Image src={properties[2].image} alt="Garden villa discovery" fill sizes="(max-width: 560px) 77vw, 35vw" /><span className="social-handle">@bengaluru / 04:32 PM</span><strong>Somewhere between<br />inside and outside.</strong></div><div className="social-card social-card-note"><Camera size={18} /><span>Saved by<br /><strong>2,418 curious people</strong></span></div><div className="social-card social-card-small"><Image src={properties[7].image} alt="Indigo Court interior" fill sizes="200px" /><span>Swipe to see the inside <ArrowRight size={14} /></span></div></div></section>;
+export function WhySection() {
+  const differences = [{ title: "Visual first", copy: "Beautiful property presentation instead of endless text-heavy listings." }, { title: "Bangalore focused", copy: "Built around properties across Bengaluru." }, { title: "Free buyer enquiries", copy: "Interested buyers can enquire without creating a paid account." }, { title: "Seller-first marketing", copy: "We give each property a proper presentation rather than treating it as just another database entry." }];
+  return <section className="why-section section-shell"><div className="why-heading"><p className="eyebrow">Why this platform</p><h2 className="display-title display-title-small">A more considered way<br /><em>to discover property.</em></h2></div><div className="why-grid">{differences.map((item, index) => <article key={item.title}><span>0{index + 1}</span><h3>{item.title}</h3><p>{item.copy}</p></article>)}</div></section>;
 }
 
 export function ClosingSection() {
-  return <section className="closing-section"><div className="section-shell closing-grid"><div><p className="eyebrow">The next chapter</p><h2 className="display-title">Your next address<br /><em>might feel like this.</em></h2></div><div className="closing-actions"><Link href="/properties" className="button button-light">Explore Bangalore <ArrowRight size={17} /></Link><Link href="/login" className="button button-quiet">Have a property worth showing? <ArrowRight size={16} /></Link></div></div><footer className="site-footer section-shell"><span className="temporary-mark"><span className="mark-dot" />BENGALURU PROPERTY</span><span>Property, with a point of view.</span><div><Link href="/properties">Discover</Link><Link href="/login">For sellers</Link><Link href="/login">Sign in</Link></div></footer></section>;
+  return <><section className="closing-section"><div className="section-shell closing-grid"><div><p className="eyebrow">For property owners</p><h2 className="display-title">Have a property<br /><em>in Bengaluru?</em></h2><p className="closing-copy">Give it more than a listing. Give it a story worth discovering.</p></div><div className="closing-actions"><Link href="/sell" className="button button-light">List your property <ArrowRight size={17} /></Link><span>No complicated process. Submit your property and we&apos;ll review it before it goes live.</span></div></div></section><section className="contact-section section-shell" id="contact"><div><p className="eyebrow">Reach us</p><h2 className="display-title display-title-small">Let&apos;s talk<br /><em>property.</em></h2></div><div className="contact-copy"><p>Have a question about a property, want to list your property, or simply want to know more about Bengaluru Property? Reach us.</p><dl><div><dt>Email</dt><dd>hello@YOURDOMAIN.com <small>development placeholder</small></dd></div><div><dt>Phone</dt><dd>[BUSINESS PHONE] <small>development placeholder</small></dd></div><div><dt>Location</dt><dd>Bengaluru, Karnataka</dd></div></dl><div className="contact-actions"><Link href="/sell" className="text-link">List your property <ArrowRight size={16} /></Link><Link href="/properties" className="text-link">Explore properties <ArrowRight size={16} /></Link></div></div></section><footer className="site-footer"><div className="section-shell footer-grid"><div className="footer-brand"><span className="temporary-mark"><span className="mark-dot" />BENGALURU PROPERTY</span><p>A more considered way to discover property across Bengaluru.</p></div><div><h3>Discover</h3><Link href="/properties">Properties</Link><Link href="/properties">Apartments</Link><Link href="/properties">Villas</Link><Link href="/properties">Houses</Link><Link href="/properties">Plots</Link><Link href="/properties">Explore Bengaluru</Link></div><div><h3>Sell</h3><Link href="/sell">Sell your property</Link><a href="#how-it-works">How it works</a><Link href="/login">Seller login</Link><Link href="/sell">Submit a property</Link></div><div><h3>Company</h3><a href="#story">About us</a><a href="#story">Our approach</a><a href="#contact">Contact</a><a href="#how-it-works">FAQ</a></div><div><h3>Reach us</h3><span>hello@YOURDOMAIN.com</span><span>[BUSINESS PHONE]</span><span>Bengaluru, Karnataka</span></div></div><div className="section-shell footer-bottom"><span>© 2026 Bengaluru Property. All rights reserved.</span><span><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Seller terms</a></span></div></footer></>;
 }
