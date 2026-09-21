@@ -146,6 +146,8 @@ class SellerPropertyDTO(PublicPropertyDTO):
     seller_profile_id: UUID
     address_line: str | None
     approval_information: str | None
+    created_at: datetime
+    updated_at: datetime
     status: PropertyStatus
 
 

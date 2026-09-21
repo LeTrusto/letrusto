@@ -13,13 +13,13 @@ export function HomeHero() {
     <section className="home-hero">
       <div className="hero-grain" aria-hidden="true" />
       <nav className="site-nav section-shell" aria-label="Main navigation">
-        <Link href="/" className="temporary-mark" aria-label="Home"><span className="mark-dot" />BENGALURU / VOL. 01</Link>
+        <Link href="/" className="temporary-mark" aria-label="Home"><span className="mark-dot" />BENGALURU PROPERTY</Link>
         <div className="nav-links"><Link href="/properties">Discover</Link><a href="#story">Our point of view</a><Link href="/login">Sign in</Link></div>
         <Link href="/properties" className="nav-pill">Explore <ArrowRight size={15} /></Link>
       </nav>
       <div className="hero-inner section-shell">
         <div className="hero-copy">
-          <p className="eyebrow hero-eyebrow"><span className="eyebrow-line" /> Bangalore / Vol. 01</p>
+          <p className="eyebrow hero-eyebrow"><span className="eyebrow-line" /> Bangalore / Property journal</p>
           <h1 className="hero-title">Find somewhere<br /><em>worth coming</em><br />home to.</h1>
           <p className="hero-subtitle">A more considered way to discover the homes, plots and spaces shaping Bangalore.</p>
           <div className="hero-actions"><Link href="/properties" className="button button-dark">Explore properties <ArrowRight size={17} /></Link><a href="#collection" className="hero-scroll"><span className="scroll-icon"><ArrowDown size={15} /></span> Scroll to wander</a></div>
@@ -62,5 +62,5 @@ export function SocialSection() {
 }
 
 export function ClosingSection() {
-  return <section className="closing-section"><div className="section-shell closing-grid"><div><p className="eyebrow">The next chapter</p><h2 className="display-title">Your next address<br /><em>might feel like this.</em></h2></div><div className="closing-actions"><Link href="/properties" className="button button-light">Explore Bangalore <ArrowRight size={17} /></Link><Link href="/login" className="button button-quiet">Have a property worth showing? <ArrowRight size={16} /></Link></div></div><footer className="site-footer section-shell"><span className="temporary-mark"><span className="mark-dot" />BENGALURU / VOL. 01</span><span>Property, with a point of view.</span><div><Link href="/properties">Discover</Link><Link href="/login">For sellers</Link><Link href="/login">Sign in</Link></div></footer></section>;
+  return <section className="closing-section"><div className="section-shell closing-grid"><div><p className="eyebrow">The next chapter</p><h2 className="display-title">Your next address<br /><em>might feel like this.</em></h2></div><div className="closing-actions"><Link href="/properties" className="button button-light">Explore Bangalore <ArrowRight size={17} /></Link><Link href="/login" className="button button-quiet">Have a property worth showing? <ArrowRight size={16} /></Link></div></div><footer className="site-footer section-shell"><span className="temporary-mark"><span className="mark-dot" />BENGALURU PROPERTY</span><span>Property, with a point of view.</span><div><Link href="/properties">Discover</Link><Link href="/login">For sellers</Link><Link href="/login">Sign in</Link></div></footer></section>;
 }

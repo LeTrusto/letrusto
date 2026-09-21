@@ -1,0 +1,18 @@
+"use client";
+
+import { Check, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { createSellerProfile, getSellerProfile, updateSellerProfile, type SellerProfile } from "@/services/seller.service";
+import { useAuth } from "@/hooks/useAuth";
+
+const initial = { seller_type: "OWNER" as "OWNER" | "AUTHORIZED_REPRESENTATIVE", display_name: "", phone: "", whatsapp_available: false, email: "" };
+
+export default function SellerProfileForm() {
+  const { accessToken, user } = useAuth();
+  const [form, setForm] = useState(initial); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState("");
+  useEffect(() => { if (!accessToken) return; getSellerProfile(accessToken).then((profile) => setForm({ seller_type: profile.seller_type, display_name: profile.display_name, phone: profile.phone, whatsapp_available: profile.whatsapp_available, email: profile.email ?? "" })).catch(() => setForm((current) => ({ ...current, email: user?.email ?? "" }))).finally(() => setLoading(false)); }, [accessToken, user?.email]);
+  function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) { setForm((current) => ({ ...current, [key]: value })); setMessage(""); }
+  async function save(event: React.FormEvent) { event.preventDefault(); if (!accessToken) return; setSaving(true); setError(""); setMessage(""); try { let profile: SellerProfile; try { profile = await getSellerProfile(accessToken); } catch { profile = await createSellerProfile(accessToken, form); } if (profile) await updateSellerProfile(accessToken, form); setMessage("Profile saved."); } catch (err) { setError(err instanceof Error ? err.message : "We couldn't save your profile."); } finally { setSaving(false); } }
+  return <><header className="seller-page-heading"><div><p className="eyebrow">Your details</p><h1 className="seller-display-title">Seller profile</h1><p className="seller-muted">Keep your contact details in one place across every property you submit.</p></div></header><form className="seller-form-panel" onSubmit={(event) => { void save(event); }}><div className="seller-form-section"><p className="seller-section-label">About you</p><div className="seller-form-grid"><label>Name<input required minLength={1} value={form.display_name} onChange={(event) => update("display_name", event.target.value)} placeholder="Your name" /></label><label>Phone<input required minLength={7} value={form.phone} onChange={(event) => update("phone", event.target.value)} placeholder="Your phone number" /></label><label>Email<input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} placeholder={user?.email ?? "you@example.com"} /></label><label>Seller type<select value={form.seller_type} onChange={(event) => update("seller_type", event.target.value as typeof form.seller_type)}><option value="OWNER">Owner</option><option value="AUTHORIZED_REPRESENTATIVE">Authorized representative</option></select></label></div><label className="seller-checkbox"><input type="checkbox" checked={form.whatsapp_available} onChange={(event) => update("whatsapp_available", event.target.checked)} /> WhatsApp is available for property enquiries</label></div>{error && <p className="seller-alert" role="alert">{error}</p>}{message && <p className="seller-success" role="status"><Check size={16} /> {message}</p>}<button className="seller-primary-button" type="submit" disabled={loading || saving}>{saving ? <Loader2 className="spin" size={17} /> : <Check size={17} />} {saving ? "Saving..." : "Save profile"}</button></form></>;
+}
