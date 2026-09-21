@@ -967,6 +967,78 @@ class MarketingLead(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class PropertyListing(Base):
+    __tablename__ = "property_listings"
+    __table_args__ = (
+        Index("ix_property_listings_status_type", "status", "property_type"),
+        Index("ix_property_listings_locality", "locality"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    seller_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    property_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    locality: Mapped[str] = mapped_column(String(160), nullable=False)
+    city: Mapped[str] = mapped_column(String(80), nullable=False, default="Bangalore")
+    price: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    area_sqft: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    bedrooms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    image_urls: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    contact_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    contact_phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING_PAYMENT")
+    is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    moderation_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    seller: Mapped[User] = relationship()
+    payment_attempts: Mapped[list["PropertyPaymentAttempt"]] = relationship(back_populates="listing", cascade="all, delete-orphan")
+    unlocks: Mapped[list["PropertyContactUnlock"]] = relationship(back_populates="listing", cascade="all, delete-orphan")
+
+
+class PropertyPaymentAttempt(Base):
+    __tablename__ = "property_payment_attempts"
+    __table_args__ = (
+        UniqueConstraint("provider_order_id", name="uq_property_payment_provider_order"),
+        UniqueConstraint("provider", "provider_payment_id", name="uq_property_payment_provider_payment"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    listing_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property_listings.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(20), nullable=False)
+    provider: Mapped[str] = mapped_column(String(30), nullable=False, default="RAZORPAY")
+    provider_order_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    provider_payment_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="INR")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    listing: Mapped[PropertyListing] = relationship(back_populates="payment_attempts")
+    user: Mapped[User] = relationship()
+    unlock: Mapped["PropertyContactUnlock | None"] = relationship(back_populates="payment_attempt", uselist=False)
+
+
+class PropertyContactUnlock(Base):
+    __tablename__ = "property_contact_unlocks"
+    __table_args__ = (UniqueConstraint("listing_id", "buyer_user_id", name="uq_property_unlock_listing_buyer"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    listing_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property_listings.id", ondelete="CASCADE"), index=True)
+    buyer_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    payment_attempt_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property_payment_attempts.id", ondelete="RESTRICT"), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    listing: Mapped[PropertyListing] = relationship(back_populates="unlocks")
+    buyer: Mapped[User] = relationship()
+    payment_attempt: Mapped[PropertyPaymentAttempt] = relationship(back_populates="unlock")
+
+
 class RefundRequest(Base):
     __tablename__ = "refund_requests"
     __table_args__ = (UniqueConstraint("idempotency_key", name="uq_refund_requests_idempotency_key"),)
