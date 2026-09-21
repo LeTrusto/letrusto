@@ -1,4 +1,3 @@
-from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
@@ -22,11 +21,9 @@ class Settings(BaseSettings):
     # env_file is only read when .env exists; real env vars always take precedence
     model_config = SettingsConfigDict(env_file=str(_ENV_FILE), env_file_encoding="utf-8", extra="ignore")
 
-    APP_NAME: str = "LeTrusto Backend"
+    APP_NAME: str = "Bangalore Property Platform"
     APP_ENV: str = "development"
     API_V1_PREFIX: str = "/api/v1"
-    PHYSICAL_COMMERCE_ENABLED: bool = False
-    SUPPLIER_INTEGRATIONS_ENABLED: bool = False
 
     DATABASE_URL: str = "postgresql+pg8000://postgres:postgres@localhost:5432/letrusto"
 
@@ -51,60 +48,8 @@ class Settings(BaseSettings):
     OTP_RESEND_COOLDOWN_SECONDS: int = 60
     OTP_MAX_REQUESTS_PER_HOUR: int = 5
 
-    AI_PROVIDER: str = "heuristic"
-    AI_SESSION_TTL_MINUTES: int = 120
-
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-
-    INVENTORY_RESERVATION_TTL_MINUTES: int = 15
-    PENDING_PAYMENT_RECONCILIATION_AGE_MINUTES: int = 30
-    RECONCILIATION_BATCH_SIZE: int = 50
-    ORDER_RECONCILIATION_ENABLED: bool = True
-    SCHEDULED_JOB_LOCK_KEY: int = 826301
-    LOW_STOCK_THRESHOLD: int = 5
-    ALERT_EMAIL_COOLDOWN_MINUTES: int = 60
-
-    # Printful is the only active production supplier. CJ remains available for legacy validation data.
-    SUPPLIER_PROVIDER: str = "printful"
-    CJ_API_KEY: str = ""
-    PRINTFUL_API_KEY: str = ""
-
-    # Approved Phase 3.3.3 prepaid launch pricing policy
-    PRICING_FX_RATE: Decimal = Decimal("98.00")
-    PAYMENT_GATEWAY_PCT: Decimal = Decimal("2.36")
-    RTO_RESERVE_PCT: Decimal = Decimal("4.00")
-    TARGET_CONTRIBUTION_MARGIN_PCT: Decimal = Decimal("20.00")
-    TARGET_CAC_INR: Decimal = Decimal("150.00")
-    # Business configuration only; this does not assert legal GST exemption.
-    CATALOG_TAX_TREATMENT: str = "UNREGISTERED_NO_GSTIN"
-    CATALOG_TAX_RATE_PCT: Decimal | None = None
-
-    # Cashfree Payments. Keep sandbox as the only default; production must be explicit.
-    CASHFREE_ENV: str = "sandbox"
-    CASHFREE_APP_ID: str = ""
-    CASHFREE_SECRET_KEY: str = ""
-    CASHFREE_WEBHOOK_SECRET: str = ""
-    CASHFREE_API_VERSION: str = "2026-01-01"
-    CASHFREE_RETURN_URL: str = "http://localhost:3000/orders/{order_id}"
-    CASHFREE_NOTIFY_URL: str = "http://localhost:8000/api/v1/payments/cashfree/webhook"
-
-    # Razorpay Payments. Keep sandbox as the default; production must be explicit.
-    RAZORPAY_ENV: str = "sandbox"
-    RAZORPAY_KEY_ID: str = ""
-    RAZORPAY_KEY_SECRET: str = ""
-    RAZORPAY_WEBHOOK_SECRET: str = ""
-    RAZORPAY_STARTER_PLAN_ID: str = ""
-    RAZORPAY_PRO_PLAN_ID: str = ""
-    RAZORPAY_STARTER_OFFER_ID: str = ""
-    RAZORPAY_PRO_OFFER_ID: str = ""
-    RAZORPAY_TRIAL_DAYS: int = 14
-
-    # Stripe Checkout for non-India orders. Keep credentials server-side only.
-    STRIPE_SECRET_KEY: str = ""
-    STRIPE_WEBHOOK_SECRET: str = ""
-    STRIPE_SUCCESS_URL: str = "http://localhost:3000/orders/{order_id}?payment=success"
-    STRIPE_CANCEL_URL: str = "http://localhost:3000/checkout?payment=cancelled"
 
     # Rate limiting (requests per minute per IP)
     RATE_LIMIT_AUTH: int = 10
@@ -139,25 +84,4 @@ def get_settings() -> Settings:
         or "127.0.0.1" in s.PUBLIC_APP_URL
     ):
         raise RuntimeError("FATAL: production email delivery requires RESEND_API_KEY and a non-local HTTPS PUBLIC_APP_URL.")
-    if s.CASHFREE_ENV not in {"sandbox", "production"}:
-        raise ValueError("CASHFREE_ENV must be sandbox or production")
-    if s.APP_ENV == "production" and s.CASHFREE_ENV != "production":
-        raise RuntimeError("Production app requires CASHFREE_ENV=production")
-    if s.RAZORPAY_ENV not in {"sandbox", "production"}:
-        raise ValueError("RAZORPAY_ENV must be sandbox or production")
-    razorpay_configured = any(
-        (
-            s.RAZORPAY_KEY_ID,
-            s.RAZORPAY_KEY_SECRET,
-            s.RAZORPAY_WEBHOOK_SECRET,
-            s.RAZORPAY_STARTER_PLAN_ID,
-            s.RAZORPAY_PRO_PLAN_ID,
-            s.RAZORPAY_STARTER_OFFER_ID,
-            s.RAZORPAY_PRO_OFFER_ID,
-        )
-    )
-    if s.APP_ENV == "production" and razorpay_configured and s.RAZORPAY_ENV != "production":
-        raise RuntimeError("FATAL: configured Razorpay credentials require RAZORPAY_ENV=production.")
-    if s.APP_ENV == "production" and (s.RAZORPAY_KEY_ID or s.RAZORPAY_KEY_SECRET) and not s.RAZORPAY_WEBHOOK_SECRET:
-        raise RuntimeError("FATAL: RAZORPAY_WEBHOOK_SECRET is required when Razorpay credentials are configured in production.")
     return s

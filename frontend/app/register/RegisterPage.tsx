@@ -5,10 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import BrandMark from "@/components/layout/BrandMark";
+import BrandMark from "@/components/BrandMark";
 import { useAuth } from "@/hooks/useAuth";
 import { trackSafeEvent } from "@/lib/analytics";
-import { recordMarketingEvent } from "@/services/marketing.service";
 
 export default function RegisterPage() {
   const { register, isAuthenticated, isLoading, logout } = useAuth();
@@ -19,17 +18,11 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [redirectTimedOut, setRedirectTimedOut] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<"free" | "starter" | "pro">("starter");
-
-  useEffect(() => {
-    const plan = new URLSearchParams(window.location.search).get("plan");
-    if (plan === "free" || plan === "starter" || plan === "pro") window.setTimeout(() => setSelectedPlan(plan), 0);
-  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     const timer = window.setTimeout(() => setRedirectTimedOut(true), 2000);
-    router.replace("/dashboard");
+    router.replace("/account");
     return () => window.clearTimeout(timer);
   }, [isAuthenticated, router]);
 
@@ -46,7 +39,6 @@ export default function RegisterPage() {
     try {
       await register({ email: form.email, password: form.password, full_name: form.full_name });
       trackSafeEvent("account_created", { source: "register_page" });
-      void recordMarketingEvent("account_created", { source: "register_page" }).catch(() => undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -59,9 +51,8 @@ export default function RegisterPage() {
       <section className="relative w-full max-w-[460px] rounded-[1.5rem] border border-white/20 bg-[var(--surface)] p-6 shadow-2xl sm:p-9">
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandMark />
-          <h1 className="mt-7 text-3xl font-black text-[var(--text-primary)]">Create your LeTrusto account</h1>
-          <p className="mt-2 text-[var(--text-secondary)]">Start your LeTrusto workspace with a 14-day Starter trial.</p>
-          <p className="mt-2 text-xs font-semibold text-[var(--lt-primary)]">Selected: {selectedPlan === "free" ? "Free" : selectedPlan === "starter" ? "Starter" : "Pro"}</p>
+          <h1 className="mt-7 text-3xl font-black text-[var(--text-primary)]">Create your account</h1>
+          <p className="mt-2 text-[var(--text-secondary)]">Sign up to get started.</p>
         </div>
         {error && <p role="alert" className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
         <form onSubmit={(event) => { void handleSubmit(event); }} className="space-y-4">
@@ -82,7 +73,7 @@ function AuthLoading({ message = "Loading..." }: { message?: string }) {
 }
 
 function AuthRedirectFallback({ timedOut, onSignOut }: { timedOut: boolean; onSignOut: () => void }) {
-  return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-center text-slate-300"><div><p>{timedOut ? "Redirect is taking longer than expected." : "You are already signed in. Redirecting..."}</p>{timedOut && <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center"><Link href="/dashboard" className="rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-bold text-white">Click here to go to Dashboard</Link><button type="button" onClick={onSignOut} className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-300 hover:border-slate-500 hover:text-white">Sign Out &amp; Switch Account</button></div>}</div></main>;
+  return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-center text-slate-300"><div><p>{timedOut ? "Redirect is taking longer than expected." : "You are already signed in. Redirecting..."}</p>{timedOut && <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center"><Link href="/account" className="rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-bold text-white">Click here to go to your account</Link><button type="button" onClick={onSignOut} className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-300 hover:border-slate-500 hover:text-white">Sign Out &amp; Switch Account</button></div>}</div></main>;
 }
 
 function PasswordField({ id, label, value, visible, onChange, onToggle, autoComplete, placeholder }: { id: string; label: string; value: string; visible: boolean; onChange: (value: string) => void; onToggle: () => void; autoComplete: string; placeholder: string }) {

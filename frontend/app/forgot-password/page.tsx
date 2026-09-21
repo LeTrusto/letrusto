@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import BrandMark from "@/components/layout/BrandMark";
+import BrandMark from "@/components/BrandMark";
 import { requestPasswordReset } from "@/services/auth.service";
 
 export default function ForgotPasswordPage() {

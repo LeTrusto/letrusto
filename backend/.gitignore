@@ -13,6 +13,8 @@ venv/
 env/
 *.egg-info/
 dist/
+db_backups/
+*.dump
 build/
 .pytest_cache/
 .mypy_cache/

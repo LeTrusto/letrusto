@@ -9,7 +9,6 @@ def test_production_rejects_default_jwt_secret(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")
     monkeypatch.setenv("JWT_SECRET_KEY", "change-this-secret-for-production")
-    monkeypatch.setenv("CASHFREE_ENV", "production")
     get_settings.cache_clear()
     try:
         with pytest.raises(RuntimeError, match="JWT_SECRET_KEY"):
@@ -18,43 +17,14 @@ def test_production_rejects_default_jwt_secret(monkeypatch):
         get_settings.cache_clear()
 
 
-def test_production_allows_unconfigured_razorpay(monkeypatch):
+def test_production_requires_resend_and_https_public_url(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")
     monkeypatch.setenv("JWT_SECRET_KEY", "12345678901234567890123456789012")
-    monkeypatch.setenv("CASHFREE_ENV", "production")
-    monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
-    monkeypatch.setenv("RAZORPAY_ENV", "sandbox")
-    monkeypatch.setenv("RAZORPAY_KEY_ID", "")
-    monkeypatch.setenv("RAZORPAY_KEY_SECRET", "")
-    monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", "")
-    monkeypatch.setenv("RAZORPAY_STARTER_PLAN_ID", "")
-    monkeypatch.setenv("RAZORPAY_PRO_PLAN_ID", "")
-    monkeypatch.setenv("RAZORPAY_STARTER_OFFER_ID", "")
-    monkeypatch.setenv("RAZORPAY_PRO_OFFER_ID", "")
+    monkeypatch.setenv("RESEND_API_KEY", "")
     get_settings.cache_clear()
     try:
-        settings = get_settings()
-        assert settings.RAZORPAY_KEY_ID == ""
-        assert settings.RAZORPAY_KEY_SECRET == ""
-        assert settings.RAZORPAY_WEBHOOK_SECRET == ""
-    finally:
-        get_settings.cache_clear()
-
-
-def test_production_rejects_configured_sandbox_razorpay(monkeypatch):
-    monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")
-    monkeypatch.setenv("JWT_SECRET_KEY", "12345678901234567890123456789012")
-    monkeypatch.setenv("CASHFREE_ENV", "production")
-    monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
-    monkeypatch.setenv("RAZORPAY_ENV", "sandbox")
-    monkeypatch.setenv("RAZORPAY_KEY_ID", "rzp_test_configured")
-    monkeypatch.setenv("RAZORPAY_KEY_SECRET", "configured-secret")
-    monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", "configured-webhook")
-    get_settings.cache_clear()
-    try:
-        with pytest.raises(RuntimeError, match="RAZORPAY_ENV=production"):
+        with pytest.raises(RuntimeError, match="RESEND_API_KEY"):
             get_settings()
     finally:
         get_settings.cache_clear()
@@ -63,7 +33,7 @@ def test_production_rejects_configured_sandbox_razorpay(monkeypatch):
 def test_credentialed_cors_allows_only_configured_origins():
     client = TestClient(app)
     allowed = client.options(
-        "/api/v1/products",
+        "/api/v1/health",
         headers={"Origin": "https://letrusto.com", "Access-Control-Request-Method": "GET"},
     )
     generated_preview = client.options(
@@ -83,7 +53,7 @@ def test_credentialed_cors_allows_only_configured_origins():
         },
     )
     blocked = client.options(
-        "/api/v1/products",
+        "/api/v1/health",
         headers={"Origin": "https://untrusted.vercel.app", "Access-Control-Request-Method": "GET"},
     )
     assert allowed.headers["access-control-allow-origin"] == "https://letrusto.com"
@@ -117,21 +87,3 @@ def test_production_cors_rejects_non_https_origins():
     origins = _build_cors_origins("http://shop.example.com, https://shop.example.com", "production")
     assert "http://shop.example.com" not in origins
     assert "https://shop.example.com" in origins
-
-
-def test_production_requires_razorpay_webhook_secret_when_credentials_are_configured(monkeypatch):
-    monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://db.example.invalid/letrusto")
-    monkeypatch.setenv("JWT_SECRET_KEY", "12345678901234567890123456789012")
-    monkeypatch.setenv("CASHFREE_ENV", "production")
-    monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
-    monkeypatch.setenv("RAZORPAY_ENV", "production")
-    monkeypatch.setenv("RAZORPAY_KEY_ID", "rzp_test_configured")
-    monkeypatch.setenv("RAZORPAY_KEY_SECRET", "configured-secret")
-    monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", "")
-    get_settings.cache_clear()
-    try:
-        with pytest.raises(RuntimeError, match="RAZORPAY_WEBHOOK_SECRET"):
-            get_settings()
-    finally:
-        get_settings.cache_clear()

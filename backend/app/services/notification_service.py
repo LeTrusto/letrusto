@@ -27,7 +27,6 @@ class NotificationService:
                 type=r.type,
                 title=r.title,
                 body=r.body,
-                product_id=str(r.product_id) if r.product_id else None,
                 is_read=r.is_read,
                 created_at=r.created_at.isoformat(),
             )

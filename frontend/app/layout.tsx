@@ -2,12 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 
-import CommerceShell from "@/components/layout/CommerceShell";
 import FunnelAnalytics from "@/components/FunnelAnalytics";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import SchemaOrg from "@/components/SchemaOrg";
 import { AuthProvider } from "@/lib/authContext";
-import { CartProvider } from "@/lib/cartContext";
 import { ConsentProvider } from "@/lib/consentContext";
 import CookieConsent from "@/components/CookieConsent";
 import { SITE_URL } from "@/config/site";
@@ -24,46 +22,37 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_DESCRIPTION = "LeTrusto helps growing businesses collect, manage, and display customer reviews and social proof with lightweight widgets.";
+// Temporary neutral working name until the Bangalore Property brand is finalized.
+const SITE_NAME = "Bangalore Property Platform";
+const SITE_DESCRIPTION = "Bangalore property discovery, marketing, and buyer lead generation.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  applicationName: "LeTrusto",
+  applicationName: SITE_NAME,
   alternates: {
     canonical: "/",
   },
   title: {
-    default: "LeTrusto - Social Proof Widgets for Growing Businesses",
-    template: "%s | LeTrusto",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
-  keywords: [
-    "social proof widgets",
-    "customer reviews",
-    "review widgets",
-    "customer testimonials",
-    "LeTrusto",
-  ],
   openGraph: {
     type: "website",
     locale: "en",
     url: SITE_URL,
-    siteName: "LeTrusto",
-    title: "LeTrusto",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
     description: SITE_DESCRIPTION,
-    images: [{ url: "/og-card.png", width: 1254, height: 1254 }],
   },
   twitter: {
     card: "summary_large_image",
-    site: "@letrusto",
-    creator: "@letrusto",
-    title: "LeTrusto — Digital tools and services",
-    description: "Practical digital tools, templates and services for Indian businesses.",
-    images: ["/og-card.png"],
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
   },
-  authors: [{ name: "LeTrusto", url: SITE_URL }],
-  creator: "LeTrusto",
-  publisher: "LeTrusto",
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
   manifest: "/site.webmanifest",
   icons: {
     icon: [
@@ -76,7 +65,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "LeTrusto",
+    title: SITE_NAME,
     statusBarStyle: "default",
   },
   robots: { index: true, follow: true },
@@ -101,37 +90,23 @@ export default function RootLayout({
           type="WebSite"
           data={{
             "@id": `${SITE_URL}/#website`,
-            name: "LeTrusto",
+            name: SITE_NAME,
             url: SITE_URL,
             description: SITE_DESCRIPTION,
-            potentialAction: {
-              "@type": "SearchAction",
-              target: `${SITE_URL}/search?q={search_term_string}`,
-              "query-input": "required name=search_term_string",
-            },
           }}
         />
         <SchemaOrg
           type="Organization"
           data={{
             "@id": `${SITE_URL}/#organization`,
-            name: "LeTrusto",
+            name: SITE_NAME,
             url: SITE_URL,
-            logo: {
-              "@type": "ImageObject",
-              url: `${SITE_URL}/logo.png`,
-              width: 2008,
-              height: 783,
-            },
             description: SITE_DESCRIPTION,
-            sameAs: ["https://x.com/letrusto", "https://instagram.com/letrusto"],
           }}
         />
         <ConsentProvider>
           <AuthProvider>
-            <CartProvider>
-            <CommerceShell>{children}</CommerceShell>
-            </CartProvider>
+            <main className="flex-1">{children}</main>
           </AuthProvider>
           <CookieConsent />
           <GoogleAnalytics />
@@ -141,3 +116,4 @@ export default function RootLayout({
     </html>
   );
 }
+

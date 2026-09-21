@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
-import BrandMark from "@/components/layout/BrandMark";
+import BrandMark from "@/components/BrandMark";
 import { confirmPasswordReset } from "@/services/auth.service";
 
 export default function ResetPasswordPage() {

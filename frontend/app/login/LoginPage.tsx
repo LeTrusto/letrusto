@@ -5,14 +5,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import BrandMark from "@/components/layout/BrandMark";
+import BrandMark from "@/components/BrandMark";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginPage() {
   const { login, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = searchParams.get("redirect") || "/account";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -49,7 +49,7 @@ export default function LoginPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandMark />
           <h1 className="mt-7 text-3xl font-black text-[var(--text-primary)]">Welcome back</h1>
-          <p className="mt-2 text-[var(--text-secondary)]">Sign in to your LeTrusto account</p>
+          <p className="mt-2 text-[var(--text-secondary)]">Sign in to your account</p>
         </div>
 
         {error && <p role="alert" className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
@@ -88,5 +88,5 @@ function AuthLoading({ message = "Loading..." }: { message?: string }) {
 }
 
 function AuthRedirectFallback({ timedOut, onSignOut }: { timedOut: boolean; onSignOut: () => void }) {
-  return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-center text-slate-300"><div><p>{timedOut ? "Redirect is taking longer than expected." : "You are already signed in. Redirecting..."}</p>{timedOut && <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center"><Link href="/dashboard" className="rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-bold text-white">Click here to go to Dashboard</Link><button type="button" onClick={onSignOut} className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-300 hover:border-slate-500 hover:text-white">Sign Out &amp; Switch Account</button></div>}</div></main>;
+  return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-center text-slate-300"><div><p>{timedOut ? "Redirect is taking longer than expected." : "You are already signed in. Redirecting..."}</p>{timedOut && <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center"><Link href="/account" className="rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-bold text-white">Click here to go to your account</Link><button type="button" onClick={onSignOut} className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-300 hover:border-slate-500 hover:text-white">Sign Out &amp; Switch Account</button></div>}</div></main>;
 }

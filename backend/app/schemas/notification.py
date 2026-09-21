@@ -6,7 +6,6 @@ class NotificationDTO(BaseModel):
     type: str
     title: str
     body: str
-    product_id: str | None
     is_read: bool
     created_at: str
 
