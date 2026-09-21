@@ -16,7 +16,7 @@ router = APIRouter(tags=["properties"])
 
 def public_dto(prop: Property) -> PublicPropertyDTO:
     verification = prop.verification.verification_status if prop.verification else "NOT_REVIEWED"
-    return PublicPropertyDTO.model_validate({**prop.__dict__, "location": prop.location, "media": [m for m in prop.media if m.status == "READY"], "verification_label": verification})
+    return PublicPropertyDTO.model_validate({**prop.__dict__, "location": prop.location, "media": [m for m in prop.media if m.status == "READY" and m.public_url], "verification_label": verification})
 
 
 @router.get("/properties", response_model=list[PublicPropertyDTO])

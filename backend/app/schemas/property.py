@@ -94,7 +94,6 @@ class PropertyMediaDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     media_type: str
-    storage_key: str
     public_url: str | None
     mime_type: str
     file_size_bytes: int
@@ -170,8 +169,23 @@ class VerificationUpdateRequest(BaseModel):
 
 class MediaCreateRequest(BaseModel):
     media_type: MediaType
-    storage_key: str = Field(min_length=1, max_length=1000)
     mime_type: str = Field(min_length=1, max_length=120)
     file_size_bytes: int = Field(gt=0)
     is_cover: bool = False
     caption: str | None = Field(default=None, max_length=240)
+
+
+class MediaUploadTargetRequest(BaseModel):
+    media_type: MediaType
+    mime_type: str = Field(min_length=1, max_length=120)
+    file_size_bytes: int = Field(gt=0)
+    is_cover: bool = False
+    caption: str | None = Field(default=None, max_length=240)
+
+
+class MediaUploadTargetResponse(BaseModel):
+    media_id: UUID
+    upload_url: str
+    headers: dict[str, str]
+    expires_at: datetime
+    status: str

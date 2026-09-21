@@ -11,6 +11,7 @@ from app.services.auth_service import AuthService
 from app.services.email_service import EmailService
 from app.services.notification_service import NotificationService
 from app.services.user_service import UserService
+from app.storage import MockObjectStorage, ObjectStorage, S3ObjectStorage
 
 
 settings = get_settings()
@@ -30,6 +31,21 @@ def get_notification_service(db: Session = Depends(get_db)) -> NotificationServi
 
 def get_email_service() -> EmailService:
     return EmailService.from_settings(settings)
+
+
+def get_storage() -> ObjectStorage:
+    if settings.STORAGE_PROVIDER.lower() == "s3":
+        if settings.APP_ENV == "production" and (
+            not settings.STORAGE_BUCKET
+            or not settings.STORAGE_ACCESS_KEY
+            or not settings.STORAGE_SECRET_KEY
+            or not settings.STORAGE_PUBLIC_BASE_URL.startswith("https://")
+        ):
+            raise RuntimeError("FATAL: production media storage requires an S3-compatible provider and HTTPS public base URL.")
+        return S3ObjectStorage(settings)
+    if settings.APP_ENV != "production":
+        return MockObjectStorage()
+    raise RuntimeError("Production media storage is not configured")
 
 
 def _extract_bearer(authorization: str) -> str:

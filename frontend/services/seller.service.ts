@@ -23,7 +23,6 @@ export type SellerProfile = {
 export type SellerMedia = {
   id: string;
   media_type: "IMAGE" | "VIDEO" | string;
-  storage_key: string;
   public_url: string | null;
   mime_type: string;
   file_size_bytes: number;
@@ -98,11 +97,18 @@ export type PropertyPayload = {
 
 export type MediaPayload = {
   media_type: "IMAGE" | "VIDEO";
-  storage_key: string;
   mime_type: string;
   file_size_bytes: number;
   is_cover: boolean;
   caption?: string;
+};
+
+export type MediaUploadTarget = {
+  media_id: string;
+  upload_url: string;
+  headers: Record<string, string>;
+  expires_at: string;
+  status: string;
 };
 
 export type SellerEnquiryHistory = {
@@ -173,8 +179,21 @@ export function submitSellerProperty(token: string, id: string) {
   return authenticatedApiRequest<{ id: string; status: string }>(token, `/seller/properties/${encodeURIComponent(id)}/submit`, { method: "POST" });
 }
 
-export function addSellerMedia(token: string, id: string, payload: MediaPayload) {
-  return authenticatedApiRequest<{ id: string; status: string }>(token, `/seller/properties/${encodeURIComponent(id)}/media`, { method: "POST", body: JSON.stringify(payload) });
+export function createSellerMediaUploadTarget(token: string, id: string, payload: Omit<MediaPayload, "storage_key">) {
+  return authenticatedApiRequest<MediaUploadTarget>(token, `/seller/properties/${encodeURIComponent(id)}/media/upload-target`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function completeSellerMediaUpload(token: string, propertyId: string, mediaId: string) {
+  return authenticatedApiRequest<{ id: string; status: string; public_url: string | null }>(token, `/seller/properties/${encodeURIComponent(propertyId)}/media/${encodeURIComponent(mediaId)}/complete`, { method: "POST" });
+}
+
+export function uploadMockSellerMedia(token: string, uploadUrl: string, content: Blob, contentType: string) {
+  const path = uploadUrl.startsWith("mock://") ? `/seller/media/mock-upload/${uploadUrl.slice("mock://".length)}` : uploadUrl.replace(/^https?:\/\/[^/]+\/api\/v1/, "");
+  return authenticatedApiRequest<void>(token, path, { method: "PUT", headers: { "Content-Type": contentType }, body: content });
+}
+
+export function deleteSellerMedia(token: string, propertyId: string, mediaId: string) {
+  return authenticatedApiRequest<void>(token, `/seller/properties/${encodeURIComponent(propertyId)}/media/${encodeURIComponent(mediaId)}`, { method: "DELETE" });
 }
 
 export function listSellerEnquiries(token: string) {

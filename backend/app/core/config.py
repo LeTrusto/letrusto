@@ -55,6 +55,17 @@ class Settings(BaseSettings):
     RATE_LIMIT_AUTH: int = 10
     RATE_LIMIT_DEFAULT: int = 120
 
+    STORAGE_PROVIDER: str = "mock"
+    STORAGE_ENDPOINT: str = ""
+    STORAGE_REGION: str = "auto"
+    STORAGE_BUCKET: str = ""
+    STORAGE_ACCESS_KEY: str = ""
+    STORAGE_SECRET_KEY: str = ""
+    STORAGE_PUBLIC_BASE_URL: str = ""
+    STORAGE_UPLOAD_EXPIRE_SECONDS: int = 600
+    IMAGE_MAX_SIZE_MB: int = 10
+    VIDEO_MAX_SIZE_MB: int = 100
+
 
 @lru_cache
 def get_settings() -> Settings:

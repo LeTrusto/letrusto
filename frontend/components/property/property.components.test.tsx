@@ -56,6 +56,7 @@ describe("property detail experience", () => {
     expect(html).toContain("Jayanagar");
     expect(html).toContain("4 BHK");
     expect(html).toContain("Get Details");
+    expect(html).toContain("Courtyard");
     expect(html).not.toContain("seller_profile");
     expect(html).not.toContain("seller_phone");
   });

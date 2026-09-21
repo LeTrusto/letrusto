@@ -9,5 +9,6 @@ passlib[bcrypt]>=1.7.4
 bcrypt>=4.0.0
 email-validator>=2.0.0
 resend>=2.14.0
+boto3>=1.35.0
 httpx>=0.28.0
 pytest>=8.4.1

@@ -1,24 +1,447 @@
 "use client";
 
-import { Check, ChevronRight, CircleAlert, Eye, FileCheck2, MessageSquareWarning, Send, ShieldCheck, X } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  CircleAlert,
+  Eye,
+  FileCheck2,
+  MessageSquareWarning,
+  Send,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { getAdminDashboard, getAdminProperty, listAdminEnquiries, listAdminProperties, listAdminSellers, publishAdminProperty, reviewAdminProperty, updateAdminVerification, type AdminDashboard, type AdminEnquiry, type AdminProperty, type AdminSeller } from "@/services/admin.service";
+import {
+  getAdminDashboard,
+  getAdminProperty,
+  listAdminEnquiries,
+  listAdminProperties,
+  listAdminSellers,
+  publishAdminProperty,
+  reviewAdminProperty,
+  updateAdminVerification,
+  type AdminDashboard,
+  type AdminEnquiry,
+  type AdminProperty,
+  type AdminSeller,
+} from "@/services/admin.service";
 
-const date = (value?: string | null) => value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
-const money = (value: number | string | null) => value == null ? "-" : `INR ${Number(value).toLocaleString("en-IN")}`;
-function Status({ value }: { value: string }) { return <span className={`admin-status status-${value.toLowerCase()}`}>{value.replaceAll("_", " ")}</span>; }
+const date = (value?: string | null) =>
+  value
+    ? new Date(value).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "-";
+const money = (value: number | string | null) =>
+  value == null ? "-" : `INR ${Number(value).toLocaleString("en-IN")}`;
+function Status({ value }: { value: string }) {
+  return (
+    <span className={`admin-status status-${value.toLowerCase()}`}>
+      {value.replaceAll("_", " ")}
+    </span>
+  );
+}
 
-export function AdminOverview() { const { accessToken } = useAuth(); const [data, setData] = useState<AdminDashboard | null>(null); const [error, setError] = useState(""); useEffect(() => { if (accessToken) void getAdminDashboard(accessToken).then(setData).catch((e) => setError(e.message)); }, [accessToken]); if (error) return <p className="admin-error">{error}</p>; if (!data) return <p className="admin-muted">Loading operations...</p>; return <><Heading title="Operations overview" eyebrow="Today" /><div className="admin-metrics"><Metric label="Awaiting review" value={data.awaiting_review} icon={<CircleAlert />} /><Metric label="Changes requested" value={data.changes_requested} icon={<MessageSquareWarning />} /><Metric label="Live properties" value={data.live_properties} icon={<Eye />} /><Metric label="Suspended" value={data.suspended_properties} icon={<ShieldCheck />} /></div><section className="admin-section"><div className="admin-section-head"><h2>Recent enquiries</h2><Link href="/admin/enquiries">View all <ChevronRight size={15} /></Link></div><EnquiryTable rows={data.recent_enquiries} /></section></>; }
-function Metric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) { return <div className="admin-metric"><div>{icon}<strong>{value}</strong></div><span>{label}</span></div>; }
-function Heading({ title, eyebrow }: { title: string; eyebrow: string }) { return <div className="admin-heading"><p className="admin-eyebrow">{eyebrow}</p><h1>{title}</h1></div>; }
+export function AdminOverview() {
+  const { accessToken } = useAuth();
+  const [data, setData] = useState<AdminDashboard | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (accessToken)
+      void getAdminDashboard(accessToken)
+        .then(setData)
+        .catch((e) => setError(e.message));
+  }, [accessToken]);
+  if (error) return <p className="admin-error">{error}</p>;
+  if (!data) return <p className="admin-muted">Loading operations...</p>;
+  return (
+    <>
+      <Heading title="Operations overview" eyebrow="Today" />
+      <div className="admin-metrics">
+        <Metric
+          label="Awaiting review"
+          value={data.awaiting_review}
+          icon={<CircleAlert />}
+        />
+        <Metric
+          label="Changes requested"
+          value={data.changes_requested}
+          icon={<MessageSquareWarning />}
+        />
+        <Metric
+          label="Live properties"
+          value={data.live_properties}
+          icon={<Eye />}
+        />
+        <Metric
+          label="Suspended"
+          value={data.suspended_properties}
+          icon={<ShieldCheck />}
+        />
+      </div>
+      <section className="admin-section">
+        <div className="admin-section-head">
+          <h2>Recent enquiries</h2>
+          <Link href="/admin/enquiries">
+            View all <ChevronRight size={15} />
+          </Link>
+        </div>
+        <EnquiryTable rows={data.recent_enquiries} />
+      </section>
+    </>
+  );
+}
+function Metric({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="admin-metric">
+      <div>
+        {icon}
+        <strong>{value}</strong>
+      </div>
+      <span>{label}</span>
+    </div>
+  );
+}
+function Heading({ title, eyebrow }: { title: string; eyebrow: string }) {
+  return (
+    <div className="admin-heading">
+      <p className="admin-eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+    </div>
+  );
+}
 
-export function AdminProperties() { const { accessToken } = useAuth(); const [rows, setRows] = useState<AdminProperty[]>([]); useEffect(() => { if (accessToken) void listAdminProperties(accessToken).then(setRows); }, [accessToken]); return <><Heading title="Review queue" eyebrow="Properties" /><div className="admin-queue">{rows.length ? rows.map((property) => <Link className="admin-property-row" href={`/admin/properties/${property.id}`} key={property.id}><div><p className="admin-kicker">{property.location.name} · submitted {date(property.submitted_at)}</p><h2>{property.title}</h2><p>{property.seller.display_name} · {money(property.price_amount)}</p></div><Status value={property.status} /><ChevronRight size={18} /></Link>) : <p className="admin-empty">No properties are waiting for review.</p>}</div></>; }
+export function AdminProperties() {
+  const { accessToken } = useAuth();
+  const [rows, setRows] = useState<AdminProperty[]>([]);
+  useEffect(() => {
+    if (accessToken) void listAdminProperties(accessToken).then(setRows);
+  }, [accessToken]);
+  return (
+    <>
+      <Heading title="Review queue" eyebrow="Properties" />
+      <div className="admin-queue">
+        {rows.length ? (
+          rows.map((property) => (
+            <Link
+              className="admin-property-row"
+              href={`/admin/properties/${property.id}`}
+              key={property.id}
+            >
+              <div>
+                <p className="admin-kicker">
+                  {property.location.name} · submitted{" "}
+                  {date(property.submitted_at)}
+                </p>
+                <h2>{property.title}</h2>
+                <p>
+                  {property.seller.display_name} ·{" "}
+                  {money(property.price_amount)}
+                </p>
+              </div>
+              <Status value={property.status} />
+              <ChevronRight size={18} />
+            </Link>
+          ))
+        ) : (
+          <p className="admin-empty">No properties are waiting for review.</p>
+        )}
+      </div>
+    </>
+  );
+}
 
-export function AdminEnquiries() { const { accessToken } = useAuth(); const [rows, setRows] = useState<AdminEnquiry[]>([]); useEffect(() => { if (accessToken) void listAdminEnquiries(accessToken).then(setRows); }, [accessToken]); return <><Heading title="Buyer enquiries" eyebrow="Leads" /><div className="admin-section"><EnquiryTable rows={rows} /></div></>; }
-function EnquiryTable({ rows }: { rows: AdminEnquiry[] }) { return <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Buyer</th><th>Property</th><th>Contact</th><th>Status</th><th>Received</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td><strong>{row.buyer_name}</strong><small>{row.buyer_email || "No email"}</small></td><td>{row.property_title}<small>{row.seller_name}</small></td><td>{row.buyer_phone}</td><td><Status value={row.status} /></td><td>{date(row.created_at)}</td></tr>)}</tbody></table>{!rows.length && <p className="admin-empty">No enquiries yet.</p>}</div>; }
+export function AdminEnquiries() {
+  const { accessToken } = useAuth();
+  const [rows, setRows] = useState<AdminEnquiry[]>([]);
+  useEffect(() => {
+    if (accessToken) void listAdminEnquiries(accessToken).then(setRows);
+  }, [accessToken]);
+  return (
+    <>
+      <Heading title="Buyer enquiries" eyebrow="Leads" />
+      <div className="admin-section">
+        <EnquiryTable rows={rows} />
+      </div>
+    </>
+  );
+}
+function EnquiryTable({ rows }: { rows: AdminEnquiry[] }) {
+  return (
+    <div className="admin-table-wrap">
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>Buyer</th>
+            <th>Property</th>
+            <th>Contact</th>
+            <th>Status</th>
+            <th>Received</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td>
+                <strong>{row.buyer_name}</strong>
+                <small>{row.buyer_email || "No email"}</small>
+              </td>
+              <td>
+                {row.property_title}
+                <small>{row.seller_name}</small>
+              </td>
+              <td>{row.buyer_phone}</td>
+              <td>
+                <Status value={row.status} />
+              </td>
+              <td>{date(row.created_at)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {!rows.length && <p className="admin-empty">No enquiries yet.</p>}
+    </div>
+  );
+}
 
-export function AdminSellers() { const { accessToken } = useAuth(); const [rows, setRows] = useState<AdminSeller[]>([]); useEffect(() => { if (accessToken) void listAdminSellers(accessToken).then(setRows); }, [accessToken]); return <><Heading title="Seller directory" eyebrow="People" /><div className="admin-section"><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Seller</th><th>Type</th><th>Contact</th><th>Listings</th><th>Verification</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td><strong>{row.display_name}</strong><small>{date(row.created_at)}</small></td><td>{row.seller_type.replaceAll("_", " ")}</td><td>{row.phone}<small>{row.email || "No email"}</small></td><td>{row.property_count ?? 0}</td><td><Status value={row.verification_status} /></td></tr>)}</tbody></table>{!rows.length && <p className="admin-empty">No seller profiles yet.</p>}</div></div></>; }
+export function AdminSellers() {
+  const { accessToken } = useAuth();
+  const [rows, setRows] = useState<AdminSeller[]>([]);
+  useEffect(() => {
+    if (accessToken) void listAdminSellers(accessToken).then(setRows);
+  }, [accessToken]);
+  return (
+    <>
+      <Heading title="Seller directory" eyebrow="People" />
+      <div className="admin-section">
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Seller</th>
+                <th>Type</th>
+                <th>Contact</th>
+                <th>Listings</th>
+                <th>Verification</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <strong>{row.display_name}</strong>
+                    <small>{date(row.created_at)}</small>
+                  </td>
+                  <td>{row.seller_type.replaceAll("_", " ")}</td>
+                  <td>
+                    {row.phone}
+                    <small>{row.email || "No email"}</small>
+                  </td>
+                  <td>{row.property_count ?? 0}</td>
+                  <td>
+                    <Status value={row.verification_status} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!rows.length && (
+            <p className="admin-empty">No seller profiles yet.</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
 
-export function AdminPropertyDetail({ id }: { id: string }) { const { accessToken } = useAuth(); const [property, setProperty] = useState<AdminProperty | null>(null); const [note, setNote] = useState(""); const [verification, setVerification] = useState("NOT_REVIEWED"); const [message, setMessage] = useState(""); useEffect(() => { if (accessToken) void getAdminProperty(accessToken, id).then((value) => { setProperty(value); setVerification(value.verification?.verification_status || "NOT_REVIEWED"); }); }, [accessToken, id]); if (!property) return <p className="admin-muted">Loading property...</p>; const act = async (decision: "APPROVED" | "CHANGES_REQUESTED" | "REJECTED") => { if (decision === "CHANGES_REQUESTED" && !note.trim()) { setMessage("A note is required when requesting changes."); return; } if (!accessToken) return; const result = await reviewAdminProperty(accessToken, id, decision, note); setMessage(`Property is now ${result.status}.`); setProperty({ ...property, status: result.status }); }; const publish = async () => { if (!accessToken) return; const result = await publishAdminProperty(accessToken, id); setMessage(`Property is now ${result.status}.`); setProperty({ ...property, status: result.status }); }; const verify = async () => { if (!accessToken) return; await updateAdminVerification(accessToken, id, verification, note); setMessage("Verification updated."); setProperty({ ...property, verification: { ...(property.verification || { verification_method: null, notes: null, verified_by: null, verified_at: null, expires_at: null }), verification_status: verification } }); }; return <><div className="admin-detail-top"><div><p className="admin-eyebrow">Property review</p><h1>{property.title}</h1><p>{property.location.name} · {money(property.price_amount)} · {property.seller.display_name}</p></div><Status value={property.status} /></div><div className="admin-detail-grid"><section className="admin-section"><h2>Listing information</h2><dl className="admin-facts"><dt>Description</dt><dd>{property.description}</dd><dt>Address</dt><dd>{property.address_line || "Locality only"}</dd><dt>Evidence</dt><dd>{property.approval_information || "No approval information supplied."}</dd><dt>Submitted</dt><dd>{date(property.submitted_at)}</dd></dl><h2>Review history</h2><div className="admin-timeline">{property.reviews.map((review) => <div key={review.id}><Status value={review.decision} /><span>{review.notes || "No note"}</span><small>{date(review.created_at)}</small></div>)}{property.audit.map((entry) => <div key={entry.id}><FileCheck2 size={16} /><span>{entry.action.replaceAll("_", " ")}</span><small>{date(entry.created_at)}</small></div>)}</div></section><aside className="admin-section admin-actions"><h2>Moderation</h2><textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Decision note" rows={4} /><div className="admin-action-grid"><button onClick={() => void act("APPROVED")}><Check size={16} /> Approve</button><button onClick={() => void act("CHANGES_REQUESTED")}><MessageSquareWarning size={16} /> Request changes</button><button className="danger" onClick={() => void act("REJECTED")}><X size={16} /> Reject</button>{property.status === "APPROVED" && <button className="publish" onClick={() => void publish()}><Send size={16} /> Publish live</button>}</div><label>Verification status<select value={verification} onChange={(e) => setVerification(e.target.value)}><option>NOT_REVIEWED</option><option>CONTACT_VERIFIED</option><option>RELATIONSHIP_REVIEWED</option><option>DOCUMENT_EVIDENCE_REVIEWED</option><option>FAILED</option><option>EXPIRED</option></select></label><button className="secondary" onClick={() => void verify()}>Update verification</button>{message && <p className="admin-message">{message}</p>}</aside></div></>; }
+export function AdminPropertyDetail({ id }: { id: string }) {
+  const { accessToken } = useAuth();
+  const [property, setProperty] = useState<AdminProperty | null>(null);
+  const [note, setNote] = useState("");
+  const [verification, setVerification] = useState("NOT_REVIEWED");
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    if (accessToken)
+      void getAdminProperty(accessToken, id).then((value) => {
+        setProperty(value);
+        setVerification(
+          value.verification?.verification_status || "NOT_REVIEWED",
+        );
+      });
+  }, [accessToken, id]);
+  if (!property) return <p className="admin-muted">Loading property...</p>;
+  const act = async (
+    decision: "APPROVED" | "CHANGES_REQUESTED" | "REJECTED",
+  ) => {
+    if (decision === "CHANGES_REQUESTED" && !note.trim()) {
+      setMessage("A note is required when requesting changes.");
+      return;
+    }
+    if (!accessToken) return;
+    const result = await reviewAdminProperty(accessToken, id, decision, note);
+    setMessage(`Property is now ${result.status}.`);
+    setProperty({ ...property, status: result.status });
+  };
+  const publish = async () => {
+    if (!accessToken) return;
+    const result = await publishAdminProperty(accessToken, id);
+    setMessage(`Property is now ${result.status}.`);
+    setProperty({ ...property, status: result.status });
+  };
+  const verify = async () => {
+    if (!accessToken) return;
+    await updateAdminVerification(accessToken, id, verification, note);
+    setMessage("Verification updated.");
+    setProperty({
+      ...property,
+      verification: {
+        ...(property.verification || {
+          verification_method: null,
+          notes: null,
+          verified_by: null,
+          verified_at: null,
+          expires_at: null,
+        }),
+        verification_status: verification,
+      },
+    });
+  };
+  return (
+    <>
+      <div className="admin-detail-top">
+        <div>
+          <p className="admin-eyebrow">Property review</p>
+          <h1>{property.title}</h1>
+          <p>
+            {property.location.name} · {money(property.price_amount)} ·{" "}
+            {property.seller.display_name}
+          </p>
+        </div>
+        <Status value={property.status} />
+      </div>
+      <div className="admin-detail-grid">
+        <section className="admin-section">
+          <h2>Listing information</h2>
+          <dl className="admin-facts">
+            <dt>Description</dt>
+            <dd>{property.description}</dd>
+            <dt>Address</dt>
+            <dd>{property.address_line || "Locality only"}</dd>
+            <dt>Evidence</dt>
+            <dd>
+              {property.approval_information ||
+                "No approval information supplied."}
+            </dd>
+            <dt>Submitted</dt>
+            <dd>{date(property.submitted_at)}</dd>
+          </dl>
+          <h2>Media inspection</h2>
+          <div className="admin-media-review">
+            {property.media.length ? (
+              property.media.map((media) => (
+                <div className="admin-media-review-item" key={media.id}>
+                  <div className="admin-media-review-preview">
+                    {media.public_url ? (
+                      <Image
+                        src={media.public_url}
+                        alt={media.caption || "Property media"}
+                        fill
+                        unoptimized
+                        sizes="160px"
+                      />
+                    ) : (
+                      <span>No public preview</span>
+                    )}
+                  </div>
+                  <strong>
+                    {media.is_cover ? "Cover · " : ""}
+                    {media.media_type}
+                  </strong>
+                  <small>
+                    Order {media.sort_order + 1} · {media.status}
+                  </small>
+                </div>
+              ))
+            ) : (
+              <p className="admin-muted">No media uploaded.</p>
+            )}
+          </div>
+          <h2>Review history</h2>
+          <div className="admin-timeline">
+            {property.reviews.map((review) => (
+              <div key={review.id}>
+                <Status value={review.decision} />
+                <span>{review.notes || "No note"}</span>
+                <small>{date(review.created_at)}</small>
+              </div>
+            ))}
+            {property.audit.map((entry) => (
+              <div key={entry.id}>
+                <FileCheck2 size={16} />
+                <span>{entry.action.replaceAll("_", " ")}</span>
+                <small>{date(entry.created_at)}</small>
+              </div>
+            ))}
+          </div>
+        </section>
+        <aside className="admin-section admin-actions">
+          <h2>Moderation</h2>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Decision note"
+            rows={4}
+          />
+          <div className="admin-action-grid">
+            <button onClick={() => void act("APPROVED")}>
+              <Check size={16} /> Approve
+            </button>
+            <button onClick={() => void act("CHANGES_REQUESTED")}>
+              <MessageSquareWarning size={16} /> Request changes
+            </button>
+            <button className="danger" onClick={() => void act("REJECTED")}>
+              <X size={16} /> Reject
+            </button>
+            {property.status === "APPROVED" && (
+              <button className="publish" onClick={() => void publish()}>
+                <Send size={16} /> Publish live
+              </button>
+            )}
+          </div>
+          <label>
+            Verification status
+            <select
+              value={verification}
+              onChange={(e) => setVerification(e.target.value)}
+            >
+              <option>NOT_REVIEWED</option>
+              <option>CONTACT_VERIFIED</option>
+              <option>RELATIONSHIP_REVIEWED</option>
+              <option>DOCUMENT_EVIDENCE_REVIEWED</option>
+              <option>FAILED</option>
+              <option>EXPIRED</option>
+            </select>
+          </label>
+          <button className="secondary" onClick={() => void verify()}>
+            Update verification
+          </button>
+          {message && <p className="admin-message">{message}</p>}
+        </aside>
+      </div>
+    </>
+  );
+}
