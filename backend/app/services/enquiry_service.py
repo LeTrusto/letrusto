@@ -2,11 +2,11 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError, UnauthorizedError
 from app.models.entities import LeadStatus, Property, PropertyEnquiry, LeadStatusHistory, SellerProfile, User
-from app.schemas.enquiry import EnquiryCreate, LeadStatusUpdate
+from app.schemas.enquiry import EnquiryCreate, LeadStatusUpdate, SellerEnquiryDTO, SellerEnquiryHistoryDTO
 from app.services.property_audit_service import AuditService
 
 
@@ -39,14 +39,52 @@ class EnquiryService:
         return enquiry
 
     def list_for_seller(self, user: User, property_id: UUID) -> list[PropertyEnquiry]:
-        return list(self.db.scalars(select(PropertyEnquiry).join(Property).join(SellerProfile).where(
-            PropertyEnquiry.property_id == property_id, SellerProfile.user_id == user.id
-        ).order_by(PropertyEnquiry.created_at.desc())))
+        return list(self.db.scalars(self._seller_query(user).where(PropertyEnquiry.property_id == property_id).order_by(PropertyEnquiry.created_at.desc())).unique())
+
+    def list_all_for_seller(self, user: User) -> list[PropertyEnquiry]:
+        return list(self.db.scalars(self._seller_query(user).order_by(PropertyEnquiry.created_at.desc())).unique())
+
+    def get_for_seller(self, user: User, enquiry_id: UUID) -> PropertyEnquiry:
+        enquiry = self.db.scalar(self._seller_query(user).where(PropertyEnquiry.id == enquiry_id))
+        if not enquiry:
+            raise NotFoundError("Enquiry not found")
+        return enquiry
+
+    def to_seller_dto(self, enquiry: PropertyEnquiry) -> SellerEnquiryDTO:
+        can_share_contact = bool(enquiry.consent_to_share)
+        return SellerEnquiryDTO(
+            id=enquiry.id,
+            property_id=enquiry.property_id,
+            property_slug=enquiry.property.slug,
+            property_title=enquiry.property.title,
+            locality=enquiry.property.location.name,
+            buyer_name=enquiry.buyer_name,
+            buyer_phone=enquiry.buyer_phone if can_share_contact else None,
+            buyer_email=enquiry.buyer_email if can_share_contact else None,
+            whatsapp_available=enquiry.whatsapp_available if can_share_contact else False,
+            budget_amount=enquiry.budget_amount,
+            buying_timeline=enquiry.buying_timeline,
+            message=enquiry.message,
+            preferred_contact_method=enquiry.preferred_contact_method,
+            source=enquiry.source,
+            source_medium=enquiry.source_medium,
+            source_content=enquiry.source_content,
+            campaign_id=enquiry.campaign_id,
+            landing_path=enquiry.landing_path,
+            consent_to_share=enquiry.consent_to_share,
+            status=enquiry.status,
+            created_at=enquiry.created_at,
+            history=[SellerEnquiryHistoryDTO(old_status=item.old_status, new_status=item.new_status, note=item.note, created_at=item.created_at) for item in sorted(enquiry.status_history, key=lambda item: item.created_at)],
+        )
+
+    def _seller_query(self, user: User):
+        return select(PropertyEnquiry).options(
+            joinedload(PropertyEnquiry.property).joinedload(Property.location),
+            selectinload(PropertyEnquiry.status_history),
+        ).join(Property).join(SellerProfile).where(SellerProfile.user_id == user.id)
 
     def update_status(self, user: User, enquiry_id: UUID, payload: LeadStatusUpdate) -> PropertyEnquiry:
-        enquiry = self.db.scalar(select(PropertyEnquiry).join(Property).join(SellerProfile).where(
-            PropertyEnquiry.id == enquiry_id, SellerProfile.user_id == user.id
-        ))
+        enquiry = self.db.scalar(self._seller_query(user).where(PropertyEnquiry.id == enquiry_id))
         if not enquiry:
             if user.role != "admin":
                 raise NotFoundError("Enquiry not found")
@@ -61,4 +99,5 @@ class EnquiryService:
         self.audit.record(actor_user_id=user.id, entity_type="ENQUIRY", entity_id=enquiry.id, action="LEAD_STATUS_CHANGED", metadata={"from": old, "to": payload.status.value})
         self.db.commit()
         self.db.refresh(enquiry)
+        enquiry = self.get_for_seller(user, enquiry.id) if user.role != "admin" else enquiry
         return enquiry

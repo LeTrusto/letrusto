@@ -105,6 +105,38 @@ export type MediaPayload = {
   caption?: string;
 };
 
+export type SellerEnquiryHistory = {
+  old_status: string | null;
+  new_status: string;
+  note: string | null;
+  created_at: string;
+};
+
+export type SellerEnquiry = {
+  id: string;
+  property_id: string;
+  property_slug: string;
+  property_title: string;
+  locality: string;
+  buyer_name: string;
+  buyer_phone: string | null;
+  buyer_email: string | null;
+  whatsapp_available: boolean;
+  budget_amount: number | string | null;
+  buying_timeline: string | null;
+  message: string | null;
+  preferred_contact_method: string;
+  source: string;
+  source_medium: string | null;
+  source_content: string | null;
+  campaign_id: string | null;
+  landing_path: string | null;
+  consent_to_share: boolean;
+  status: string;
+  created_at: string;
+  history: SellerEnquiryHistory[];
+};
+
 export function getLocations() {
   return apiRequest<Location[]>("/properties/locations");
 }
@@ -143,4 +175,20 @@ export function submitSellerProperty(token: string, id: string) {
 
 export function addSellerMedia(token: string, id: string, payload: MediaPayload) {
   return authenticatedApiRequest<{ id: string; status: string }>(token, `/seller/properties/${encodeURIComponent(id)}/media`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function listSellerEnquiries(token: string) {
+  return authenticatedApiRequest<SellerEnquiry[]>(token, "/seller/enquiries");
+}
+
+export function listSellerPropertyEnquiries(token: string, propertyId: string) {
+  return authenticatedApiRequest<SellerEnquiry[]>(token, `/seller/properties/${encodeURIComponent(propertyId)}/enquiries`);
+}
+
+export function getSellerEnquiry(token: string, id: string) {
+  return authenticatedApiRequest<SellerEnquiry>(token, `/seller/enquiries/${encodeURIComponent(id)}`);
+}
+
+export function updateSellerEnquiryStatus(token: string, id: string, status: string, note?: string) {
+  return authenticatedApiRequest<SellerEnquiry>(token, `/seller/enquiries/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ status, note }) });
 }

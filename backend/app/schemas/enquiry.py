@@ -31,11 +31,21 @@ class PublicEnquiryResponse(BaseModel):
     created_at: datetime
 
 
+class SellerEnquiryHistoryDTO(BaseModel):
+    old_status: LeadStatus | None
+    new_status: LeadStatus
+    note: str | None
+    created_at: datetime
+
+
 class SellerEnquiryDTO(BaseModel):
     id: UUID
     property_id: UUID
+    property_slug: str
+    property_title: str
+    locality: str
     buyer_name: str
-    buyer_phone: str
+    buyer_phone: str | None
     buyer_email: EmailStr | None
     whatsapp_available: bool
     budget_amount: Decimal | None
@@ -43,8 +53,14 @@ class SellerEnquiryDTO(BaseModel):
     message: str | None
     preferred_contact_method: ContactMethod
     source: EnquirySource
+    source_medium: str | None
+    source_content: str | None
+    campaign_id: UUID | None
+    landing_path: str | None
+    consent_to_share: bool
     status: LeadStatus
     created_at: datetime
+    history: list[SellerEnquiryHistoryDTO]
 
 
 class LeadStatusUpdate(BaseModel):
