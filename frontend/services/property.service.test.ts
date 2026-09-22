@@ -10,15 +10,15 @@ describe("public property service", () => {
   it("loads the public property contract and does not expose seller fields", async () => {
     const result = { id: "property-1", slug: propertySlug, title: "The Bougainvillea House" };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(result), { status: 200 })));
-    await expect(getPublicProperty(propertySlug)).resolves.toMatchObject(result);
     const property = await getPublicProperty(propertySlug);
+    expect(property).toMatchObject(result);
     expect(property).not.toHaveProperty("seller_profile");
     expect(property).not.toHaveProperty("seller_phone");
   });
 
-  it("uses the isolated mock fallback when the public API is unavailable", async () => {
+  it("does not show a fake listing when the public API is unavailable", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
-    await expect(getPublicProperty(propertySlug)).resolves.toMatchObject({ slug: propertySlug, status: "LIVE", location: { name: "Jayanagar" } });
+    await expect(getPublicProperty(propertySlug)).resolves.toBeNull();
     await expect(getPublicProperty("not-a-live-property")).resolves.toBeNull();
   });
 

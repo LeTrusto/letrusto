@@ -1,5 +1,4 @@
 import { apiRequest } from "@/services/api";
-import { properties as mockProperties } from "@/lib/propertyMockData";
 
 export type PublicPropertyMedia = {
   id: string;
@@ -46,6 +45,23 @@ export type PublicProperty = {
   verification_label: string;
 };
 
+export type PublicPropertyPage = {
+  items: PublicProperty[];
+  page: number;
+  page_size: number;
+  total: number;
+  has_more: boolean;
+};
+
+export type PublicLocation = {
+  id: string;
+  name: string;
+  slug: string;
+  location_type: string;
+  parent_id: string | null;
+  city_name: string;
+};
+
 export type EnquiryPayload = {
   buyer_name: string;
   buyer_phone: string;
@@ -67,85 +83,36 @@ export type PublicEnquiryResponse = {
   created_at: string;
 };
 
-function fallbackId(slug: string): string {
-  let hash = 0;
-  for (const character of slug) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
-  return `00000000-0000-4000-8000-${hash.toString(16).padStart(12, "0")}`;
+export type PublicPropertyQuery = {
+  page?: number;
+  page_size?: number;
+  type?: string;
+  bhk?: number;
+  min_price?: number;
+  max_price?: number;
+  locality?: string;
+  search?: string;
+  sort?: "newest" | "price_asc" | "price_desc";
+};
+
+function queryString(params: PublicPropertyQuery): string {
+  const values = Object.entries(params).filter(([, value]) => value !== undefined && value !== "");
+  return values.length ? `?${new URLSearchParams(values.map(([key, value]) => [key, String(value)]))}` : "";
 }
 
-function fallbackProperty(slug: string): PublicProperty | null {
-  const property = mockProperties.find((item) => item.slug === slug);
-  if (!property) return null;
+export async function getPublicProperties(params: PublicPropertyQuery = {}): Promise<PublicPropertyPage> {
+  return apiRequest<PublicPropertyPage>(`/properties${queryString(params)}`);
+}
 
-  const propertyType = {
-    Apartment: "APARTMENT",
-    Villa: "VILLA",
-    House: "INDEPENDENT_HOUSE",
-    Plot: "RESIDENTIAL_PLOT",
-  }[property.type];
-
-  return {
-    id: fallbackId(slug),
-    slug: property.slug,
-    title: property.title,
-    description: property.description,
-    property_type: propertyType,
-    price_amount: Number(property.price.replace(/[^0-9.]/g, "")) * (property.price.includes("Cr") ? 10000000 : 100000),
-    currency: "INR",
-    built_up_area_sqft: Number(property.area.replace(/[^0-9.]/g, "")),
-    carpet_area_sqft: null,
-    plot_area_sqft: property.type === "Plot" ? Number(property.area.replace(/[^0-9.]/g, "")) : null,
-    bhk: property.bhk ? Number(property.bhk.replace(/[^0-9]/g, "")) : null,
-    floor_number: null,
-    total_floors: null,
-    facing: null,
-    parking_details: null,
-    maintenance_amount: null,
-    possession_status: null,
-    plot_dimensions: null,
-    corner_site: null,
-    address_visibility: "LOCALITY_ONLY",
-    status: "LIVE",
-    published_at: null,
-    location: {
-      id: fallbackId(`${slug}-location`),
-      name: property.locality,
-      slug: property.locality.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      location_type: "LOCALITY",
-      parent_id: null,
-      city_name: "Bengaluru",
-    },
-    media: [
-      {
-        id: fallbackId(`${slug}-media`),
-        media_type: "IMAGE",
-        public_url: property.image,
-        mime_type: "image/jpeg",
-        sort_order: 0,
-        is_cover: true,
-        caption: property.title,
-      },
-      ...(property.secondaryImage
-        ? [{
-            id: fallbackId(`${slug}-secondary`),
-            media_type: "IMAGE" as const,
-            public_url: property.secondaryImage,
-            mime_type: "image/jpeg",
-            sort_order: 1,
-            is_cover: false,
-            caption: `${property.title} interior`,
-          }]
-        : []),
-    ],
-    verification_label: "NOT_REVIEWED",
-  };
+export function getPublicLocations(): Promise<PublicLocation[]> {
+  return apiRequest<PublicLocation[]>("/locations");
 }
 
 export async function getPublicProperty(slug: string): Promise<PublicProperty | null> {
   try {
     return await apiRequest<PublicProperty>(`/properties/${encodeURIComponent(slug)}`);
   } catch {
-    return process.env.NODE_ENV === "production" ? null : fallbackProperty(slug);
+    return null;
   }
 }
 

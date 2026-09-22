@@ -141,6 +141,14 @@ class PublicPropertyDTO(BaseModel):
     verification_label: str
 
 
+class PublicPropertyPageDTO(BaseModel):
+    items: list[PublicPropertyDTO]
+    page: int
+    page_size: int
+    total: int
+    has_more: bool
+
+
 class SellerPropertyDTO(PublicPropertyDTO):
     seller_profile_id: UUID
     address_line: str | None
