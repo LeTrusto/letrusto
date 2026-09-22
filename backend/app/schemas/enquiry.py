@@ -41,8 +41,10 @@ class SellerEnquiryHistoryDTO(BaseModel):
 class SellerEnquiryDTO(BaseModel):
     id: UUID
     property_id: UUID
+    duplicate_of_id: UUID | None
     property_slug: str
     property_title: str
+    property_type: str
     locality: str
     buyer_name: str
     buyer_phone: str | None

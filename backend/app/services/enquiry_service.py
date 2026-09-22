@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError, UnauthorizedError
-from app.models.entities import LeadStatus, Property, PropertyEnquiry, LeadStatusHistory, SellerProfile, User
+from app.models.entities import LeadStatus, Notification, Property, PropertyEnquiry, LeadStatusHistory, SellerProfile, User
 from app.schemas.enquiry import EnquiryCreate, LeadStatusUpdate, SellerEnquiryDTO, SellerEnquiryHistoryDTO
 from app.services.property_audit_service import AuditService
 
@@ -28,11 +28,22 @@ class EnquiryService:
         data = payload.model_dump()
         data["consent_at"] = datetime.now(timezone.utc)
         data.pop("consent_to_share", None)
-        enquiry = PropertyEnquiry(property_id=property_id, consent_to_share=True, **data)
+        enquiry = PropertyEnquiry(property_id=property_id, consent_to_share=True, status=LeadStatus.NEW.value, **data)
         if recent:
             enquiry.duplicate_of_id = recent.id
         self.db.add(enquiry)
         self.db.flush()
+        seller_user_id = self.db.scalar(
+            select(SellerProfile.user_id).where(SellerProfile.id == prop.seller_profile_id)
+        )
+        if seller_user_id:
+            duplicate_note = " This appears to be a repeat enquiry." if recent else ""
+            self.db.add(Notification(
+                user_id=seller_user_id,
+                type="NEW_PROPERTY_ENQUIRY",
+                title="New property enquiry",
+                body=f"{enquiry.buyer_name} enquired about {prop.title}.{duplicate_note}",
+            ))
         self.audit.record(actor_user_id=None, entity_type="ENQUIRY", entity_id=enquiry.id, action="ENQUIRY_CREATED")
         self.db.commit()
         self.db.refresh(enquiry)
@@ -55,8 +66,10 @@ class EnquiryService:
         return SellerEnquiryDTO(
             id=enquiry.id,
             property_id=enquiry.property_id,
+            duplicate_of_id=enquiry.duplicate_of_id,
             property_slug=enquiry.property.slug,
             property_title=enquiry.property.title,
+            property_type=str(enquiry.property.property_type),
             locality=enquiry.property.location.name,
             buyer_name=enquiry.buyer_name,
             buyer_phone=enquiry.buyer_phone if can_share_contact else None,

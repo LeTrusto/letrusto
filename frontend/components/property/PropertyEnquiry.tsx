@@ -56,6 +56,9 @@ export function PropertyEnquiry({ property }: { property: PublicProperty }) {
     if (Object.keys(validation).length > 0) return;
 
     setStatus("submitting");
+    const attribution = new URLSearchParams(window.location.search);
+    const source = attribution.get("utm_source")?.toUpperCase();
+    const supportedSources = ["INSTAGRAM", "FACEBOOK", "WHATSAPP", "DIRECT", "QR", "OTHER"];
     createPropertyEnquiry(property.id, {
       buyer_name: form.buyer_name.trim(),
       buyer_phone: form.buyer_phone.trim(),
@@ -65,8 +68,10 @@ export function PropertyEnquiry({ property }: { property: PublicProperty }) {
       buying_timeline: form.buying_timeline || undefined,
       message: form.message.trim() || undefined,
       preferred_contact_method: form.preferred_contact_method,
-      source: "WEBSITE",
-      landing_path: window.location.pathname,
+      source: supportedSources.includes(source ?? "") ? source as "INSTAGRAM" | "FACEBOOK" | "WHATSAPP" | "DIRECT" | "QR" | "OTHER" : "WEBSITE",
+      source_medium: attribution.get("utm_medium") || undefined,
+      source_content: attribution.get("utm_content") || undefined,
+      landing_path: `${window.location.pathname}${window.location.search}`,
       consent_to_share: form.consent_to_share,
     }).then(() => setStatus("success")).catch(() => setStatus("error"));
   }

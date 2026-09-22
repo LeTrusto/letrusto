@@ -121,8 +121,10 @@ export type SellerEnquiryHistory = {
 export type SellerEnquiry = {
   id: string;
   property_id: string;
+  duplicate_of_id: string | null;
   property_slug: string;
   property_title: string;
+  property_type: string;
   locality: string;
   buyer_name: string;
   buyer_phone: string | null;

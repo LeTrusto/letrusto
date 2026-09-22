@@ -71,7 +71,9 @@ export type EnquiryPayload = {
   buying_timeline?: string;
   message?: string;
   preferred_contact_method: "PHONE" | "WHATSAPP" | "EMAIL";
-  source: "WEBSITE";
+  source: "WEBSITE" | "INSTAGRAM" | "FACEBOOK" | "WHATSAPP" | "DIRECT" | "QR" | "OTHER";
+  source_medium?: string;
+  source_content?: string;
   landing_path: string;
   consent_to_share: boolean;
 };
