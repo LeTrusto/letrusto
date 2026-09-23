@@ -35,6 +35,24 @@ class User(Base):
     seller_profile: Mapped["SellerProfile | None"] = relationship(back_populates="user", uselist=False)
 
 
+class MonetizationPlan(Base):
+    __tablename__ = "monetization_plans"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(String(32), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    price_amount: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    billing_period: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    customer_purchase_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    features: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
     __table_args__ = (Index("ix_refresh_tokens_hash", "token_hash"),)

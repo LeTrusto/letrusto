@@ -6,10 +6,13 @@ export type AdminProperty = { id: string; slug: string; title: string; descripti
 export type AdminAttentionProperty = { id: string; title: string; location: string | null; status: string };
 export type AdminAttentionCampaign = { id: string; title: string; property_id: string; property_title: string | null };
 export type AdminDashboard = { properties: Record<string, number>; leads: Record<string, number>; sellers: { active: number }; campaigns: { active: number }; attention: { review: AdminAttentionProperty[]; changes_requested: AdminAttentionProperty[]; campaigns: AdminAttentionCampaign[] }; recent_enquiries: AdminEnquiry[] };
+export type MonetizationPlan = { id: string; code: string; name: string; description: string; price_amount: number | string | null; currency: string | null; billing_period: string | null; is_active: boolean; customer_purchase_enabled: boolean; features: string[]; sort_order: number; created_at: string; updated_at: string };
 export type SocialPost = { id: string; platform: string; post_type: string; headline: string | null; body: string; cta: string | null; content: string | null; status: string };
 export type AdminCampaign = { id: string; property_id: string; property_title: string; property_slug: string; campaign_title: string; campaign_key: string; campaign_description: string | null; source: string; medium: string; content: string | null; status: string; public_path: string; social_posts: SocialPost[]; created_at: string; updated_at: string };
 
 export function getAdminDashboard(token: string) { return authenticatedApiRequest<AdminDashboard>(token, "/admin/dashboard"); }
+export function listAdminMonetizationPlans(token: string) { return authenticatedApiRequest<MonetizationPlan[]>(token, "/admin/monetization/plans"); }
+export function updateAdminMonetizationPlan(token: string, code: string, payload: Partial<Pick<MonetizationPlan, "name" | "description" | "price_amount" | "currency" | "billing_period" | "is_active" | "features">>) { return authenticatedApiRequest<MonetizationPlan>(token, `/admin/monetization/plans/${encodeURIComponent(code)}`, { method: "PATCH", body: JSON.stringify(payload) }); }
 export function listAdminProperties(token: string, status?: string | null) { return authenticatedApiRequest<AdminProperty[]>(token, `/admin/properties${status ? `?status=${encodeURIComponent(status)}` : ""}`); }
 export function getAdminProperty(token: string, id: string) { return authenticatedApiRequest<AdminProperty>(token, `/admin/properties/${id}`); }
 export function listAdminEnquiries(token: string, status?: string | null) { return authenticatedApiRequest<AdminEnquiry[]>(token, `/admin/enquiries${status ? `?status=${encodeURIComponent(status)}` : ""}`); }

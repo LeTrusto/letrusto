@@ -38,6 +38,8 @@ import {
   type AdminEnquiry,
   type AdminProperty,
   type AdminSeller,
+  listAdminMonetizationPlans,
+  type MonetizationPlan,
 } from "@/services/admin.service";
 
 const date = (value?: string | null) =>
@@ -61,16 +63,17 @@ function Status({ value }: { value: string }) {
 export function AdminOverview() {
   const { accessToken } = useAuth();
   const [data, setData] = useState<AdminDashboard | null>(null);
+  const [plans, setPlans] = useState<MonetizationPlan[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const load = () => {
     if (!accessToken) return;
     setLoading(true);
     setError("");
-    void getAdminDashboard(accessToken).then(setData).catch((e) => setError(e.message)).finally(() => setLoading(false));
+    void Promise.all([getAdminDashboard(accessToken), listAdminMonetizationPlans(accessToken)]).then(([dashboard, planRows]) => { setData(dashboard); setPlans(planRows); }).catch((e) => setError(e.message)).finally(() => setLoading(false));
   };
   useEffect(() => {
-    if (accessToken) void getAdminDashboard(accessToken).then(setData).catch((e) => setError(e.message)).finally(() => setLoading(false));
+    if (accessToken) void Promise.all([getAdminDashboard(accessToken), listAdminMonetizationPlans(accessToken)]).then(([dashboard, planRows]) => { setData(dashboard); setPlans(planRows); }).catch((e) => setError(e.message)).finally(() => setLoading(false));
   }, [accessToken]);
   if (loading && !data) return <div className="admin-loading-panel"><div className="admin-skeleton admin-skeleton-wide" /><div className="admin-skeleton-grid">{Array.from({ length: 6 }).map((_, index) => <div className="admin-skeleton" key={index} />)}</div></div>;
   if (error && !data) return <div className="admin-empty-panel"><h2>Operations data is unavailable.</h2><p>{error}</p><button className="admin-action-secondary" onClick={load}><RefreshCw size={15} /> Retry</button></div>;
@@ -83,6 +86,7 @@ export function AdminOverview() {
       <section className="admin-command-section"><div className="admin-section-head"><div><p className="admin-eyebrow">Property workflow</p><h2>Know what needs moving</h2></div><span className="admin-kicker">Live data</span></div><div className="admin-command-grid">{propertyCards.map((card) => <Link className="admin-command-card" href={`/admin/properties?status=${card.href}`} key={card.key}><span>{card.label}</span><strong>{data.properties[card.key] ?? 0}</strong><ArrowUpRight size={16} /></Link>)}</div></section>
       <section className="admin-command-section"><div className="admin-section-head"><div><p className="admin-eyebrow">Lead workflow</p><h2>Buyer enquiries</h2></div><Link href="/admin/enquiries">View all <ChevronRight size={15} /></Link></div><div className="admin-command-grid admin-command-grid-leads">{leadCards.map((card) => <Link className="admin-command-card" href={`/admin/enquiries?status=${card.href}`} key={card.key}><span>{card.label}</span><strong>{data.leads[card.key] ?? 0}</strong><ArrowUpRight size={16} /></Link>)}</div></section>
       <section className="admin-command-section"><div className="admin-command-grid admin-command-grid-secondary"><Link className="admin-command-card admin-command-card-accent" href="/admin/sellers"><Users size={18} /><span>Active sellers</span><strong>{data.sellers.active}</strong><ArrowUpRight size={16} /></Link><Link className="admin-command-card admin-command-card-accent" href="/admin/properties?status=LIVE"><Megaphone size={18} /><span>Active campaigns</span><strong>{data.campaigns.active}</strong><ArrowUpRight size={16} /></Link></div></section>
+      <section className="admin-command-section"><div className="admin-section-head"><div><p className="admin-eyebrow">Monetization foundation</p><h2>Plan configuration</h2></div><span className="admin-kicker">Payments not enabled</span></div><div className="admin-command-grid admin-command-grid-plans">{plans.map((plan) => <article className="admin-command-card admin-plan-card" key={plan.code}><div className="admin-plan-card-top"><span>{plan.code}</span><Status value={plan.is_active ? "CONFIGURED" : "PLANNED"} /></div><h3>{plan.name}</h3><p>{plan.description}</p><strong>{plan.price_amount == null ? "Price to be configured" : `${plan.currency || ""} ${plan.price_amount}`}</strong><small>{plan.customer_purchase_enabled ? "Purchasing enabled" : "Not purchasable"} · {plan.features.length} feature concepts</small></article>)}</div></section>
       <section className="admin-attention-section"><div className="admin-section-head"><div><p className="admin-eyebrow">Priority queue</p><h2>Needs your attention</h2></div><CircleAlert size={21} /></div><div className="admin-attention-grid"><AttentionPanel title="Properties awaiting review" count={data.properties.submitted + data.properties.under_review} href="/admin/properties?status=SUBMITTED" rows={data.attention.review.map((item) => ({ id: item.id, title: item.title, detail: item.location || "Bengaluru", status: item.status }))} empty="No properties are currently waiting for review." /><AttentionPanel title="New buyer enquiries" count={data.leads.new} href="/admin/enquiries?status=NEW" rows={data.recent_enquiries.filter((item) => item.status === "NEW").slice(0, 4).map((item) => ({ id: item.id, title: item.property_title, detail: item.buyer_name, status: item.status }))} empty="No new buyer enquiries." /><AttentionPanel title="Waiting for seller changes" count={data.properties.changes_requested} href="/admin/properties?status=CHANGES_REQUESTED" rows={data.attention.changes_requested.map((item) => ({ id: item.id, title: item.title, detail: item.location || "Bengaluru", status: item.status }))} empty="No properties are waiting for seller changes." /><AttentionPanel title="Active marketing campaigns" count={data.campaigns.active} href="/admin/properties?status=LIVE" rows={data.attention.campaigns.map((item) => ({ id: item.property_id, title: item.title, detail: item.property_title || "LIVE property", status: "ACTIVE" }))} empty="No active campaigns." /></div></section>
       <section className="admin-section">
         <div className="admin-section-head">

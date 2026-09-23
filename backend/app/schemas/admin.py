@@ -129,3 +129,31 @@ class AdminDashboardDTO(BaseModel):
     campaigns: dict[str, int]
     attention: dict[str, list[dict[str, str | None]]]
     recent_enquiries: list[AdminEnquiryDTO]
+
+
+class MonetizationPlanDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    code: str
+    name: str
+    description: str
+    price_amount: Decimal | None
+    currency: str | None
+    billing_period: str | None
+    is_active: bool
+    customer_purchase_enabled: bool
+    features: list[str]
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class MonetizationPlanUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    price_amount: Decimal | None = None
+    currency: str | None = None
+    billing_period: str | None = None
+    is_active: bool | None = None
+    features: list[str] | None = None
