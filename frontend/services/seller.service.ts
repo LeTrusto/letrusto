@@ -148,7 +148,7 @@ export type SellerEnquiry = {
 };
 
 export function getLocations() {
-  return apiRequest<Location[]>("/properties/locations");
+  return apiRequest<Location[]>("/locations");
 }
 
 export function getSellerProfile(token: string) {

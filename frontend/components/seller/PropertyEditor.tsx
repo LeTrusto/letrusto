@@ -846,6 +846,7 @@ function fromProperty(property: SellerProperty): FormState {
     ),
     location_id: property.location.id,
   };
+  next.corner_site = property.corner_site ?? false;
   Object.entries(property.amenities ?? {}).forEach(([name, enabled]) => {
     next[`amenity_${name}`] = Boolean(enabled);
   });
