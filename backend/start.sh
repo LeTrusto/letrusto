@@ -13,9 +13,5 @@ echo "STEP 2: Running Alembic migrations..."
 alembic upgrade head
 echo "STEP 2: Alembic migrations complete."
 
-echo "STEP 3: Initialising product catalog..."
-python -m scripts.init_production_db
-echo "STEP 3: Catalog initialisation complete."
-
-echo "STEP 4: Starting Uvicorn on port ${PORT:-8000}..."
+echo "STEP 3: Starting Uvicorn on port ${PORT:-8000}..."
 exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
