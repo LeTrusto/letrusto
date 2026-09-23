@@ -6,7 +6,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline' https://checkout-static-next.razorpay.com https://fonts.googleapis.com",
   "img-src * blob: data:",
   "font-src 'self' data: https://fonts.gstatic.com https://assets.razorpay.com https://checkout-static-next.razorpay.com",
-  "connect-src 'self' https://letrusto-staging.up.railway.app https://letrusto-production.up.railway.app https://api.razorpay.com https://lumberjack.razorpay.com https://lumberjack-metrics.razorpay.com https://checkout.razorpay.com https://checkout-static-next.razorpay.com https://vercel.live wss://*.vercel.com",
+  "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://letrusto-staging.up.railway.app https://letrusto-production.up.railway.app https://api.razorpay.com https://lumberjack.razorpay.com https://lumberjack-metrics.razorpay.com https://checkout.razorpay.com https://checkout-static-next.razorpay.com https://vercel.live wss://*.vercel.com",
   "frame-src https://api.razorpay.com https://checkout.razorpay.com https://*.razorpay.com https://vercel.live",
   "child-src https://api.razorpay.com https://checkout.razorpay.com https://*.razorpay.com https://vercel.live",
   "worker-src 'self' blob:",

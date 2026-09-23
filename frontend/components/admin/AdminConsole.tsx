@@ -2,6 +2,8 @@
 
 import {
   Check,
+  CheckCheck,
+  Copy,
   ChevronRight,
   CircleAlert,
   Eye,
@@ -24,6 +26,10 @@ import {
   publishAdminProperty,
   reviewAdminProperty,
   updateAdminVerification,
+  createAdminCampaign,
+  listAdminCampaigns,
+  updateAdminCampaign,
+  type AdminCampaign,
   type AdminDashboard,
   type AdminEnquiry,
   type AdminProperty,
@@ -442,6 +448,36 @@ export function AdminPropertyDetail({ id }: { id: string }) {
           {message && <p className="admin-message">{message}</p>}
         </aside>
       </div>
+      {property.status === "LIVE" && <CampaignPanel property={property} token={accessToken} />}
     </>
   );
+}
+
+function CampaignPanel({ property, token }: { property: AdminProperty; token: string | null }) {
+  const [campaigns, setCampaigns] = useState<AdminCampaign[]>([]);
+  const [title, setTitle] = useState(`${property.title} — Instagram Launch`);
+  const [key, setKey] = useState(`${property.slug}-launch`);
+  const [source, setSource] = useState("INSTAGRAM");
+  const [medium, setMedium] = useState("social");
+  const [content, setContent] = useState("property-post");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState("");
+  useEffect(() => { if (token) void listAdminCampaigns(token, property.id).then(setCampaigns).catch((error) => setMessage(error.message)); }, [token, property.id]);
+  const create = async () => {
+    if (!token) return;
+    setSaving(true);
+    try { const campaign = await createAdminCampaign(token, property.id, { campaign_title: title, campaign_key: key, source, medium, content, status: "ACTIVE" }); setCampaigns((current) => [campaign, ...current]); setMessage("Campaign saved."); } catch (error) { setMessage(error instanceof Error ? error.message : "Campaign could not be saved."); } finally { setSaving(false); }
+  };
+  const copy = async (label: string, value: string) => { await navigator.clipboard.writeText(value); setCopied(label); window.setTimeout(() => setCopied(""), 1600); };
+  const baseUrl = typeof window === "undefined" ? "" : window.location.origin;
+  return <section className="admin-section campaign-panel"><div className="admin-section-head"><div><p className="admin-eyebrow">Manual distribution</p><h2>Social campaign studio</h2></div><span className="admin-kicker">LIVE property</span></div><p className="admin-muted">Prepare a story-led content package, then publish it manually across your chosen channel.</p><div className="campaign-form"><label>Campaign name<input value={title} onChange={(event) => setTitle(event.target.value)} /></label><label>Campaign key<input value={key} onChange={(event) => setKey(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} /></label><label>Channel<select value={source} onChange={(event) => setSource(event.target.value)}><option>INSTAGRAM</option><option>FACEBOOK</option><option>WHATSAPP</option></select></label><label>Medium<input value={medium} onChange={(event) => setMedium(event.target.value)} /></label><label>Content tag<input value={content} onChange={(event) => setContent(event.target.value)} /></label><button className="admin-action-primary" disabled={saving || !title || !key} onClick={() => void create()}>{saving ? "Saving..." : "Generate campaign"}</button></div>{message && <p className="admin-message">{message}</p>}<div className="campaign-list">{campaigns.map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} token={token} copy={copy} />)}</div>{copied && <span className="campaign-copied"><CheckCheck size={14} /> Copied</span>}<p className="admin-kicker">Campaigns use only public property details. No seller or buyer information is included.</p><span className="campaign-base-url">{baseUrl}{property.slug ? `/properties/${property.slug}` : property.slug}</span></section>;
+}
+
+function CampaignCard({ campaign, token, copy }: { campaign: AdminCampaign; token: string | null; copy: (label: string, value: string) => Promise<void> }) {
+  const [status, setStatus] = useState(campaign.status);
+  const [posts, setPosts] = useState(campaign.social_posts);
+  const url = `/properties/${campaign.property_slug}?utm_source=${campaign.source.toLowerCase()}&utm_medium=${campaign.medium}&utm_campaign=${campaign.campaign_key}&utm_content=${campaign.content || "property-post"}`;
+  const save = async () => { if (!token) return; const updated = await updateAdminCampaign(token, campaign.id, { status, social_posts: posts.map((post) => ({ platform: post.platform, post_type: post.post_type, headline: post.headline, body: post.body, cta: post.cta, content: post.content })) }); setStatus(updated.status); setPosts(updated.social_posts); };
+  return <article className="campaign-card"><div className="campaign-card-head"><div><p className="admin-kicker">{campaign.source} · {campaign.medium}</p><h3>{campaign.campaign_title}</h3></div><select value={status} onChange={(event) => setStatus(event.target.value)}><option>DRAFT</option><option>ACTIVE</option><option>PAUSED</option><option>COMPLETED</option></select></div><label className="campaign-url">Property URL<input readOnly value={url} onFocus={(event) => event.currentTarget.select()} /></label><button className="admin-copy-button" onClick={() => void copy("url", url)}><Copy size={14} /> Copy property URL</button><div className="campaign-post-grid">{posts.map((post, index) => <div className="campaign-post" key={`${post.platform}-${post.post_type}`}><div className="campaign-post-head"><strong>{post.platform} {post.post_type === "REEL" ? "Reel" : "Post"}</strong><button className="admin-copy-button" onClick={() => void copy(post.platform, post.body)}><Copy size={14} /> Copy</button></div><textarea value={post.body} onChange={(event) => setPosts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, body: event.target.value } : item))} rows={7} /></div>)}</div><button className="admin-action-secondary" onClick={() => void save()}>Save campaign changes</button></article>;
 }

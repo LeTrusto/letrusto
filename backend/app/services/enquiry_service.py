@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 from uuid import UUID
+from urllib.parse import parse_qs, urlparse
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError, UnauthorizedError
-from app.models.entities import LeadStatus, Notification, Property, PropertyEnquiry, LeadStatusHistory, SellerProfile, User
+from app.models.entities import LeadStatus, Notification, Property, PropertyCampaign, PropertyEnquiry, LeadStatusHistory, SellerProfile, User
 from app.schemas.enquiry import EnquiryCreate, LeadStatusUpdate, SellerEnquiryDTO, SellerEnquiryHistoryDTO
 from app.services.property_audit_service import AuditService
 
@@ -26,6 +27,10 @@ class EnquiryService:
             PropertyEnquiry.buyer_phone == payload.buyer_phone,
         ).order_by(PropertyEnquiry.created_at.desc()))
         data = payload.model_dump()
+        if not data.get("campaign_id") and payload.landing_path:
+            campaign_key = parse_qs(urlparse(payload.landing_path).query).get("utm_campaign", [None])[0]
+            if campaign_key:
+                data["campaign_id"] = self.db.scalar(select(PropertyCampaign.id).where(PropertyCampaign.property_id == property_id, PropertyCampaign.campaign_key == campaign_key))
         data["consent_at"] = datetime.now(timezone.utc)
         data.pop("consent_to_share", None)
         enquiry = PropertyEnquiry(property_id=property_id, consent_to_share=True, status=LeadStatus.NEW.value, **data)

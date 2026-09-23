@@ -81,6 +81,26 @@ body {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
 
+.campaign-panel { margin-top: 1.5rem; background: linear-gradient(135deg, #fffaf2 0%, #f5eee5 100%); border-color: #e4d5c3; }
+.campaign-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; margin-top: 1rem; }
+.campaign-form label, .campaign-url { display: grid; gap: .35rem; color: var(--text-secondary); font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.campaign-form input, .campaign-form select, .campaign-url input, .campaign-card select, .campaign-post textarea { width: 100%; border: 1px solid #d9cabb; border-radius: .45rem; background: rgba(255,255,255,.8); color: var(--foreground); padding: .7rem .75rem; font: inherit; letter-spacing: 0; text-transform: none; }
+.campaign-form button { align-self: end; min-height: 2.7rem; }
+.campaign-list { display: grid; gap: 1rem; margin-top: 1.25rem; }
+.campaign-card { border: 1px solid #ddcdbd; border-radius: .55rem; background: rgba(255,255,255,.72); padding: 1rem; }
+.campaign-card-head, .campaign-post-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.campaign-card h3 { margin: .15rem 0 .75rem; font-size: 1.05rem; }
+.campaign-url { margin: .7rem 0; }
+.campaign-post-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin-top: .8rem; }
+.campaign-post { display: grid; gap: .5rem; }
+.campaign-post textarea { resize: vertical; line-height: 1.5; }
+.admin-copy-button, .admin-action-secondary, .admin-action-primary { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; border: 1px solid #cdbbaa; border-radius: .4rem; background: #fffdf9; color: var(--foreground); padding: .55rem .75rem; font-weight: 700; cursor: pointer; }
+.admin-action-primary { background: #3f0e4c; color: white; border-color: #3f0e4c; }
+.admin-copy-button { font-size: .75rem; }
+.campaign-copied { display: inline-flex; align-items: center; gap: .35rem; margin-top: .8rem; color: #28724f; font-weight: 700; }
+.campaign-base-url { display: block; margin-top: .4rem; color: var(--text-muted); font-size: .75rem; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .campaign-form, .campaign-post-grid { grid-template-columns: 1fr; } .campaign-card-head { align-items: flex-start; flex-direction: column; } }
+
 /* Keep legacy customer-facing panels on the same light-lavender canvas. */
 .bg-white {
   background-color: var(--surface) !important;
@@ -453,6 +473,49 @@ body {
 @media (max-width:900px) { .seller-landing-hero { grid-template-columns:1fr; min-height:auto; padding-top:90px; padding-bottom:100px; }.seller-landing-note { justify-self:start; margin-top:80px; }.seller-step-grid { grid-template-columns:repeat(2,1fr); }.seller-step:nth-child(2) { border-right:0; }.seller-step:nth-child(n+3) { border-top:1px solid var(--line); }.seller-layout { grid-template-columns:1fr; }.seller-sidebar { display:grid; grid-template-columns:1fr auto; gap:15px; padding:18px 24px; border-right:0; border-bottom:1px solid var(--line); }.seller-sidebar nav { display:flex; }.seller-add-link { margin:0; }.seller-back-link { display:none; }.seller-main { padding-top:45px; }.seller-editor { grid-template-columns:1fr; }.seller-media-panel { order:-1; }.seller-type-grid { grid-template-columns:repeat(2,1fr); } }
 @media (max-width:560px) { .seller-topbar { min-height:68px; padding-inline:16px; }.seller-brand { font-size:9px; }.seller-user-name { display:none; }.seller-landing-hero { padding-top:70px; }.seller-landing-actions,.seller-page-heading,.seller-editor-actions { align-items:stretch; flex-direction:column; }.seller-landing-actions { gap:18px; }.seller-step-grid,.seller-summary-grid { grid-template-columns:1fr 1fr; }.seller-step { min-height:220px; padding-right:14px; }.seller-step+.seller-step { padding-left:14px; }.seller-step h2 { margin-top:40px; font-size:23px; }.seller-step p { font-size:11px; }.seller-sidebar { grid-template-columns:1fr; padding:12px 16px; }.seller-sidebar nav { overflow-x:auto; }.seller-sidebar nav a { white-space:nowrap; }.seller-add-link { justify-self:start; }.seller-main { padding:35px 16px 70px; }.seller-display-title { font-size:clamp(3.1rem,16vw,5rem); }.seller-summary-grid>div { padding-right:10px; }.seller-summary-grid>div+div { padding-left:10px; }.seller-summary-grid strong { font-size:27px; }.seller-summary-grid span { font-size:8px; }.seller-property-card { grid-template-columns:1fr; }.seller-property-image { min-height:190px; }.seller-property-card-body { padding:20px; }.seller-property-card-top { display:grid; }.seller-property-card h2 { font-size:29px; }.seller-form-panel { padding:20px 16px; }.seller-form-grid { grid-template-columns:1fr; }.seller-span-2 { grid-column:auto; }.seller-feature-grid { grid-template-columns:1fr 1fr; }.seller-type-grid { grid-template-columns:1fr 1fr; }.seller-notice { align-items:start; flex-direction:column; }.seller-empty-panel { padding:28px 20px; }.seller-empty-panel h1 { font-size:35px; } }
 .seller-property-image,.seller-upload,.seller-media-item { position:relative; }
+
+/* Editorial property detail treatment */
+.property-detail-page { background:var(--paper); }
+.property-detail-shell { width:min(1320px,calc(100% - 64px)); }
+.detail-nav { width:min(1320px,calc(100% - 64px)); }
+.property-detail-shell>.back-link { margin-top:28px; color:var(--terracotta); }
+.detail-gallery { gap:14px; }
+.detail-gallery-main { min-height:520px; box-shadow:0 24px 60px rgba(31,32,28,.12); }
+.detail-gallery-main::before { position:absolute; inset:18px; z-index:1; border:1px solid rgba(242,239,232,.42); content:""; pointer-events:none; }
+.detail-media-empty { display:grid; place-items:end start; height:100%; padding:34px; background:linear-gradient(135deg,#cfc7b8 0%,#e7e0d4 48%,#b8ad9c 100%); color:rgba(31,32,28,.7); font-family:var(--display); font-size:clamp(2rem,5vw,5rem); line-height:.9; }
+.detail-media-empty::after { content:"Bengaluru / property journal"; position:absolute; top:34px; right:34px; color:rgba(31,32,28,.55); font-family:inherit; font-size:10px; letter-spacing:.16em; text-transform:uppercase; }
+.detail-heading { padding:82px 0 72px; }
+.detail-heading h1 { max-width:850px; }
+.detail-price strong { color:var(--terracotta); }
+.detail-content-grid { padding-top:0; }
+.detail-facts { background:var(--paper-deep); border:0; padding:6px; }
+.detail-facts>div { min-height:104px; padding:22px 20px; border-color:rgba(31,32,28,.12); }
+.detail-facts span,.information-list span { letter-spacing:.15em; }
+.detail-copy { padding:125px 8% 130px 0; }
+.detail-copy h2 { max-width:600px; font-size:clamp(3.2rem,5vw,6rem); }
+.detail-copy p:not(.eyebrow) { max-width:520px; font-size:16px; line-height:1.8; }
+.detail-information { padding-top:34px; border-top:1px solid var(--line); }
+.detail-aside { padding-top:125px; }
+.verification-note { background:#e5e0d6; border-left-color:var(--sage); }
+.property-enquiry-cta { border-top:1px solid var(--line); background:transparent; padding:28px 0 0; }
+.property-enquiry-cta button { width:100%; }
+
+@media (max-width:900px) {
+  .property-detail-shell,.detail-nav { width:min(100% - 42px,680px); }
+  .detail-aside { padding-top:0; }
+  .detail-copy { padding-right:0; }
+}
+
+@media (max-width:560px) {
+  .property-detail-shell,.detail-nav { width:100%; }
+  .detail-gallery-main { min-height:300px; box-shadow:none; }
+  .detail-gallery-main::before { inset:12px; }
+  .detail-media-empty { padding:24px; }
+  .detail-media-empty::after { top:24px; right:24px; font-size:8px; }
+  .detail-heading { padding-top:55px; }
+  .detail-copy { padding-right:0; }
+  .property-enquiry-cta { background:var(--paper); }
+}
 
 /* Homepage business clarity */
 .nav-actions { display:flex; align-items:center; gap:18px; }.nav-sign-in { color:var(--ink-soft); font-size:11px; letter-spacing:.08em; }.nav-pill { min-height:42px; padding-inline:16px; font-size:11px; font-weight:600; }.nav-links { font-size:12px; gap:25px; }.mobile-menu-button { display:none; border:0; background:transparent; color:var(--ink); cursor:pointer; }.hero-subtitle { max-width:380px; font-size:16px; }.hero-actions { gap:12px; flex-wrap:wrap; }.hero-seller-button { border-color:var(--ink); background:rgba(242,239,232,.2); }.button { min-height:48px; padding:15px 22px; font-size:12px; font-weight:600; }

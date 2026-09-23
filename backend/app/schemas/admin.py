@@ -33,6 +33,8 @@ class AdminSellerDTO(BaseModel):
 
 
 class AdminVerificationDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     verification_status: str
     verification_method: str | None
     notes: str | None
