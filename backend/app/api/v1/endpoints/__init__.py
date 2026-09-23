@@ -4,6 +4,7 @@ from app.api.v1.endpoints import (
     auth,
     health,
     public_properties,
+    notifications,
     seller_leads,
     seller_properties,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "auth",
     "health",
     "public_properties",
+    "notifications",
     "seller_leads",
     "seller_properties",
 ]

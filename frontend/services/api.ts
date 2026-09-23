@@ -130,6 +130,7 @@ export async function apiRequest<T>(
 		console.error(`[LeTrusto] ${response.status} ${response.statusText} → ${endpoint}`);
 		throw new Error(`API request failed (${response.status}) for ${endpoint}`);
 	}
+	if (response.status === 204) return undefined as T;
 
 	return (await response.json()) as T;
 }

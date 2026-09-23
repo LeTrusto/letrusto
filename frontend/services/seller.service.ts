@@ -1,4 +1,5 @@
 import { apiRequest, authenticatedApiRequest } from "@/services/api";
+import type { PublicVerification } from "@/utils/verification";
 
 export type Location = {
   id: string;
@@ -66,6 +67,7 @@ export type SellerProperty = {
   location: Location;
   media: SellerMedia[];
   verification_label: string;
+  verification: PublicVerification;
 };
 
 export type PropertyPayload = {

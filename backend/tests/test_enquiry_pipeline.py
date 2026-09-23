@@ -42,6 +42,7 @@ def test_live_enquiry_persists_attribution_and_notifies_seller():
     db = MagicMock()
     prop = live_property()
     db.scalar.side_effect = [prop, None, uuid4()]
+    db.query.return_value.filter.return_value.first.return_value = None
     service = EnquiryService(db)
 
     created = service.create(prop.id, enquiry_payload())
@@ -56,7 +57,9 @@ def test_live_enquiry_persists_attribution_and_notifies_seller():
     assert created.source_medium == "social"
     assert created.source_content == "carousel-1"
     assert notification.user_id is not None
-    assert notification.type == "NEW_PROPERTY_ENQUIRY"
+    assert notification.type == "NEW_ENQUIRY"
+    assert notification.body == "You received a new enquiry for The Garden House."
+    assert notification.related_entity_type == "ENQUIRY"
 
 
 def test_non_live_property_cannot_receive_public_enquiry():

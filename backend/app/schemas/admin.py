@@ -123,8 +123,9 @@ class AdminEnquiryDTO(BaseModel):
 
 
 class AdminDashboardDTO(BaseModel):
-    awaiting_review: int
-    changes_requested: int
-    live_properties: int
-    suspended_properties: int
+    properties: dict[str, int]
+    leads: dict[str, int]
+    sellers: dict[str, int]
+    campaigns: dict[str, int]
+    attention: dict[str, list[dict[str, str | None]]]
     recent_enquiries: list[AdminEnquiryDTO]

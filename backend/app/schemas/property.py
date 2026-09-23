@@ -113,6 +113,46 @@ class PublicPropertyMediaDTO(BaseModel):
     caption: str | None
 
 
+PUBLIC_VERIFICATION_LABELS = {
+    VerificationStatus.NOT_REVIEWED: "Verification not yet reviewed",
+    VerificationStatus.CONTACT_VERIFIED: "Contact verified",
+    VerificationStatus.RELATIONSHIP_REVIEWED: "Seller/property relationship reviewed",
+    VerificationStatus.DOCUMENT_EVIDENCE_REVIEWED: "Document evidence reviewed",
+    VerificationStatus.FAILED: "Verification unavailable",
+    VerificationStatus.EXPIRED: "Verification requires re-review",
+}
+
+
+class PublicVerificationChecks(BaseModel):
+    contact_verified: bool
+    relationship_reviewed: bool
+    document_evidence_reviewed: bool
+
+
+class PublicVerificationDTO(BaseModel):
+    status: VerificationStatus
+    label: str
+    checks: PublicVerificationChecks
+    reviewed_at: datetime | None
+
+
+def public_verification(status: str, reviewed_at: datetime | None = None) -> PublicVerificationDTO:
+    try:
+        verification_status = VerificationStatus(status)
+    except ValueError:
+        verification_status = VerificationStatus.NOT_REVIEWED
+    return PublicVerificationDTO(
+        status=verification_status,
+        label=PUBLIC_VERIFICATION_LABELS[verification_status],
+        checks=PublicVerificationChecks(
+            contact_verified=verification_status is VerificationStatus.CONTACT_VERIFIED,
+            relationship_reviewed=verification_status is VerificationStatus.RELATIONSHIP_REVIEWED,
+            document_evidence_reviewed=verification_status is VerificationStatus.DOCUMENT_EVIDENCE_REVIEWED,
+        ),
+        reviewed_at=reviewed_at,
+    )
+
+
 class PublicPropertyDTO(BaseModel):
     id: UUID
     slug: str
@@ -139,6 +179,7 @@ class PublicPropertyDTO(BaseModel):
     location: LocationDTO
     media: list[PublicPropertyMediaDTO]
     verification_label: str
+    verification: PublicVerificationDTO
 
 
 class PublicPropertyPageDTO(BaseModel):

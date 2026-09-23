@@ -8,15 +8,24 @@ from app.core.exceptions import NotFoundError
 from app.models.entities import Property, PropertyType
 from app.repositories.property_repository import PropertyRepository
 from app.schemas.enquiry import EnquiryCreate, PublicEnquiryResponse
-from app.schemas.property import LocationDTO, PublicPropertyDTO, PublicPropertyPageDTO
+from app.schemas.property import LocationDTO, PublicPropertyDTO, PublicPropertyPageDTO, public_verification
 from app.services.enquiry_service import EnquiryService
 
 router = APIRouter(tags=["properties"])
 
 
 def public_dto(prop: Property) -> PublicPropertyDTO:
-    verification = prop.verification.verification_status if prop.verification else "NOT_REVIEWED"
-    return PublicPropertyDTO.model_validate({**prop.__dict__, "location": prop.location, "media": [m for m in prop.media if m.status == "READY" and m.public_url], "verification_label": verification})
+    verification = public_verification(
+        prop.verification.verification_status if prop.verification else "NOT_REVIEWED",
+        prop.verification.verified_at if prop.verification else None,
+    )
+    return PublicPropertyDTO.model_validate({
+        **prop.__dict__,
+        "location": prop.location,
+        "media": [m for m in prop.media if m.status == "READY" and m.public_url],
+        "verification_label": verification.status.value,
+        "verification": verification,
+    })
 
 
 @router.get("/properties", response_model=PublicPropertyPageDTO)

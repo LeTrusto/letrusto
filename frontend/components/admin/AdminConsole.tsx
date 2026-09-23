@@ -6,17 +6,21 @@ import {
   Copy,
   ChevronRight,
   CircleAlert,
-  Eye,
   FileCheck2,
   MessageSquareWarning,
+  Megaphone,
+  RefreshCw,
+  ArrowUpRight,
   Send,
-  ShieldCheck,
+  Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { verificationCheckLabels, verificationChecksForStatus, verificationLabelForStatus } from "@/utils/verification";
 import {
   getAdminDashboard,
   getAdminProperty,
@@ -58,39 +62,28 @@ export function AdminOverview() {
   const { accessToken } = useAuth();
   const [data, setData] = useState<AdminDashboard | null>(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const load = () => {
+    if (!accessToken) return;
+    setLoading(true);
+    setError("");
+    void getAdminDashboard(accessToken).then(setData).catch((e) => setError(e.message)).finally(() => setLoading(false));
+  };
   useEffect(() => {
-    if (accessToken)
-      void getAdminDashboard(accessToken)
-        .then(setData)
-        .catch((e) => setError(e.message));
+    if (accessToken) void getAdminDashboard(accessToken).then(setData).catch((e) => setError(e.message)).finally(() => setLoading(false));
   }, [accessToken]);
-  if (error) return <p className="admin-error">{error}</p>;
-  if (!data) return <p className="admin-muted">Loading operations...</p>;
+  if (loading && !data) return <div className="admin-loading-panel"><div className="admin-skeleton admin-skeleton-wide" /><div className="admin-skeleton-grid">{Array.from({ length: 6 }).map((_, index) => <div className="admin-skeleton" key={index} />)}</div></div>;
+  if (error && !data) return <div className="admin-empty-panel"><h2>Operations data is unavailable.</h2><p>{error}</p><button className="admin-action-secondary" onClick={load}><RefreshCw size={15} /> Retry</button></div>;
+  if (!data) return null;
+  const propertyCards = [{ label: "Draft", key: "draft", href: "DRAFT" }, { label: "Submitted", key: "submitted", href: "SUBMITTED" }, { label: "Under review", key: "under_review", href: "UNDER_REVIEW" }, { label: "LIVE", key: "live", href: "LIVE" }, { label: "Changes requested", key: "changes_requested", href: "CHANGES_REQUESTED" }];
+  const leadCards = [{ label: "New", key: "new", href: "NEW" }, { label: "Contacted", key: "contacted", href: "CONTACTED" }, { label: "Follow up", key: "follow_up", href: "FOLLOW_UP" }, { label: "Visited", key: "visited", href: "VISITED" }];
   return (
     <>
-      <Heading title="Operations overview" eyebrow="Today" />
-      <div className="admin-metrics">
-        <Metric
-          label="Awaiting review"
-          value={data.awaiting_review}
-          icon={<CircleAlert />}
-        />
-        <Metric
-          label="Changes requested"
-          value={data.changes_requested}
-          icon={<MessageSquareWarning />}
-        />
-        <Metric
-          label="Live properties"
-          value={data.live_properties}
-          icon={<Eye />}
-        />
-        <Metric
-          label="Suspended"
-          value={data.suspended_properties}
-          icon={<ShieldCheck />}
-        />
-      </div>
+      <div className="admin-command-heading"><Heading title="Admin operations" eyebrow="Command center" /><button className="admin-action-secondary" onClick={load} disabled={loading}><RefreshCw size={15} className={loading ? "admin-spin" : ""} /> Refresh</button></div>
+      <section className="admin-command-section"><div className="admin-section-head"><div><p className="admin-eyebrow">Property workflow</p><h2>Know what needs moving</h2></div><span className="admin-kicker">Live data</span></div><div className="admin-command-grid">{propertyCards.map((card) => <Link className="admin-command-card" href={`/admin/properties?status=${card.href}`} key={card.key}><span>{card.label}</span><strong>{data.properties[card.key] ?? 0}</strong><ArrowUpRight size={16} /></Link>)}</div></section>
+      <section className="admin-command-section"><div className="admin-section-head"><div><p className="admin-eyebrow">Lead workflow</p><h2>Buyer enquiries</h2></div><Link href="/admin/enquiries">View all <ChevronRight size={15} /></Link></div><div className="admin-command-grid admin-command-grid-leads">{leadCards.map((card) => <Link className="admin-command-card" href={`/admin/enquiries?status=${card.href}`} key={card.key}><span>{card.label}</span><strong>{data.leads[card.key] ?? 0}</strong><ArrowUpRight size={16} /></Link>)}</div></section>
+      <section className="admin-command-section"><div className="admin-command-grid admin-command-grid-secondary"><Link className="admin-command-card admin-command-card-accent" href="/admin/sellers"><Users size={18} /><span>Active sellers</span><strong>{data.sellers.active}</strong><ArrowUpRight size={16} /></Link><Link className="admin-command-card admin-command-card-accent" href="/admin/properties?status=LIVE"><Megaphone size={18} /><span>Active campaigns</span><strong>{data.campaigns.active}</strong><ArrowUpRight size={16} /></Link></div></section>
+      <section className="admin-attention-section"><div className="admin-section-head"><div><p className="admin-eyebrow">Priority queue</p><h2>Needs your attention</h2></div><CircleAlert size={21} /></div><div className="admin-attention-grid"><AttentionPanel title="Properties awaiting review" count={data.properties.submitted + data.properties.under_review} href="/admin/properties?status=SUBMITTED" rows={data.attention.review.map((item) => ({ id: item.id, title: item.title, detail: item.location || "Bengaluru", status: item.status }))} empty="No properties are currently waiting for review." /><AttentionPanel title="New buyer enquiries" count={data.leads.new} href="/admin/enquiries?status=NEW" rows={data.recent_enquiries.filter((item) => item.status === "NEW").slice(0, 4).map((item) => ({ id: item.id, title: item.property_title, detail: item.buyer_name, status: item.status }))} empty="No new buyer enquiries." /><AttentionPanel title="Waiting for seller changes" count={data.properties.changes_requested} href="/admin/properties?status=CHANGES_REQUESTED" rows={data.attention.changes_requested.map((item) => ({ id: item.id, title: item.title, detail: item.location || "Bengaluru", status: item.status }))} empty="No properties are waiting for seller changes." /><AttentionPanel title="Active marketing campaigns" count={data.campaigns.active} href="/admin/properties?status=LIVE" rows={data.attention.campaigns.map((item) => ({ id: item.property_id, title: item.title, detail: item.property_title || "LIVE property", status: "ACTIVE" }))} empty="No active campaigns." /></div></section>
       <section className="admin-section">
         <div className="admin-section-head">
           <h2>Recent enquiries</h2>
@@ -103,24 +96,8 @@ export function AdminOverview() {
     </>
   );
 }
-function Metric({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="admin-metric">
-      <div>
-        {icon}
-        <strong>{value}</strong>
-      </div>
-      <span>{label}</span>
-    </div>
-  );
+function AttentionPanel({ title, count, href, rows, empty }: { title: string; count: number; href: string; rows: { id: string; title: string; detail: string; status: string }[]; empty: string }) {
+  return <article className="admin-attention-panel"><div className="admin-attention-panel-head"><div><h3>{title}</h3><strong>{count}</strong></div><Link href={href} aria-label={`Open ${title}`}><ArrowUpRight size={17} /></Link></div>{rows.length ? <div className="admin-attention-list">{rows.map((row) => <Link href={`/admin/properties/${row.id}`} key={row.id}><span><strong>{row.title}</strong><small>{row.detail}</small></span><Status value={row.status} /></Link>)}</div> : <p className="admin-empty">{empty}</p>}</article>;
 }
 function Heading({ title, eyebrow }: { title: string; eyebrow: string }) {
   return (
@@ -133,13 +110,15 @@ function Heading({ title, eyebrow }: { title: string; eyebrow: string }) {
 
 export function AdminProperties() {
   const { accessToken } = useAuth();
+  const searchParams = useSearchParams();
+  const status = searchParams.get("status");
   const [rows, setRows] = useState<AdminProperty[]>([]);
   useEffect(() => {
-    if (accessToken) void listAdminProperties(accessToken).then(setRows);
-  }, [accessToken]);
+    if (accessToken) void listAdminProperties(accessToken, status).then(setRows);
+  }, [accessToken, status]);
   return (
     <>
-      <Heading title="Review queue" eyebrow="Properties" />
+      <Heading title={status ? `${status.replaceAll("_", " ")} properties` : "Review queue"} eyebrow="Properties" />
       <div className="admin-queue">
         {rows.length ? (
           rows.map((property) => (
@@ -173,13 +152,15 @@ export function AdminProperties() {
 
 export function AdminEnquiries() {
   const { accessToken } = useAuth();
+  const searchParams = useSearchParams();
+  const status = searchParams.get("status");
   const [rows, setRows] = useState<AdminEnquiry[]>([]);
   useEffect(() => {
-    if (accessToken) void listAdminEnquiries(accessToken).then(setRows);
-  }, [accessToken]);
+    if (accessToken) void listAdminEnquiries(accessToken, status).then(setRows);
+  }, [accessToken, status]);
   return (
     <>
-      <Heading title="Buyer enquiries" eyebrow="Leads" />
+      <Heading title={status ? `${status.replaceAll("_", " ")} enquiries` : "Buyer enquiries"} eyebrow="Leads" />
       <div className="admin-section">
         <EnquiryTable rows={rows} />
       </div>
@@ -355,6 +336,7 @@ export function AdminPropertyDetail({ id }: { id: string }) {
             <dt>Submitted</dt>
             <dd>{date(property.submitted_at)}</dd>
           </dl>
+          <AdminVerificationState propertyStatus={property.status} verificationStatus={property.verification?.verification_status || "NOT_REVIEWED"} />
           <h2>Media inspection</h2>
           <div className="admin-media-review">
             {property.media.length ? (
@@ -451,6 +433,11 @@ export function AdminPropertyDetail({ id }: { id: string }) {
       {property.status === "LIVE" && <CampaignPanel property={property} token={accessToken} />}
     </>
   );
+}
+
+function AdminVerificationState({ propertyStatus, verificationStatus }: { propertyStatus: string; verificationStatus: string }) {
+  const checks = verificationChecksForStatus(verificationStatus);
+  return <section className="admin-verification-panel" aria-label="Verification state"><div className="admin-verification-head"><div><p className="admin-eyebrow">Separate workflow</p><h2>Property and verification</h2></div><Status value={verificationStatus} /></div><div className="admin-verification-states"><div><span>Property status</span><strong>{propertyStatus.replaceAll("_", " ")}</strong></div><div><span>Verification status</span><strong>{verificationLabelForStatus(verificationStatus)}</strong></div></div><ul className="admin-verification-checks">{verificationCheckLabels.map(([key, label]) => <li className={checks[key] ? "complete" : "incomplete"} key={key}><span aria-hidden="true">{checks[key] ? "✓" : "-"}</span>{label}{!checks[key] && <small>Not marked complete</small>}</li>)}</ul></section>;
 }
 
 function CampaignPanel({ property, token }: { property: AdminProperty; token: string | null }) {

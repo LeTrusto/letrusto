@@ -32,6 +32,12 @@ const property: PublicProperty = {
   location: { id: "location-1", name: "Jayanagar", slug: "jayanagar", location_type: "LOCALITY", parent_id: null, city_name: "Bengaluru" },
   media: [{ id: "media-1", media_type: "IMAGE", public_url: "https://images.unsplash.com/example", mime_type: "image/jpeg", sort_order: 0, is_cover: true, caption: "Courtyard" }],
   verification_label: "CONTACT_VERIFIED",
+  verification: {
+    status: "CONTACT_VERIFIED",
+    label: "Contact verified",
+    checks: { contact_verified: true, relationship_reviewed: false, document_evidence_reviewed: false },
+    reviewed_at: null,
+  },
 };
 
 const mockProperty: MockProperty = {

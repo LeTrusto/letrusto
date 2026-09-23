@@ -19,6 +19,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import SellerStatus, { statusLabel } from "@/components/seller/SellerStatus";
+import { VerificationSummary } from "@/components/verification/VerificationSummary";
+import { verificationFromStatus } from "@/utils/verification";
 import { useAuth } from "@/hooks/useAuth";
 import {
   completeSellerMediaUpload,
@@ -367,6 +369,7 @@ export default function PropertyEditor() {
           <Check size={16} /> {notice}
         </p>
       )}
+      {property && <VerificationSummary verification={property.verification || verificationFromStatus(property.verification_label)} />}
       <div className={`seller-editor ${locked ? "seller-editor-locked" : ""}`}>
         <section className="seller-form-panel">
           <FormSection title="Property type">

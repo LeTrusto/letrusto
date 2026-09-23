@@ -87,7 +87,10 @@ class OtpChallenge(Base):
 
 class Notification(Base):
     __tablename__ = "notifications"
-    __table_args__ = (Index("ix_notifications_user_read", "user_id", "is_read"),)
+    __table_args__ = (
+        Index("ix_notifications_user_read", "user_id", "is_read"),
+        UniqueConstraint("user_id", "event_key", name="uq_notifications_user_event"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
@@ -95,6 +98,9 @@ class Notification(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    related_entity_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    related_entity_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    event_key: Mapped[str | None] = mapped_column(String(180), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="notifications")

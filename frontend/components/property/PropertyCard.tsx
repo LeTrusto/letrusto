@@ -4,6 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 
 import type { MockProperty } from "@/lib/propertyMockData";
 import type { PublicProperty } from "@/services/property.service";
+import { verificationBadgeLabel } from "@/utils/verification";
 
 type CardProperty = PublicProperty | MockProperty;
 
@@ -41,13 +42,15 @@ function cardRegion(property: CardProperty): string {
 export function PropertyCard({ property, featured = false }: { property: CardProperty; featured?: boolean }) {
   const image = cardImage(property);
   const locality = isPublicProperty(property) ? property.location.name : property.locality;
+  const trustLabel = isPublicProperty(property) ? verificationBadgeLabel(property.verification) : null;
+  const badge = isPublicProperty(property) ? trustLabel : property.badge;
   return (
     <article className={`property-card group ${featured ? "property-card-featured" : ""}`}>
       <Link href={`/properties/${property.slug}`} className="block h-full" aria-label={`Explore ${property.title} in ${locality}`}>
         <div className="property-card-image-wrap">
           {image ? <Image src={image} alt={`${property.title}, ${locality}`} fill sizes={featured ? "(max-width: 560px) 92vw, 470px" : "(max-width: 560px) 88vw, 340px"} className="property-card-image" priority={featured} unoptimized={isPublicProperty(property)} /> : <div className="property-card-no-image">Photos coming soon.</div>}
           <div className="property-card-wash" />
-          <span className="property-badge property-badge-terracotta">{isPublicProperty(property) ? property.verification_label.replaceAll("_", " ") : property.badge}</span>
+          {badge && <span className="property-badge property-badge-terracotta">{badge}</span>}
           <span className="property-arrow" aria-hidden="true"><ArrowUpRight size={18} strokeWidth={1.7} /></span>
           <div className="property-card-overlay-copy">
             <span>{typeLabel(property)}</span>

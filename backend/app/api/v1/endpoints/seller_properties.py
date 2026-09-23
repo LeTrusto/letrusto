@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, get_storage
 from app.models.entities import User
-from app.schemas.property import MediaUploadTargetRequest, MediaUploadTargetResponse, PropertyCreate, PropertySubmitResponse, PropertyUpdate, SellerPropertyDTO
+from app.schemas.property import MediaUploadTargetRequest, MediaUploadTargetResponse, PropertyCreate, PropertySubmitResponse, PropertyUpdate, SellerPropertyDTO, public_verification
 from app.schemas.seller import SellerProfileDTO, SellerProfileRequest, SellerProfileUpdate
 from app.services.media_service import MediaService
 from app.storage import MockObjectStorage, ObjectStorage
@@ -16,7 +16,17 @@ router = APIRouter(prefix="/seller", tags=["seller"])
 
 
 def seller_dto(prop):
-    return SellerPropertyDTO.model_validate({**prop.__dict__, "location": prop.location, "media": prop.media, "verification_label": prop.verification.verification_status if prop.verification else "NOT_REVIEWED"})
+    verification = public_verification(
+        prop.verification.verification_status if prop.verification else "NOT_REVIEWED",
+        prop.verification.verified_at if prop.verification else None,
+    )
+    return SellerPropertyDTO.model_validate({
+        **prop.__dict__,
+        "location": prop.location,
+        "media": prop.media,
+        "verification_label": verification.status.value,
+        "verification": verification,
+    })
 
 
 @router.get("/profile", response_model=SellerProfileDTO)

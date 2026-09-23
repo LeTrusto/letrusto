@@ -29,10 +29,41 @@ class NotificationService:
                 body=r.body,
                 is_read=r.is_read,
                 created_at=r.created_at.isoformat(),
+                related_entity_type=r.related_entity_type,
+                related_entity_id=r.related_entity_id,
             )
             for r in rows
         ]
         return NotificationListResponse(notifications=notifications, unread_count=unread_count)
+
+    def create_once(
+        self,
+        *,
+        user_id: uuid.UUID,
+        event_key: str,
+        notification_type: str,
+        title: str,
+        body: str,
+        related_entity_type: str | None = None,
+        related_entity_id: str | None = None,
+    ) -> Notification:
+        existing = self.db.query(Notification).filter(
+            Notification.user_id == user_id,
+            Notification.event_key == event_key,
+        ).first()
+        if existing:
+            return existing
+        notification = Notification(
+            user_id=user_id,
+            type=notification_type,
+            title=title,
+            body=body,
+            event_key=event_key,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+        )
+        self.db.add(notification)
+        return notification
 
     def mark_read(self, user_id: uuid.UUID, notification_id: int) -> None:
         row = self.db.query(Notification).filter(

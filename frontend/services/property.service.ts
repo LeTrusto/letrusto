@@ -1,4 +1,5 @@
 import { apiRequest } from "@/services/api";
+import type { PublicVerification } from "@/utils/verification";
 
 export type PublicPropertyMedia = {
   id: string;
@@ -43,6 +44,7 @@ export type PublicProperty = {
   };
   media: PublicPropertyMedia[];
   verification_label: string;
+  verification: PublicVerification;
 };
 
 export type PublicPropertyPage = {

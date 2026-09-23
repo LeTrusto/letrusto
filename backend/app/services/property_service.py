@@ -5,10 +5,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError, NotFoundError, UnauthorizedError
-from app.models.entities import AdminReview, AdminReviewDecision, Location, Property, PropertyStatus, PropertyType, PropertyVerification, SellerProfile, User
+from app.models.entities import AdminReview, AdminReviewDecision, Location, Notification, Property, PropertyStatus, PropertyType, PropertyVerification, SellerProfile, User
 from app.repositories.property_repository import PropertyRepository
 from app.schemas.property import PropertyCreate, PropertyUpdate
 from app.services.property_audit_service import AuditService
+from app.services.notification_service import NotificationService
 
 _ALLOWED: dict[str, set[str]] = {
     "DRAFT": {"SUBMITTED"}, "SUBMITTED": {"UNDER_REVIEW"},
@@ -23,6 +24,7 @@ class PropertyService:
         self.db = db
         self.repo = PropertyRepository(db)
         self.audit = AuditService(db)
+        self.notifications = NotificationService(db)
 
     def _profile(self, user: User) -> SellerProfile:
         profile = self.repo.seller_profile(user.id)
@@ -72,10 +74,43 @@ class PropertyService:
             prop.submitted_at = now
         if target == PropertyStatus.LIVE:
             prop.published_at = now
+        self._notify_transition(prop, target)
         self.audit.record(actor_user_id=actor.id, entity_type="PROPERTY", entity_id=prop.id, action="PROPERTY_STATUS_CHANGED", metadata={"from": current, "to": target.value})
         self.db.commit()
         self.db.refresh(prop)
         return prop
+
+    def _notify_transition(self, prop: Property, target: PropertyStatus) -> None:
+        seller_user_id = self.db.scalar(select(SellerProfile.user_id).where(SellerProfile.id == prop.seller_profile_id))
+        event = {
+            PropertyStatus.SUBMITTED: ("PROPERTY_SUBMITTED", "Property submitted for review", "Your property has been submitted and is awaiting review."),
+            PropertyStatus.CHANGES_REQUESTED: ("PROPERTY_CHANGES_REQUESTED", "Changes requested for your property", "Our team has requested changes to your property listing. Please review your property dashboard."),
+            PropertyStatus.LIVE: ("PROPERTY_PUBLISHED", "Your property is now live", "Your property is now visible to buyers on Bangalore Property Discovery."),
+            PropertyStatus.REJECTED: ("PROPERTY_REJECTED", "Property review update", "There is an update to your property review. Please review your property dashboard."),
+        }.get(target)
+        if event and seller_user_id:
+            notification_type, title, body = event
+            self.notifications.create_once(
+                user_id=seller_user_id,
+                event_key=f"property:{prop.id}:status:{target.value}",
+                notification_type=notification_type,
+                title=title,
+                body=body,
+                related_entity_type="PROPERTY",
+                related_entity_id=str(prop.id),
+            )
+        if target == PropertyStatus.SUBMITTED:
+            admins = self.db.scalars(select(User).where(User.role == "admin")).all()
+            for admin in admins:
+                self.notifications.create_once(
+                    user_id=admin.id,
+                    event_key=f"property:{prop.id}:admin-submitted",
+                    notification_type="PROPERTY_SUBMITTED",
+                    title="New property submitted",
+                    body=f"{prop.title} is waiting for review.",
+                    related_entity_type="PROPERTY",
+                    related_entity_id=str(prop.id),
+                )
 
     def submit(self, user: User, property_id: UUID) -> Property:
         return self.transition(user, self.get_owned(user, property_id), PropertyStatus.SUBMITTED)

@@ -1,12 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_admin, get_db
 from app.core.exceptions import NotFoundError
-from app.models.entities import AdminReview, AuditLog, Property, PropertyEnquiry, PropertyStatus, SellerProfile, User
+from app.models.entities import AdminReview, AuditLog, LeadStatus, Property, PropertyCampaign, PropertyEnquiry, PropertyStatus, SellerProfile, User
 from app.schemas.admin import AdminAuditDTO, AdminDashboardDTO, AdminEnquiryDTO, AdminMediaDTO, AdminPropertyDTO, AdminReviewDTO, AdminSellerDTO, AdminVerificationDTO
 from app.schemas.property import AdminReviewRequest, PropertySubmitResponse, VerificationUpdateRequest
 from app.services.property_service import PropertyService
@@ -95,22 +95,44 @@ def _enquiry_dto(enquiry: PropertyEnquiry) -> AdminEnquiryDTO:
 
 @router.get("/dashboard", response_model=AdminDashboardDTO)
 def dashboard(admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
-    def count(status: str) -> int:
+    def property_count(status: str) -> int:
         return int(db.scalar(select(func.count()).select_from(Property).where(Property.status == status)) or 0)
 
+    def enquiry_count(status: str) -> int:
+        return int(db.scalar(select(func.count()).select_from(PropertyEnquiry).where(PropertyEnquiry.status == status)) or 0)
+
+    active_seller_statuses = [status.value for status in (PropertyStatus.DRAFT, PropertyStatus.SUBMITTED, PropertyStatus.UNDER_REVIEW, PropertyStatus.CHANGES_REQUESTED, PropertyStatus.APPROVED, PropertyStatus.LIVE)]
+    active_sellers = int(db.scalar(select(func.count(func.distinct(SellerProfile.id))).join(SellerProfile.properties).where(Property.status.in_(active_seller_statuses))) or 0)
+    active_campaigns = int(db.scalar(select(func.count()).select_from(PropertyCampaign).where(PropertyCampaign.status == "ACTIVE")) or 0)
+
     enquiries = db.scalars(select(PropertyEnquiry).options(joinedload(PropertyEnquiry.property).joinedload(Property.seller_profile)).order_by(PropertyEnquiry.created_at.desc()).limit(8)).all()
+    review_items = db.scalars(select(Property).options(joinedload(Property.location)).where(Property.status.in_([PropertyStatus.SUBMITTED.value, PropertyStatus.UNDER_REVIEW.value])).order_by(Property.submitted_at.asc()).limit(5)).unique().all()
+    changes_items = db.scalars(select(Property).options(joinedload(Property.location)).where(Property.status == PropertyStatus.CHANGES_REQUESTED.value).order_by(Property.updated_at.desc()).limit(5)).unique().all()
+    campaign_items = db.scalars(select(PropertyCampaign).options(joinedload(PropertyCampaign.property).joinedload(Property.location)).where(PropertyCampaign.status == "ACTIVE").order_by(PropertyCampaign.updated_at.desc()).limit(5)).unique().all()
+
+    def property_item(prop: Property) -> dict[str, str | None]:
+        return {"id": str(prop.id), "title": prop.title, "location": prop.location.name if prop.location else None, "status": prop.status}
+
     return AdminDashboardDTO(
-        awaiting_review=count(PropertyStatus.SUBMITTED.value) + count(PropertyStatus.UNDER_REVIEW.value),
-        changes_requested=count(PropertyStatus.CHANGES_REQUESTED.value),
-        live_properties=count(PropertyStatus.LIVE.value),
-        suspended_properties=count(PropertyStatus.SUSPENDED.value),
+        properties={status.lower(): property_count(status.value) for status in (PropertyStatus.DRAFT, PropertyStatus.SUBMITTED, PropertyStatus.UNDER_REVIEW, PropertyStatus.LIVE, PropertyStatus.CHANGES_REQUESTED)},
+        leads={status.lower(): enquiry_count(status.value) for status in (LeadStatus.NEW, LeadStatus.CONTACTED, LeadStatus.FOLLOW_UP, LeadStatus.VISITED)},
+        sellers={"active": active_sellers},
+        campaigns={"active": active_campaigns},
+        attention={
+            "review": [property_item(prop) for prop in review_items],
+            "changes_requested": [property_item(prop) for prop in changes_items],
+            "campaigns": [{"id": str(item.id), "title": item.campaign_title, "property_id": str(item.property_id), "property_title": item.property.title if item.property else None} for item in campaign_items],
+        },
         recent_enquiries=[_enquiry_dto(enquiry) for enquiry in enquiries],
     )
 
 
 @router.get("/properties", response_model=list[AdminPropertyDTO])
-def review_queue(admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
+def review_queue(status: str | None = Query(default=None), admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
+    statuses = [status] if status else ["SUBMITTED", "UNDER_REVIEW"]
     properties = db.scalars(select(Property).options(joinedload(Property.location), joinedload(Property.media), joinedload(Property.verification), joinedload(Property.seller_profile).joinedload(SellerProfile.user), joinedload(Property.seller_profile).joinedload(SellerProfile.properties), joinedload(Property.reviews)).where(Property.status.in_(["SUBMITTED", "UNDER_REVIEW"])).order_by(Property.submitted_at.asc())).unique()
+    if status:
+        properties = db.scalars(select(Property).options(joinedload(Property.location), joinedload(Property.media), joinedload(Property.verification), joinedload(Property.seller_profile).joinedload(SellerProfile.user), joinedload(Property.seller_profile).joinedload(SellerProfile.properties), joinedload(Property.reviews)).where(Property.status.in_(statuses)).order_by(Property.submitted_at.asc())).unique()
     return [_property_dto(prop) for prop in properties]
 
 
@@ -124,8 +146,11 @@ def review_property(property_id: UUID, admin: User = Depends(get_current_admin),
 
 
 @router.get("/enquiries", response_model=list[AdminEnquiryDTO])
-def enquiries(admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
-    rows = db.scalars(select(PropertyEnquiry).options(joinedload(PropertyEnquiry.property).joinedload(Property.seller_profile)).order_by(PropertyEnquiry.created_at.desc())).all()
+def enquiries(status: str | None = Query(default=None), admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
+    query = select(PropertyEnquiry).options(joinedload(PropertyEnquiry.property).joinedload(Property.seller_profile)).order_by(PropertyEnquiry.created_at.desc())
+    if status:
+        query = query.where(PropertyEnquiry.status == status)
+    rows = db.scalars(query).all()
     return [_enquiry_dto(row) for row in rows]
 
 

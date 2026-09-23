@@ -6,15 +6,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError, UnauthorizedError
-from app.models.entities import LeadStatus, Notification, Property, PropertyCampaign, PropertyEnquiry, LeadStatusHistory, SellerProfile, User
+from app.models.entities import LeadStatus, Property, PropertyCampaign, PropertyEnquiry, LeadStatusHistory, SellerProfile, User
 from app.schemas.enquiry import EnquiryCreate, LeadStatusUpdate, SellerEnquiryDTO, SellerEnquiryHistoryDTO
 from app.services.property_audit_service import AuditService
+from app.services.notification_service import NotificationService
 
 
 class EnquiryService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.audit = AuditService(db)
+        self.notifications = NotificationService(db)
 
     def create(self, property_id: UUID, payload: EnquiryCreate) -> PropertyEnquiry:
         prop = self.db.scalar(select(Property).where(Property.id == property_id, Property.status == "LIVE"))
@@ -42,13 +44,25 @@ class EnquiryService:
             select(SellerProfile.user_id).where(SellerProfile.id == prop.seller_profile_id)
         )
         if seller_user_id:
-            duplicate_note = " This appears to be a repeat enquiry." if recent else ""
-            self.db.add(Notification(
+            self.notifications.create_once(
                 user_id=seller_user_id,
-                type="NEW_PROPERTY_ENQUIRY",
-                title="New property enquiry",
-                body=f"{enquiry.buyer_name} enquired about {prop.title}.{duplicate_note}",
-            ))
+                event_key=f"enquiry:{enquiry.id}:seller",
+                notification_type="NEW_ENQUIRY",
+                title="New buyer enquiry",
+                body=f"You received a new enquiry for {prop.title}.",
+                related_entity_type="ENQUIRY",
+                related_entity_id=str(enquiry.id),
+            )
+        for admin in self.db.scalars(select(User).where(User.role == "admin")):
+            self.notifications.create_once(
+                user_id=admin.id,
+                event_key=f"enquiry:{enquiry.id}:admin",
+                notification_type="NEW_ENQUIRY",
+                title="New buyer enquiry",
+                body=f"A new buyer enquiry was received for {prop.title}.",
+                related_entity_type="ENQUIRY",
+                related_entity_id=str(enquiry.id),
+            )
         self.audit.record(actor_user_id=None, entity_type="ENQUIRY", entity_id=enquiry.id, action="ENQUIRY_CREATED")
         self.db.commit()
         self.db.refresh(enquiry)

@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import type { PublicProperty } from "@/services/property.service";
 import { PropertyEnquiry } from "./PropertyEnquiry";
 import { PropertyGallery } from "./PropertyGallery";
+import { VerificationSummary } from "@/components/verification/VerificationSummary";
+import { verificationFromStatus } from "@/utils/verification";
 
 function formatPrice(property: PublicProperty): string {
   const amount = Number(property.price_amount);
@@ -18,13 +20,6 @@ function numberLabel(value: number | string | null, suffix: string): string | nu
 
 function typeLabel(type: string): string {
   return type.replaceAll("_", " ").toLowerCase().replace(/(^| )\w/g, (letter) => letter.toUpperCase());
-}
-
-function verificationLabel(label: string): string {
-  if (label === "DOCUMENT_EVIDENCE_REVIEWED") return "Document evidence reviewed";
-  if (label === "RELATIONSHIP_REVIEWED") return "Relationship reviewed";
-  if (label === "CONTACT_VERIFIED") return "Contact verified";
-  return "Verification in progress";
 }
 
 export function PropertyUnavailable() {
@@ -50,7 +45,7 @@ export function PropertyDetail({ property }: { property: PublicProperty }) {
       <Link href="/properties" className="back-link"><ArrowLeft size={15} /> Back to the collection</Link>
       <PropertyGallery title={property.title} media={property.media} />
       <section className="detail-heading"><div><p className="eyebrow">{property.location.name} / {property.location.city_name}</p><h1>{property.title}</h1><p className="detail-type">{typeLabel(property.property_type)} · For sale</p></div><div className="detail-price"><span>Guide price</span><strong>{formatPrice(property)}</strong></div></section>
-      <div className="detail-content-grid"><div className="detail-main-column"><section className="detail-facts" aria-label="Property facts">{facts.map((fact) => <div key={fact.label}><span>{fact.label}</span><strong>{fact.value}</strong></div>)}</section><section className="detail-copy"><p className="eyebrow">The story</p><h2>A place with room for a life.</h2><p>{property.description}</p></section><section className="detail-information"><p className="eyebrow">Property information</p><div className="information-list"><div><span>Location</span><strong>{property.location.name}, {property.location.city_name}</strong></div><div><span>Listing type</span><strong>{typeLabel(property.property_type)} · For sale</strong></div>{property.corner_site !== null && <div><span>Corner site</span><strong>{property.corner_site ? "Yes" : "No"}</strong></div>}{property.plot_dimensions && <div><span>Plot dimensions</span><strong>{property.plot_dimensions}</strong></div>}</div></section></div><aside className="detail-aside"><div className="verification-note"><ShieldCheck size={19} /><div><strong>{verificationLabel(property.verification_label)}</strong><p>Public information shown here is provided through the property listing.</p></div></div><PropertyEnquiry property={property} /></aside></div>
+      <div className="detail-content-grid"><div className="detail-main-column"><section className="detail-facts" aria-label="Property facts">{facts.map((fact) => <div key={fact.label}><span>{fact.label}</span><strong>{fact.value}</strong></div>)}</section><section className="detail-copy"><p className="eyebrow">The story</p><h2>A place with room for a life.</h2><p>{property.description}</p></section><section className="detail-information"><p className="eyebrow">Property information</p><div className="information-list"><div><span>Location</span><strong>{property.location.name}, {property.location.city_name}</strong></div><div><span>Listing type</span><strong>{typeLabel(property.property_type)} · For sale</strong></div>{property.corner_site !== null && <div><span>Corner site</span><strong>{property.corner_site ? "Yes" : "No"}</strong></div>}{property.plot_dimensions && <div><span>Plot dimensions</span><strong>{property.plot_dimensions}</strong></div>}</div></section></div><aside className="detail-aside"><VerificationSummary verification={property.verification || verificationFromStatus(property.verification_label)} /><PropertyEnquiry property={property} /></aside></div>
     </div>
   </main>;
 }
