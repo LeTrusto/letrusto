@@ -512,6 +512,7 @@ body {
 .property-enquiry-cta { gap:24px; border-top:0; background:var(--ink); padding:28px; color:var(--paper); box-shadow:0 18px 40px rgba(31,32,28,.14); }
 .property-enquiry-cta .eyebrow { color:rgba(242,239,232,.7); }
 .property-enquiry-cta p:not(.eyebrow) { max-width:280px; margin:0; color:rgba(242,239,232,.82); line-height:1.5; }
+.property-enquiry-cta .button-dark { color:var(--ink)!important; }
 .property-enquiry-cta button { width:100%; }
 
 @media (max-width:900px) {
