@@ -8,6 +8,7 @@ _MOCK_OBJECTS: dict[str, tuple[bytes, str]] = {}
 
 class ObjectStorage(Protocol):
     def create_upload_target(self, key: str, mime_type: str, expires_in: int) -> "UploadTarget": ...
+    def upload(self, key: str, content: bytes, mime_type: str) -> None: ...
     def delete(self, key: str) -> None: ...
     def public_url(self, key: str) -> str | None: ...
     def inspect(self, key: str) -> "StoredObject | None": ...
@@ -53,6 +54,9 @@ class S3ObjectStorage:
         )
         return UploadTarget(url=url, headers={"Content-Type": mime_type}, expires_at=now + timedelta(seconds=expires_in))
 
+    def upload(self, key: str, content: bytes, mime_type: str) -> None:
+        self.client.put_object(Bucket=self.bucket, Key=key, Body=content, ContentType=mime_type)
+
     def delete(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)
 
@@ -84,6 +88,9 @@ class MockObjectStorage:
 
         now = datetime.now(timezone.utc)
         return UploadTarget(url=f"mock://{key}", headers={"Content-Type": mime_type}, expires_at=now + timedelta(seconds=expires_in))
+
+    def upload(self, key: str, content: bytes, mime_type: str) -> None:
+        self.put(key, content, mime_type)
 
     def delete(self, key: str) -> None:
         _MOCK_OBJECTS.pop(key, None)

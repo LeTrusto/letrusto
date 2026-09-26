@@ -23,7 +23,6 @@ import { VerificationSummary } from "@/components/verification/VerificationSumma
 import { verificationFromStatus } from "@/utils/verification";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  completeSellerMediaUpload,
   createSellerMediaUploadTarget,
   createSellerProperty,
   deleteSellerMedia,
@@ -32,7 +31,7 @@ import {
   requestSellerPropertyChanges,
   submitSellerProperty,
   updateSellerProperty,
-  uploadMockSellerMedia,
+  uploadSellerMedia,
   type Location,
   type PropertyPayload,
   type SellerProperty,
@@ -236,6 +235,7 @@ export default function PropertyEditor() {
         current ? { ...current, status: "SUBMITTED" } : current,
       );
     } catch (err) {
+      setNotice("");
       setError(friendlyError(err));
     } finally {
       setSubmitting(false);
@@ -277,18 +277,7 @@ export default function PropertyEditor() {
             caption: file.name,
           },
         );
-        if (target.upload_url.startsWith("mock://")) {
-          await uploadMockSellerMedia(accessToken, target.upload_url, file, file.type);
-        } else {
-          const upload = await fetch(target.upload_url, {
-            method: "PUT",
-            headers: target.headers,
-            body: file,
-          });
-          if (!upload.ok)
-            throw new Error("The storage upload failed. Please try again.");
-        }
-        await completeSellerMediaUpload(accessToken, targetProperty.id, target.media_id);
+        await uploadSellerMedia(accessToken, targetProperty.id, target.media_id, file, file.type);
       }
       setNotice(`Upload successful: ${files.length} media ${files.length === 1 ? "file" : "files"} ready for review.`);
       setSelectedFiles([]);

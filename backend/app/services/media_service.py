@@ -46,6 +46,15 @@ class MediaService:
     def _next_order(self, property_id: UUID) -> int:
         return int(self.db.scalar(select(func.max(PropertyMedia.sort_order)).where(PropertyMedia.property_id == property_id)) or -1) + 1
 
+    def upload(self, *, property_id: UUID, media_id: UUID, content: bytes, content_type: str) -> PropertyMedia:
+        media = self.db.scalar(select(PropertyMedia).where(PropertyMedia.id == media_id, PropertyMedia.property_id == property_id))
+        if not media or media.status == MediaStatus.DELETED.value:
+            raise BadRequestError("Media upload is not available")
+        if content_type.lower().strip() != media.mime_type or len(content) != media.file_size_bytes:
+            raise BadRequestError("Uploaded media does not match the requested file")
+        self.storage.upload(media.storage_key, content, media.mime_type)
+        return self.complete(property_id=property_id, media_id=media_id)
+
     def complete(self, *, property_id: UUID, media_id: UUID) -> PropertyMedia:
         media = self.db.scalar(select(PropertyMedia).where(PropertyMedia.id == media_id, PropertyMedia.property_id == property_id))
         if not media or media.status == MediaStatus.DELETED.value:

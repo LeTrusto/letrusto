@@ -97,6 +97,18 @@ async def mock_upload(storage_key: str, request: Request, _: User = Depends(get_
     return {"status": "uploaded"}
 
 
+@router.put("/properties/{property_id}/media/{media_id}/upload", response_model=dict)
+async def upload_media(property_id: UUID, media_id: UUID, request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), storage: ObjectStorage = Depends(get_storage)):
+    PropertyService(db).get_owned(current_user, property_id)
+    media = MediaService(db, storage).upload(
+        property_id=property_id,
+        media_id=media_id,
+        content=await request.body(),
+        content_type=request.headers.get("content-type", ""),
+    )
+    return {"id": media.id, "status": media.status, "public_url": media.public_url}
+
+
 @router.get("/media/mock-public/{storage_key:path}")
 def mock_public(storage_key: str, storage: ObjectStorage = Depends(get_storage)):
     from fastapi.responses import Response as FastAPIResponse

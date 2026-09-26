@@ -195,6 +195,10 @@ export function completeSellerMediaUpload(token: string, propertyId: string, med
   return authenticatedApiRequest<{ id: string; status: string; public_url: string | null }>(token, `/seller/properties/${encodeURIComponent(propertyId)}/media/${encodeURIComponent(mediaId)}/complete`, { method: "POST" });
 }
 
+export function uploadSellerMedia(token: string, propertyId: string, mediaId: string, content: Blob, contentType: string) {
+  return authenticatedApiRequest<{ id: string; status: string; public_url: string | null }>(token, `/seller/properties/${encodeURIComponent(propertyId)}/media/${encodeURIComponent(mediaId)}/upload`, { method: "PUT", headers: { "Content-Type": contentType }, body: content });
+}
+
 export function uploadMockSellerMedia(token: string, uploadUrl: string, content: Blob, contentType: string) {
   if (uploadUrl.startsWith("mock://")) {
     const path = `/seller/media/mock-upload/${uploadUrl.slice("mock://".length)}`;
