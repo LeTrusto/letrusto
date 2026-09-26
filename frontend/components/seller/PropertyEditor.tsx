@@ -93,8 +93,8 @@ export default function PropertyEditor() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [localPreview, setLocalPreview] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [localPreviews, setLocalPreviews] = useState<string[]>([]);
   const type = String(form.property_type);
   const isPlot = type === "RESIDENTIAL_PLOT";
   const isApartment = type === "APARTMENT";
@@ -181,7 +181,7 @@ export default function PropertyEditor() {
       setProperty(saved);
       setForm(fromProperty(saved));
       setNotice("Draft saved. You can return to it any time.");
-      if (!editing && selectedFile) await registerMedia(saved, selectedFile);
+      if (!editing && selectedFiles.length) await registerMedia(saved, selectedFiles);
       if (!editing) router.replace(`/seller/properties/${saved.id}`);
     } catch (err) {
       setError(friendlyError(err));
@@ -232,49 +232,40 @@ export default function PropertyEditor() {
   }
   async function registerMedia(
     targetProperty = property,
-    file = selectedFile,
+    files = selectedFiles,
   ) {
-    if (!accessToken || !targetProperty || !file) return;
+    if (!accessToken || !targetProperty || !files.length) return;
     setSaving(true);
     setError("");
     try {
-      const target = await createSellerMediaUploadTarget(
-        accessToken,
-        targetProperty.id,
-        {
-          media_type: file.type.startsWith("video/")
-            ? "VIDEO"
-            : "IMAGE",
-          mime_type: file.type,
-          file_size_bytes: file.size,
-          is_cover: targetProperty.media.length === 0,
-          caption: file.name,
-        },
-      );
-      if (target.upload_url.startsWith("mock://"))
-        await uploadMockSellerMedia(
+      for (const [index, file] of files.entries()) {
+        const target = await createSellerMediaUploadTarget(
           accessToken,
-          target.upload_url,
-          file,
-          file.type,
+          targetProperty.id,
+          {
+            media_type: file.type.startsWith("video/") ? "VIDEO" : "IMAGE",
+            mime_type: file.type,
+            file_size_bytes: file.size,
+            is_cover: targetProperty.media.length === 0 && index === 0,
+            caption: file.name,
+          },
         );
-      else {
-        const upload = await fetch(target.upload_url, {
-          method: "PUT",
-          headers: target.headers,
-          body: file,
-        });
-        if (!upload.ok)
-          throw new Error("The storage upload failed. Please try again.");
+        if (target.upload_url.startsWith("mock://")) {
+          await uploadMockSellerMedia(accessToken, target.upload_url, file, file.type);
+        } else {
+          const upload = await fetch(target.upload_url, {
+            method: "PUT",
+            headers: target.headers,
+            body: file,
+          });
+          if (!upload.ok)
+            throw new Error("The storage upload failed. Please try again.");
+        }
+        await completeSellerMediaUpload(accessToken, targetProperty.id, target.media_id);
       }
-      await completeSellerMediaUpload(
-        accessToken,
-        targetProperty.id,
-        target.media_id,
-      );
-      setNotice("Media uploaded and ready for review.");
-      setSelectedFile(null);
-      setLocalPreview("");
+      setNotice(`${files.length} media ${files.length === 1 ? "file" : "files"} uploaded and ready for review.`);
+      setSelectedFiles([]);
+      setLocalPreviews([]);
       const refreshed = await getSellerProperty(accessToken, targetProperty.id);
       setProperty(refreshed);
     } catch (err) {
@@ -686,15 +677,17 @@ export default function PropertyEditor() {
         </section>
         <MediaPanel
           property={property}
-          selectedFile={selectedFile}
-          localPreview={localPreview}
+          selectedFiles={selectedFiles}
+          localPreviews={localPreviews}
           locked={locked}
-          onFile={(file) => {
-            setSelectedFile(file);
-            setLocalPreview(
-              file && file.type.startsWith("image/")
-                ? URL.createObjectURL(file)
-                : "",
+          onFiles={(files) => {
+            setSelectedFiles(files);
+            setLocalPreviews(
+              files.map((file) =>
+                file.type.startsWith("image/")
+                  ? URL.createObjectURL(file)
+                  : "",
+              ),
             );
           }}
           onRegister={() => void registerMedia()}
@@ -722,19 +715,19 @@ function FormSection({
 }
 function MediaPanel({
   property,
-  selectedFile,
-  localPreview,
+  selectedFiles,
+  localPreviews,
   locked,
-  onFile,
+  onFiles,
   onRegister,
   onDelete,
   saving,
 }: {
   property: SellerProperty | null;
-  selectedFile: File | null;
-  localPreview: string;
+  selectedFiles: File[];
+  localPreviews: string[];
   locked: boolean;
-  onFile: (file: File) => void;
+  onFiles: (files: File[]) => void;
   onRegister: () => void;
   onDelete: (mediaId: string) => void;
   saving: boolean;
@@ -751,21 +744,34 @@ function MediaPanel({
         <label className="seller-upload">
           <input
             type="file"
+            multiple
             accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
             disabled={locked || saving}
             onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) onFile(file);
+              const files = Array.from(event.target.files ?? []);
+              if (files.length) onFiles(files);
             }}
           />
-          {localPreview ? (
-            <Image
-              src={localPreview}
-              alt="Selected preview"
-              fill
-              unoptimized
-              sizes="290px"
-            />
+          {localPreviews.length ? (
+            <div className="seller-upload-preview-grid">
+              {localPreviews.map((preview, index) =>
+                preview ? (
+                  <Image
+                    key={preview}
+                    src={preview}
+                    alt={`Selected preview ${index + 1}`}
+                    fill
+                    unoptimized
+                    sizes="145px"
+                  />
+                ) : (
+                  <span className="seller-upload-file" key={`file-${index}`}>
+                    <Video size={18} />
+                    {selectedFiles[index]?.name}
+                  </span>
+                ),
+              )}
+            </div>
           ) : (
             <>
               <ImagePlus size={22} />
@@ -774,7 +780,7 @@ function MediaPanel({
             </>
           )}
         </label>
-        {selectedFile && property ? (
+        {selectedFiles.length && property ? (
             <button
               type="button"
               className="seller-secondary-button seller-media-save"
@@ -786,10 +792,10 @@ function MediaPanel({
               ) : (
                 <Video size={16} />
               )}{" "}
-              Upload media
+              Upload {selectedFiles.length} {selectedFiles.length === 1 ? "file" : "files"}
             </button>
-          ) : selectedFile ? (
-            <p className="seller-media-note">Save the draft to enable upload for this selected file.</p>
+          ) : selectedFiles.length ? (
+            <p className="seller-media-note">Save the draft to enable upload for these selected files.</p>
           ) : null}
         {property ? (
           <div className="seller-media-list">
