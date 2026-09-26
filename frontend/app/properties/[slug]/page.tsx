@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { PropertyDetail, PropertyUnavailable } from "@/components/property/PropertyDetail";
+import PublicPropertyDetailLoader from "@/components/property/PublicPropertyDetailLoader";
 import { getPublicProperty } from "@/services/property.service";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +25,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function PropertyDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const property = await getPublicProperty(slug);
-  return property ? <PropertyDetail property={property} /> : <PropertyUnavailable />;
+export default function PropertyDetailPage() {
+  return <PublicPropertyDetailLoader />;
 }
