@@ -114,7 +114,7 @@ export function getPublicLocations(): Promise<PublicLocation[]> {
 
 export async function getPublicProperty(slug: string): Promise<PublicProperty | null> {
   try {
-    return await apiRequest<PublicProperty>(`/properties/${encodeURIComponent(slug)}`);
+    return await apiRequest<PublicProperty>(`/properties/${slug}`);
   } catch {
     return null;
   }
