@@ -13,6 +13,41 @@ function formatPrice(property: PublicProperty): string {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: property.currency, maximumFractionDigits: 0 }).format(amount);
 }
 
+const numberWords = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+const tensWords = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
+function belowThousand(value: number): string {
+  const parts: string[] = [];
+  if (value >= 100) {
+    parts.push(`${numberWords[Math.floor(value / 100)]} hundred`);
+    value %= 100;
+  }
+  if (value >= 20) {
+    parts.push(tensWords[Math.floor(value / 10)]);
+    value %= 10;
+  }
+  if (value > 0) parts.push(numberWords[value]);
+  return parts.join(" ");
+}
+
+function priceInWords(property: PublicProperty): string | null {
+  const amount = Math.round(Number(property.price_amount));
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  const parts: string[] = [];
+  let remainder = amount;
+  const crore = Math.floor(remainder / 10_000_000);
+  remainder %= 10_000_000;
+  const lakh = Math.floor(remainder / 100_000);
+  remainder %= 100_000;
+  const thousand = Math.floor(remainder / 1_000);
+  remainder %= 1_000;
+  if (crore) parts.push(`${belowThousand(crore)} crore`);
+  if (lakh) parts.push(`${belowThousand(lakh)} lakh`);
+  if (thousand) parts.push(`${belowThousand(thousand)} thousand`);
+  if (remainder) parts.push(belowThousand(remainder));
+  return parts.length ? `${parts.join(" ")} rupees` : "zero rupees";
+}
+
 function numberLabel(value: number | string | null, suffix: string): string | null {
   if (value === null || value === "") return null;
   return `${Number(value).toLocaleString("en-IN")} ${suffix}`;
@@ -44,7 +79,7 @@ export function PropertyDetail({ property }: { property: PublicProperty }) {
     <div className="property-detail-shell section-shell">
       <Link href="/properties" className="back-link"><ArrowLeft size={15} /> Back to the collection</Link>
       <PropertyGallery title={property.title} media={property.media} />
-      <section className="detail-heading"><div><p className="eyebrow">{property.location.name} / {property.location.city_name}</p><h1>{property.title}</h1><p className="detail-type">{typeLabel(property.property_type)} · For sale</p></div><div className="detail-price"><span>Guide price</span><strong>{formatPrice(property)}</strong></div></section>
+      <section className="detail-heading"><div><p className="eyebrow">{property.location.name} / {property.location.city_name}</p><h1>{property.title}</h1><p className="detail-type">{typeLabel(property.property_type)} · For sale</p></div><div className="detail-price"><span>Quoted price</span><strong>{formatPrice(property)}</strong>{priceInWords(property) && <p className="detail-price-words">{priceInWords(property)}</p>}<span className="detail-price-note">Negotiable · Owner enquiries welcome</span></div></section>
       <div className="detail-content-grid"><div className="detail-main-column"><section className="detail-facts" aria-label="Property facts">{facts.map((fact) => <div key={fact.label}><span>{fact.label}</span><strong>{fact.value}</strong></div>)}</section><section className="detail-copy"><p className="eyebrow">The story</p><h2>A place with room for a life.</h2><p>{property.description}</p></section><section className="detail-information"><p className="eyebrow">Property information</p><div className="information-list"><div><span>Location</span><strong>{property.location.name}, {property.location.city_name}</strong></div><div><span>Listing type</span><strong>{typeLabel(property.property_type)} · For sale</strong></div>{property.corner_site !== null && <div><span>Corner site</span><strong>{property.corner_site ? "Yes" : "No"}</strong></div>}{property.plot_dimensions && <div><span>Plot dimensions</span><strong>{property.plot_dimensions}</strong></div>}</div></section></div><aside className="detail-aside"><VerificationSummary verification={property.verification || verificationFromStatus(property.verification_label)} /><PropertyEnquiry property={property} /></aside></div>
     </div>
   </main>;

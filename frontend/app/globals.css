@@ -495,6 +495,10 @@ body {
 .detail-heading { padding:82px 0 72px; }
 .detail-heading h1 { max-width:850px; }
 .detail-price strong { color:var(--terracotta); }
+.detail-price { min-width:270px; padding:22px 24px; border-left:4px solid var(--terracotta); background:var(--paper-deep); text-align:left; }
+.detail-price>span:first-child { color:var(--ink-soft); font-size:10px; letter-spacing:.16em; text-transform:uppercase; }
+.detail-price-words { margin:0; color:var(--ink); font-family:var(--display); font-size:18px; line-height:1.1; text-transform:capitalize; }
+.detail-price-note { color:var(--terracotta); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
 .detail-content-grid { padding-top:0; }
 .detail-facts { background:var(--paper-deep); border:0; padding:6px; }
 .detail-facts>div { min-height:104px; padding:22px 20px; border-color:rgba(31,32,28,.12); }
@@ -505,7 +509,9 @@ body {
 .detail-information { padding-top:34px; border-top:1px solid var(--line); }
 .detail-aside { padding-top:125px; }
 .verification-note { background:#e5e0d6; border-left-color:var(--sage); }
-.property-enquiry-cta { border-top:1px solid var(--line); background:transparent; padding:28px 0 0; }
+.property-enquiry-cta { gap:24px; border-top:0; background:var(--ink); padding:28px; color:var(--paper); box-shadow:0 18px 40px rgba(31,32,28,.14); }
+.property-enquiry-cta .eyebrow { color:rgba(242,239,232,.7); }
+.property-enquiry-cta p:not(.eyebrow) { max-width:280px; margin:0; color:rgba(242,239,232,.82); line-height:1.5; }
 .property-enquiry-cta button { width:100%; }
 
 @media (max-width:900px) {

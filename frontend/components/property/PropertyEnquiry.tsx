@@ -79,8 +79,8 @@ export function PropertyEnquiry({ property }: { property: PublicProperty }) {
   return (
     <>
       <div className="property-enquiry-cta">
-        <div><p className="eyebrow">Interested in this property?</p><p>Send an enquiry and the authorized property contact can get back to you.</p></div>
-        <button type="button" className="button button-dark" onClick={() => { setOpen(true); setStatus("idle"); }}>Get Details</button>
+        <div><p className="eyebrow">Ready to take the next step?</p><p>Contact the owner to ask questions, discuss the negotiable price, or arrange a visit.</p></div>
+        <button type="button" className="button button-dark" onClick={() => { setOpen(true); setStatus("idle"); }}>Contact owner</button>
       </div>
       {open && <div className="enquiry-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
         <div className="enquiry-dialog" role="dialog" aria-modal="true" aria-labelledby="enquiry-title" ref={dialogRef}>
@@ -96,9 +96,9 @@ export function PropertyEnquiry({ property }: { property: PublicProperty }) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} noValidate>
-              <p className="eyebrow">Get the details</p>
-              <h2 id="enquiry-title">A closer look starts here.</h2>
-              <p className="enquiry-intro">Share your details and the authorized property contact can respond to your interest.</p>
+              <p className="eyebrow">Contact the owner</p>
+              <h2 id="enquiry-title">Make your interest known.</h2>
+              <p className="enquiry-intro">Share your details and the authorized property contact can respond about the price, availability, or a visit.</p>
               <div className="enquiry-fields">
                 <label>Name <input ref={firstFieldRef} value={form.buyer_name} onChange={(event) => updateField("buyer_name", event.target.value)} placeholder="Your full name" aria-invalid={Boolean(errors.buyer_name)} />{errors.buyer_name && <span className="field-error">{errors.buyer_name}</span>}</label>
                 <label>Phone <input type="tel" value={form.buyer_phone} onChange={(event) => updateField("buyer_phone", event.target.value)} placeholder="10-digit phone number" aria-invalid={Boolean(errors.buyer_phone)} />{errors.buyer_phone && <span className="field-error">{errors.buyer_phone}</span>}</label>

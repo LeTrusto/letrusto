@@ -61,8 +61,10 @@ describe("property detail experience", () => {
     expect(html).toContain("The Bougainvillea House");
     expect(html).toContain("Jayanagar");
     expect(html).toContain("4 BHK");
-    expect(html).toContain("Get Details");
-    expect(html).toContain("Courtyard");
+    expect(html).toContain("Contact owner");
+    expect(html).toContain("Quoted price");
+    expect(html).toContain("Negotiable");
+    expect(html).not.toContain("Courtyard");
     expect(html).not.toContain("seller_profile");
     expect(html).not.toContain("seller_phone");
   });
