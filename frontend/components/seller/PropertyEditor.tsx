@@ -54,6 +54,15 @@ const amenities = [
   "Garden",
   "Clubhouse",
 ];
+const allowedMediaTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+]);
+const imageMaxSize = 10 * 1024 * 1024;
+const videoMaxSize = 100 * 1024 * 1024;
 const initialForm: FormState = {
   location_id: "",
   title: "",
@@ -239,6 +248,7 @@ export default function PropertyEditor() {
     setError("");
     try {
       for (const [index, file] of files.entries()) {
+        setNotice(`Uploading media ${index + 1} of ${files.length}...`);
         const target = await createSellerMediaUploadTarget(
           accessToken,
           targetProperty.id,
@@ -263,7 +273,7 @@ export default function PropertyEditor() {
         }
         await completeSellerMediaUpload(accessToken, targetProperty.id, target.media_id);
       }
-      setNotice(`${files.length} media ${files.length === 1 ? "file" : "files"} uploaded and ready for review.`);
+      setNotice(`Upload successful: ${files.length} media ${files.length === 1 ? "file" : "files"} ready for review.`);
       setSelectedFiles([]);
       setLocalPreviews([]);
       const refreshed = await getSellerProperty(accessToken, targetProperty.id);
@@ -681,9 +691,20 @@ export default function PropertyEditor() {
           localPreviews={localPreviews}
           locked={locked}
           onFiles={(files) => {
-            setSelectedFiles(files);
+            const invalidFiles = files.filter(
+              (file) =>
+                !allowedMediaTypes.has(file.type) ||
+                file.size > (file.type.startsWith("video/") ? videoMaxSize : imageMaxSize),
+            );
+            const validFiles = files.filter((file) => !invalidFiles.includes(file));
+            setSelectedFiles(validFiles);
+            setError(
+              invalidFiles.length
+                ? `${invalidFiles.length} file${invalidFiles.length === 1 ? "" : "s"} could not be selected. Images must be under 10 MB; videos under 100 MB.`
+                : "",
+            );
             setLocalPreviews(
-              files.map((file) =>
+              validFiles.map((file) =>
                 file.type.startsWith("image/")
                   ? URL.createObjectURL(file)
                   : "",
