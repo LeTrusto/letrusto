@@ -104,6 +104,8 @@ class PropertyMediaDTO(BaseModel):
 
 
 class PublicPropertyMediaDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     media_type: str
     public_url: str | None

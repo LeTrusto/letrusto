@@ -4,5 +4,5 @@ import { HomeHero, BuyerSellerSection, IntroSection, CategorySection, CityStory,
 import { PropertyRail } from "./PropertyRail";
 
 export function PropertyExperience() {
-  return <main className="property-experience"><HomeHero /><BuyerSellerSection /><IntroSection /><CategorySection /><CityStory /><PropertyRail title="Properties worth seeing" eyebrow="A considered selection" /><LocalitySection /><DifferenceSection /><WhySection /><ClosingSection /></main>;
+  return <main className="property-experience"><HomeHero /><PropertyRail title="Available properties" eyebrow="Live listings" /><BuyerSellerSection /><IntroSection /><CategorySection /><CityStory /><LocalitySection /><DifferenceSection /><WhySection /><ClosingSection /></main>;
 }
