@@ -181,6 +181,7 @@ export default function PropertyEditor() {
       setProperty(saved);
       setForm(fromProperty(saved));
       setNotice("Draft saved. You can return to it any time.");
+      if (!editing && selectedFile) await registerMedia(saved, selectedFile);
       if (!editing) router.replace(`/seller/properties/${saved.id}`);
     } catch (err) {
       setError(friendlyError(err));
@@ -229,49 +230,52 @@ export default function PropertyEditor() {
       setSubmitting(false);
     }
   }
-  async function registerMedia() {
-    if (!accessToken || !property || !selectedFile) return;
+  async function registerMedia(
+    targetProperty = property,
+    file = selectedFile,
+  ) {
+    if (!accessToken || !targetProperty || !file) return;
     setSaving(true);
     setError("");
     try {
       const target = await createSellerMediaUploadTarget(
         accessToken,
-        property.id,
+        targetProperty.id,
         {
-          media_type: selectedFile.type.startsWith("video/")
+          media_type: file.type.startsWith("video/")
             ? "VIDEO"
             : "IMAGE",
-          mime_type: selectedFile.type,
-          file_size_bytes: selectedFile.size,
-          is_cover: property.media.length === 0,
-          caption: selectedFile.name,
+          mime_type: file.type,
+          file_size_bytes: file.size,
+          is_cover: targetProperty.media.length === 0,
+          caption: file.name,
         },
       );
       if (target.upload_url.startsWith("mock://"))
         await uploadMockSellerMedia(
           accessToken,
           target.upload_url,
-          selectedFile,
-          selectedFile.type,
+          file,
+          file.type,
         );
       else {
         const upload = await fetch(target.upload_url, {
           method: "PUT",
           headers: target.headers,
-          body: selectedFile,
+          body: file,
         });
         if (!upload.ok)
           throw new Error("The storage upload failed. Please try again.");
       }
       await completeSellerMediaUpload(
         accessToken,
-        property.id,
+        targetProperty.id,
         target.media_id,
       );
       setNotice("Media uploaded and ready for review.");
       setSelectedFile(null);
       setLocalPreview("");
-      const refreshed = await getSellerProperty(accessToken, property.id);
+      const refreshed = await getSellerProperty(accessToken, targetProperty.id);
       setProperty(refreshed);
     } catch (err) {
       setError(friendlyError(err));
@@ -743,35 +747,34 @@ function MediaPanel({
         Upload clear images or a short property video. Files are checked before
         they become ready.
       </p>
-      {property ? (
-        <>
-          <label className="seller-upload">
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
-              disabled={locked || saving}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) onFile(file);
-              }}
+      <>
+        <label className="seller-upload">
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
+            disabled={locked || saving}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onFile(file);
+            }}
+          />
+          {localPreview ? (
+            <Image
+              src={localPreview}
+              alt="Selected preview"
+              fill
+              unoptimized
+              sizes="290px"
             />
-            {localPreview ? (
-              <Image
-                src={localPreview}
-                alt="Selected preview"
-                fill
-                unoptimized
-                sizes="290px"
-              />
-            ) : (
-              <>
-                <ImagePlus size={22} />
-                <span>Upload photos or video</span>
-                <small>JPEG, PNG, WebP up to 10 MB. Video up to 100 MB.</small>
-              </>
-            )}
-          </label>
-          {selectedFile && (
+          ) : (
+            <>
+              <ImagePlus size={22} />
+              <span>{property ? "Upload photos or video" : "Choose photos or video"}</span>
+              <small>JPEG, PNG, WebP up to 10 MB. Video up to 100 MB.</small>
+            </>
+          )}
+        </label>
+        {selectedFile && property ? (
             <button
               type="button"
               className="seller-secondary-button seller-media-save"
@@ -785,7 +788,10 @@ function MediaPanel({
               )}{" "}
               Upload media
             </button>
-          )}
+          ) : selectedFile ? (
+            <p className="seller-media-note">Save the draft to enable upload for this selected file.</p>
+          ) : null}
+        {property ? (
           <div className="seller-media-list">
             {property.media.length === 0 ? (
               <p className="seller-muted">No media added yet.</p>
@@ -822,13 +828,10 @@ function MediaPanel({
               ))
             )}
           </div>
-        </>
-      ) : (
-        <div className="seller-media-locked">
-          <ImagePlus size={22} />
-          <p>Save the property draft first, then add media.</p>
-        </div>
-      )}
+        ) : (
+          <p className="seller-media-note">You can choose media now. Save the property draft before uploading it.</p>
+        )}
+      </>
     </aside>
   );
 }
