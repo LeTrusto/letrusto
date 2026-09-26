@@ -191,6 +191,7 @@ class PublicPropertyPageDTO(BaseModel):
 
 
 class SellerPropertyDTO(PublicPropertyDTO):
+    media: list[PropertyMediaDTO]
     seller_profile_id: UUID
     address_line: str | None
     approval_information: str | None
