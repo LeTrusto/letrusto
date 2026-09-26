@@ -183,6 +183,10 @@ export function submitSellerProperty(token: string, id: string) {
   return authenticatedApiRequest<{ id: string; status: string }>(token, `/seller/properties/${encodeURIComponent(id)}/submit`, { method: "POST" });
 }
 
+export function requestSellerPropertyChanges(token: string, id: string) {
+  return authenticatedApiRequest<{ id: string; status: string }>(token, `/seller/properties/${encodeURIComponent(id)}/request-changes`, { method: "POST" });
+}
+
 export function createSellerMediaUploadTarget(token: string, id: string, payload: Omit<MediaPayload, "storage_key">) {
   return authenticatedApiRequest<MediaUploadTarget>(token, `/seller/properties/${encodeURIComponent(id)}/media/upload-target`, { method: "POST", body: JSON.stringify(payload) });
 }

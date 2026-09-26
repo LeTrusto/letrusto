@@ -54,6 +54,7 @@ def test_property_lifecycle_only_allows_approved_transitions():
     assert PropertyStatus.SUBMITTED.value in _ALLOWED[PropertyStatus.DRAFT.value]
     assert PropertyStatus.LIVE.value not in _ALLOWED[PropertyStatus.SUBMITTED.value]
     assert PropertyStatus.APPROVED.value in _ALLOWED[PropertyStatus.UNDER_REVIEW.value]
+    assert PropertyStatus.CHANGES_REQUESTED.value in _ALLOWED[PropertyStatus.LIVE.value]
 
 
 def test_location_has_sibling_identity_constraint():

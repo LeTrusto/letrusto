@@ -29,6 +29,7 @@ import {
   deleteSellerMedia,
   getLocations,
   getSellerProperty,
+  requestSellerPropertyChanges,
   submitSellerProperty,
   updateSellerProperty,
   uploadMockSellerMedia,
@@ -100,6 +101,7 @@ export default function PropertyEditor() {
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [requestingChanges, setRequestingChanges] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -239,6 +241,21 @@ export default function PropertyEditor() {
       setSubmitting(false);
     }
   }
+  async function requestChanges() {
+    if (!accessToken || !property || property.status !== "LIVE") return;
+    setRequestingChanges(true);
+    setError("");
+    setNotice("");
+    try {
+      const updated = await requestSellerPropertyChanges(accessToken, property.id);
+      setProperty((current) => current ? { ...current, status: updated.status } : current);
+      setNotice("Editing is enabled. Update the listing and submit it again for review.");
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setRequestingChanges(false);
+    }
+  }
   async function registerMedia(
     targetProperty = property,
     files = selectedFiles,
@@ -354,6 +371,16 @@ export default function PropertyEditor() {
             <Send size={16} />{" "}
             {submitting ? "Submitting..." : "Submit for review"}
           </button>
+          {property?.status === "LIVE" && (
+            <button
+              type="button"
+              className="seller-secondary-button"
+              disabled={saving || submitting || requestingChanges}
+              onClick={() => void requestChanges()}
+            >
+              {requestingChanges ? "Enabling edits..." : "Request changes to edit"}
+            </button>
+          )}
         </div>
       </header>
       {property?.status === "CHANGES_REQUESTED" && (

@@ -72,6 +72,12 @@ def submit_property(property_id: UUID, current_user: User = Depends(get_current_
     return PropertySubmitResponse(id=prop.id, status=prop.status)
 
 
+@router.post("/properties/{property_id}/request-changes", response_model=PropertySubmitResponse)
+def request_property_changes(property_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    prop = PropertyService(db).request_changes(current_user, property_id)
+    return PropertySubmitResponse(id=prop.id, status=prop.status)
+
+
 @router.post("/properties/{property_id}/media/upload-target", response_model=MediaUploadTargetResponse, status_code=201)
 def create_media_upload_target(property_id: UUID, payload: MediaUploadTargetRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), storage: ObjectStorage = Depends(get_storage)):
     prop = PropertyService(db).get_owned(current_user, property_id)

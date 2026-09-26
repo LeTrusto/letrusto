@@ -14,7 +14,7 @@ from app.services.notification_service import NotificationService
 _ALLOWED: dict[str, set[str]] = {
     "DRAFT": {"SUBMITTED"}, "SUBMITTED": {"UNDER_REVIEW"},
     "UNDER_REVIEW": {"CHANGES_REQUESTED", "APPROVED", "REJECTED"},
-    "APPROVED": {"LIVE"}, "LIVE": {"SUSPENDED", "SOLD", "WITHDRAWN", "EXPIRED"},
+    "APPROVED": {"LIVE"}, "LIVE": {"CHANGES_REQUESTED", "SUSPENDED", "SOLD", "WITHDRAWN", "EXPIRED"},
     "SUSPENDED": {"LIVE"}, "CHANGES_REQUESTED": {"SUBMITTED"}, "EXPIRED": {"SUBMITTED"},
 }
 
@@ -66,7 +66,7 @@ class PropertyService:
         current = prop.status.value if isinstance(prop.status, PropertyStatus) else prop.status
         if target.value not in _ALLOWED.get(current, set()):
             raise BadRequestError(f"Invalid property transition: {current} to {target.value}")
-        if actor.role != "admin" and target not in {PropertyStatus.SUBMITTED, PropertyStatus.WITHDRAWN, PropertyStatus.SOLD}:
+        if actor.role != "admin" and target not in {PropertyStatus.SUBMITTED, PropertyStatus.CHANGES_REQUESTED, PropertyStatus.WITHDRAWN, PropertyStatus.SOLD}:
             raise UnauthorizedError("Admin access required for this transition")
         prop.status = target.value
         now = datetime.now(timezone.utc)
@@ -114,6 +114,9 @@ class PropertyService:
 
     def submit(self, user: User, property_id: UUID) -> Property:
         return self.transition(user, self.get_owned(user, property_id), PropertyStatus.SUBMITTED)
+
+    def request_changes(self, user: User, property_id: UUID) -> Property:
+        return self.transition(user, self.get_owned(user, property_id), PropertyStatus.CHANGES_REQUESTED)
 
     def admin_review(self, admin: User, prop: Property, decision: str, notes: str | None) -> AdminReview:
         if admin.role != "admin":
