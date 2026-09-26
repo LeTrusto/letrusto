@@ -284,6 +284,12 @@ export function AdminPropertyDetail({ id }: { id: string }) {
     }
     if (!accessToken) return;
     const result = await reviewAdminProperty(accessToken, id, decision, note);
+    if (decision === "APPROVED" && result.status === "APPROVED") {
+      const published = await publishAdminProperty(accessToken, id);
+      setMessage("Property approved and published live.");
+      setProperty({ ...property, status: published.status });
+      return;
+    }
     setMessage(`Property is now ${result.status}.`);
     setProperty({ ...property, status: result.status });
   };
@@ -400,7 +406,7 @@ export function AdminPropertyDetail({ id }: { id: string }) {
           />
           <div className="admin-action-grid">
             <button onClick={() => void act("APPROVED")}>
-              <Check size={16} /> Approve
+              <Check size={16} /> Approve & publish live
             </button>
             <button onClick={() => void act("CHANGES_REQUESTED")}>
               <MessageSquareWarning size={16} /> Request changes
