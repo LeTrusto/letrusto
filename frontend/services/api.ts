@@ -150,12 +150,30 @@ export async function authenticatedApiRequest<T>(
 	});
 
 	if (!response.ok) {
-		const body = await response.json().catch(() => null) as { detail?: string } | null;
-		throw new Error(body?.detail ?? `API request failed (${response.status})`);
+		const body = await response.json().catch(() => null) as { detail?: unknown } | null;
+		throw new Error(formatApiError(body?.detail, response.status));
 	}
 	if (response.status === 204) return undefined as T;
 
 	return (await response.json()) as T;
+}
+
+function formatApiError(detail: unknown, status: number): string {
+	if (typeof detail === "string" && detail.trim()) return detail;
+	if (Array.isArray(detail)) {
+		const messages = detail
+			.map((item) => {
+				if (typeof item === "string") return item;
+				if (item && typeof item === "object" && "msg" in item)
+					return String(item.msg);
+				return "Please check the submitted fields.";
+			})
+			.filter(Boolean);
+		if (messages.length) return messages.join(" ");
+	}
+	if (detail && typeof detail === "object" && "message" in detail)
+		return String(detail.message);
+	return `API request failed (${status})`;
 }
 
 export async function withApiFallback<T>(
