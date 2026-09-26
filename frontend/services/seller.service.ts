@@ -192,8 +192,18 @@ export function completeSellerMediaUpload(token: string, propertyId: string, med
 }
 
 export function uploadMockSellerMedia(token: string, uploadUrl: string, content: Blob, contentType: string) {
-  const path = uploadUrl.startsWith("mock://") ? `/seller/media/mock-upload/${uploadUrl.slice("mock://".length)}` : uploadUrl.replace(/^https?:\/\/[^/]+\/api\/v1/, "");
-  return authenticatedApiRequest<void>(token, path, { method: "PUT", headers: { "Content-Type": contentType }, body: content });
+  if (uploadUrl.startsWith("mock://")) {
+    const path = `/seller/media/mock-upload/${uploadUrl.slice("mock://".length)}`;
+    return authenticatedApiRequest<void>(token, path, { method: "PUT", headers: { "Content-Type": contentType }, body: content });
+  }
+
+  return fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: content,
+  }).then((response) => {
+    if (!response.ok) throw new Error(`Media upload failed (${response.status})`);
+  });
 }
 
 export function deleteSellerMedia(token: string, propertyId: string, mediaId: string) {

@@ -17,6 +17,13 @@ describe("seller media service", () => {
     await expect(uploadMockSellerMedia("token", "mock://properties/p/media/1/original", new Blob(["data"]), "image/png")).rejects.toThrow("Upload failed");
   });
 
+  it("uploads production media directly to the presigned URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await uploadMockSellerMedia("token", "https://storage.example.com/presigned-upload", new Blob(["data"]), "image/png");
+    expect(fetchMock).toHaveBeenCalledWith("https://storage.example.com/presigned-upload", expect.objectContaining({ method: "PUT", body: expect.any(Blob) }));
+  });
+
   it("calls the seller-owned media delete endpoint", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
