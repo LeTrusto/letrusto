@@ -21,7 +21,7 @@ import {
 
 type AuthContextValue = AuthState & {
   register: (payload: RegisterPayload) => Promise<void>;
-  login: (payload: LoginPayload) => Promise<void>;
+  login: (payload: LoginPayload) => Promise<AuthUser>;
   logout: () => Promise<void>;
 };
 
@@ -116,9 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const login = useCallback(
-    async (payload: LoginPayload) => {
+    async (payload: LoginPayload): Promise<AuthUser> => {
       const r = await loginUser(payload);
       applyAuth(r);
+      return userFromResponse(r);
     },
     [applyAuth]
   );

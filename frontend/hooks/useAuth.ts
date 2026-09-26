@@ -12,8 +12,8 @@ export function useAuth() {
 
   const loginAndRedirect = useCallback(
     async (payload: LoginPayload, redirectTo = "/dashboard") => {
-      await ctx.login(payload);
-      router.push(redirectTo);
+      const user = await ctx.login(payload);
+      router.push(user.role === "admin" && redirectTo === "/account" ? "/admin" : redirectTo);
     },
     [ctx, router]
   );
