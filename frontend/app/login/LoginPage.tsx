@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
+import { Eye, EyeOff, Loader2, LogIn, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,10 +9,10 @@ import BrandMark from "@/components/BrandMark";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginPage() {
-  const { login, isAuthenticated, isLoading, logout } = useAuth();
+  const { login, isAdmin, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/account";
+  const redirectTo = searchParams.get("redirect") || (isAdmin ? "/admin" : "/account");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -78,6 +78,10 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-7 text-center text-sm text-[var(--text-secondary)]">Don&apos;t have an account? <Link href="/register" className="font-bold text-[var(--lt-primary)] hover:text-[var(--lt-accent-dark)]">Create account</Link></p>
+        <Link href="/admin" className="mt-6 flex h-11 items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] text-sm font-bold text-[var(--text-primary)] transition hover:border-[var(--lt-primary)] hover:text-[var(--lt-primary)]">
+          <ShieldCheck size={17} />
+          Admin login
+        </Link>
       </section>
     </main>
   );
